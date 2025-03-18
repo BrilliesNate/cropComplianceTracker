@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "854876175061",
+    "project_id": "cropcompliance",
+    "storage_bucket": "cropcompliance.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:854876175061:android:a826d41714b6b6ab03805c",
+        "android_client_info": {
+          "package_name": "com.example.cropcompliance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKWlUuRI_a1DXx-j9GZ2106kGmWGrg87Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
