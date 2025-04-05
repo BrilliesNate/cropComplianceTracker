@@ -11,6 +11,9 @@ class DocumentViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cache document fileUrls to avoid repeated access
+    final fileUrls = document.fileUrls;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -25,9 +28,9 @@ class DocumentViewer extends StatelessWidget {
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: document.fileUrls.length,
+              itemCount: fileUrls.length,
               itemBuilder: (context, index) {
-                final fileUrl = document.fileUrls[index];
+                final fileUrl = fileUrls[index];
                 final fileName = _getFileNameFromUrl(fileUrl);
                 final fileExtension = _getFileExtension(fileName);
 

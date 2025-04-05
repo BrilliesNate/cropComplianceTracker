@@ -14,6 +14,7 @@ class RouteConstants {
   static const String documentDetail = '/document-detail';
   static const String documentUpload = '/document-upload';
   static const String documentForm = '/document-form';
+  static const String categoryDocuments = '/category-documents';
 
   // Admin routes
   static const String userManagement = '/user-management';

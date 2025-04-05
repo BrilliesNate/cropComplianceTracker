@@ -27,8 +27,10 @@ class DocumentDetailScreen extends StatefulWidget {
 }
 
 class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
-  late Future<DocumentModel?> _documentFuture;
+  Future<DocumentModel?>? _documentFuture;
   TextEditingController _commentController = TextEditingController();
+  DocumentTypeModel? _documentType;
+  bool _hasLoggedDocumentInfo = false;
 
   @override
   void initState() {
@@ -43,8 +45,11 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   }
 
   void _loadDocument() {
-    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
-    _documentFuture = documentProvider.getDocument(widget.documentId);
+    // Only set the future if it hasn't been set already
+    if (_documentFuture == null) {
+      final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+      _documentFuture = documentProvider.getDocument(widget.documentId);
+    }
   }
 
   @override
@@ -69,6 +74,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
               error: 'Error loading document: ${snapshot.error}',
               onRetry: () {
                 setState(() {
+                  _documentFuture = null;
                   _loadDocument();
                 });
               },
@@ -82,14 +88,23 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
             );
           }
 
-          // Get document type information
-          categoryProvider.fetchDocumentTypes(document.categoryId);
-          final documentTypes = categoryProvider.getDocumentTypes(document.categoryId);
-          DocumentTypeModel? documentType;
-          try {
-            documentType = documentTypes.firstWhere((dt) => dt.id == document.documentTypeId) as DocumentTypeModel?;
-          } catch (_) {
-            documentType = null;
+          // Print debug info only once when document is first loaded
+          if (!_hasLoggedDocumentInfo) {
+            print("Document ID: ${document.id}");
+            print("File URLs: ${document.fileUrls}");
+            print("File URLs count: ${document.fileUrls.length}");
+            _hasLoggedDocumentInfo = true;
+          }
+
+          // Get document type information - avoid repeated fetches
+          if (_documentType == null) {
+            categoryProvider.fetchDocumentTypes(document.categoryId);
+            final documentTypes = categoryProvider.getDocumentTypes(document.categoryId);
+            try {
+              _documentType = documentTypes.firstWhere((dt) => dt.id == document.documentTypeId) as DocumentTypeModel?;
+            } catch (_) {
+              _documentType = null;
+            }
           }
 
           return SingleChildScrollView(
@@ -107,7 +122,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                documentType?.name ?? 'Document',
+                                _documentType?.name ?? 'Document',
                                 style: Theme.of(context).textTheme.headlineSmall,
                               ),
                             ),
@@ -153,16 +168,29 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                   if (document.fileUrls.isNotEmpty)
                     DocumentViewer(document: document)
                   else
-                    const Card(
+                    Card(
                       child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('No document files available'),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'No document files available (${document.fileUrls.length} files)',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'This document does not have any uploaded files. You can add files by updating the document.',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                 ],
 
                 // Signature section
-                if (documentType?.requiresSignature == true &&
+                if (_documentType?.requiresSignature == true &&
                     !document.isNotApplicable &&
                     document.status != DocumentStatus.REJECTED) ...[
                   const SizedBox(height: 24),
@@ -178,7 +206,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Required signatures: ${documentType?.signatureCount}',
+                            'Required signatures: ${_documentType?.signatureCount}',
                             style: Theme.of(context).textTheme.bodyLarge,
                           ),
                           const SizedBox(height: 16),
@@ -207,7 +235,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                               },
                             ),
 
-                          if (document.signatures.length < documentType!.signatureCount) ...[
+                          if (document.signatures.length < (_documentType?.signatureCount ?? 0)) ...[
                             if (document.signatures.isNotEmpty)
                               const Divider(height: 32),
                             ElevatedButton.icon(
@@ -461,6 +489,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                       );
 
                       setState(() {
+                        _documentFuture = null;
                         _loadDocument();
                       });
                     } else if (mounted) {
@@ -516,6 +545,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
 
         _commentController.clear();
         setState(() {
+          _documentFuture = null;
           _loadDocument();
         });
       } else if (mounted) {
@@ -560,6 +590,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
 
         _commentController.clear();
         setState(() {
+          _documentFuture = null;
           _loadDocument();
         });
       } else if (mounted) {

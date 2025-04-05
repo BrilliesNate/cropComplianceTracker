@@ -103,7 +103,7 @@ class DocumentModel {
       formData: formData ?? this.formData,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      expiryDate: expiryDate,
+      expiryDate: expiryDate ?? this.expiryDate,  // Fixed this line to preserve existing expiryDate
       isNotApplicable: isNotApplicable ?? this.isNotApplicable,
       signatures: signatures ?? this.signatures,
       comments: comments ?? this.comments,

@@ -1,5 +1,6 @@
 import 'package:cropcompliance/providers/audit_provider.dart';
 import 'package:cropcompliance/providers/category_provider.dart';
+import 'package:cropcompliance/providers/route_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -20,8 +21,9 @@ void main() async {
       ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ChangeNotifierProvider(create: (_) => AuthProvider()),
       ChangeNotifierProvider(create: (_) => DocumentProvider()),
-      ChangeNotifierProvider(create: (_) => CategoryProvider()), // Add this line
-      ChangeNotifierProvider(create: (_) => AuditProvider()),    // Add this if you're using AuditProvider
+      ChangeNotifierProvider(create: (_) => CategoryProvider()),
+      ChangeNotifierProvider(create: (_) => AuditProvider()),
+      ChangeNotifierProvider(create: (_) => RouteProvider()),
     ],
     child: const AgriComplianceApp(),
   ));

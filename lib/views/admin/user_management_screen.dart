@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/user_model.dart';
 import '../../models/enums.dart';
-import '../shared/custom_app_bar.dart';
 import '../shared/loading_indicator.dart';
 import '../shared/error_display.dart';
+import '../shared/app_scaffold_wrapper.dart';
 import 'package:provider/provider.dart';
 
 class UserManagementScreen extends StatefulWidget {
@@ -147,30 +147,24 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final authProvider = Provider.of<autPro.AuthProvider>(context);
 
     if (!authProvider.isAdmin) {
-      return Scaffold(
-        appBar: const CustomAppBar(
-          title: 'User Management',
-          showBackButton: true,
-        ),
-        body: const Center(
+      return AppScaffoldWrapper(
+        title: 'User Management',
+        child: const Center(
           child: Text('You do not have permission to access this page'),
         ),
       );
     }
 
-    return Scaffold(
-      appBar: const CustomAppBar(
-        title: 'User Management',
-        showBackButton: true,
-      ),
-      body: _isLoading
-          ? const LoadingIndicator(message: 'Loading user data...')
-          : _error != null
-          ? ErrorDisplay(
+    Widget content;
+    if (_isLoading) {
+      content = const LoadingIndicator(message: 'Loading user data...');
+    } else if (_error != null) {
+      content = ErrorDisplay(
         error: _error!,
         onRetry: _loadData,
-      )
-          : SingleChildScrollView(
+      );
+    } else {
+      content = SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,7 +327,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             ),
           ],
         ),
-      ),
+      );
+    }
+
+    return AppScaffoldWrapper(
+      title: 'User Management',
+      backgroundColor: Colors.grey[100],
+      child: content,
     );
   }
 

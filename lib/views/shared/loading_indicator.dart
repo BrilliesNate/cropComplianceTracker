@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 class LoadingIndicator extends StatelessWidget {
   final String? message;
@@ -14,7 +15,13 @@ class LoadingIndicator extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
+          Center(
+
+            child:  Container(
+                width: 300,
+                height: 300,
+                child: Lottie.asset('assets/lottie/loader.json')),
+          ),
           if (message != null) ...[
             const SizedBox(height: 16),
             Text(

@@ -8,25 +8,27 @@ class CategoryProvider with ChangeNotifier {
 
   List<CategoryModel> _categories = [];
   Map<String, List<DocumentTypeModel>> _documentTypesByCategory = {};
+  Map<String, DocumentTypeModel> _documentTypesMap = {}; // New lookup map
   bool _isLoading = false;
   String? _error;
 
-  // Getters
+  // Getters - unchanged
   List<CategoryModel> get categories => _categories;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Get document types for a category
+  // Get document types for a category - unchanged
   List<DocumentTypeModel> getDocumentTypes(String categoryId) {
     return _documentTypesByCategory[categoryId] ?? [];
   }
 
-  // Initialize
+  // Initialize - unchanged method signature
   Future<void> initialize() async {
     _setLoading(true);
 
     try {
-      await fetchCategories();
+      // Modified implementation to reduce notifications
+      await _batchFetchAllData();
     } catch (e) {
       _error = 'Failed to initialize categories: $e';
     } finally {
@@ -34,42 +36,99 @@ class CategoryProvider with ChangeNotifier {
     }
   }
 
-  // Fetch categories
-  Future<void> fetchCategories() async {
+  // New helper method for batch fetching
+  Future<void> _batchFetchAllData() async {
     try {
+      // Fetch categories first
       final categories = await _firestoreService.getCategories();
       _categories = categories;
-      notifyListeners();
 
-      // Fetch document types for each category
+      // Create a list of document type fetching futures for parallel execution
+      final futures = <Future>[];
       for (var category in _categories) {
-        await fetchDocumentTypes(category.id);
+        futures.add(_fetchDocTypesForCategory(category.id));
       }
+
+      // Wait for all document types to be fetched
+      await Future.wait(futures);
+
+      // Build lookup map for faster access
+      _buildDocumentTypesMap();
+
+      // Only notify once after all data is loaded
+      notifyListeners();
     } catch (e) {
-      _error = 'Failed to fetch categories: $e';
+      _error = 'Failed to fetch categories and document types: $e';
+      notifyListeners();
     }
   }
 
-  // Fetch document types
+  // Helper method to fetch document types for a category
+  Future<void> _fetchDocTypesForCategory(String categoryId) async {
+    try {
+      final documentTypes = await _firestoreService.getDocumentTypes(categoryId);
+      _documentTypesByCategory[categoryId] = documentTypes;
+    } catch (e) {
+      print('Error fetching document types for category $categoryId: $e');
+    }
+  }
+
+  // Build lookup map for faster access
+  void _buildDocumentTypesMap() {
+    _documentTypesMap = {};
+    for (var entry in _documentTypesByCategory.entries) {
+      for (var docType in entry.value) {
+        _documentTypesMap[docType.id] = docType;
+      }
+    }
+  }
+
+  // These methods remain unchanged but are optimized to use a single notification
+
+  // Fetch categories - kept for backward compatibility
+  Future<void> fetchCategories() async {
+    try {
+      // Using batch fetch instead of multiple notifications
+      await _batchFetchAllData();
+    } catch (e) {
+      _error = 'Failed to fetch categories: $e';
+      notifyListeners();
+    }
+  }
+
+  // Fetch document types - kept for backward compatibility
   Future<void> fetchDocumentTypes(String categoryId) async {
     try {
       final documentTypes = await _firestoreService.getDocumentTypes(categoryId);
       _documentTypesByCategory[categoryId] = documentTypes;
+
+      // Update the lookup map with new document types
+      for (var docType in documentTypes) {
+        _documentTypesMap[docType.id] = docType;
+      }
+
+      // Single notification after all updates
       notifyListeners();
     } catch (e) {
       _error = 'Failed to fetch document types: $e';
+      notifyListeners();
     }
   }
 
-  // Helper
+  // Helper - unchanged
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
   }
 
-  // Clear error
+  // Clear error - unchanged
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // New method for direct document type lookup
+  DocumentTypeModel? getDocumentTypeById(String id) {
+    return _documentTypesMap[id];
   }
 }

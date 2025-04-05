@@ -3,11 +3,9 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/document_provider.dart';
 import '../../providers/category_provider.dart';
-import '../shared/custom_app_bar.dart';
-import '../shared/app_drawer.dart';
 import '../shared/loading_indicator.dart';
 import '../shared/error_display.dart';
-import '../shared/responsive_layout.dart';
+import '../shared/app_scaffold_wrapper.dart';
 import 'widgets/report_summary.dart';
 import 'widgets/document_status_table.dart';
 
@@ -56,23 +54,30 @@ class _ComplianceReportScreenState extends State<ComplianceReportScreen> {
     final hasError = documentProvider.error != null || categoryProvider.error != null;
     final error = documentProvider.error ?? categoryProvider.error ?? '';
 
-    return Scaffold(
-      appBar: const CustomAppBar(
-        title: 'Compliance Report',
-      ),
-      drawer: const AppDrawer(),
-      body: isLoading
-          ? const LoadingIndicator(message: 'Loading compliance data...')
-          : hasError
-          ? ErrorDisplay(
+    Widget content;
+    if (isLoading) {
+      content = const LoadingIndicator(message: 'Loading compliance data...');
+    } else if (hasError) {
+      content = ErrorDisplay(
         error: error,
         onRetry: _initializeData,
-      )
-          : ResponsiveLayout(
-        mobileView: _buildMobileView(context),
-        tabletView: _buildTabletView(context),
-        desktopView: _buildDesktopView(context),
-      ),
+      );
+    } else {
+      // Determine the appropriate view based on screen size
+      final screenWidth = MediaQuery.of(context).size.width;
+      if (screenWidth >= 1200) {
+        content = _buildDesktopView(context);
+      } else if (screenWidth >= 600) {
+        content = _buildTabletView(context);
+      } else {
+        content = _buildMobileView(context);
+      }
+    }
+
+    return AppScaffoldWrapper(
+      title: 'Compliance Report',
+      backgroundColor: Colors.grey[100],
+      child: content,
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Generate and export report

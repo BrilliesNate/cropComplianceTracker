@@ -17,6 +17,12 @@ class DocumentProvider with ChangeNotifier {
   List<DocumentModel> _documents = [];
   List<CategoryModel> _categories = [];
   List<DocumentTypeModel> _documentTypes = [];
+
+  // New lookup maps for faster access
+  Map<String, DocumentTypeModel> _documentTypesMap = {};
+  Map<String, CategoryModel> _categoriesMap = {};
+  Map<String, DocumentModel> _documentsMap = {};
+
   bool _isLoading = false;
   String? _error;
 
@@ -27,14 +33,14 @@ class DocumentProvider with ChangeNotifier {
     );
   }
 
-  // Getters
+  // Getters - unchanged
   List<DocumentModel> get documents => _documents;
   List<CategoryModel> get categories => _categories;
   List<DocumentTypeModel> get documentTypes => _documentTypes;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Filtered document getters
+  // Filtered document getters - unchanged
   List<DocumentModel> getDocumentsByCategory(String categoryId) {
     return _documents.where((doc) => doc.categoryId == categoryId).toList();
   }
@@ -59,13 +65,13 @@ class DocumentProvider with ChangeNotifier {
     return _documents.where((doc) => doc.isExpired).toList();
   }
 
-  // Initialize data
+  // Initialize data - same method signature
   Future<void> initialize(String companyId) async {
     _setLoading(true);
 
     try {
-      await fetchCategories();
-      await fetchDocuments(companyId: companyId);
+      // Modified implementation to batch notifications
+      await _batchFetchAllData(companyId);
     } catch (e) {
       _error = 'Failed to initialize data: $e';
     } finally {
@@ -73,23 +79,91 @@ class DocumentProvider with ChangeNotifier {
     }
   }
 
-  // Fetch categories
-  Future<void> fetchCategories() async {
+  // New helper method for batch fetching
+  Future<void> _batchFetchAllData(String companyId) async {
     try {
-      final categories = await _firestoreService.getCategories();
-      _categories = categories;
-      notifyListeners();
+      // Fetch categories and all document types without multiple notifications
+      await _batchFetchCategories();
 
-      // Fetch document types for each category
-      for (var category in _categories) {
-        await fetchDocumentTypes(category.id);
-      }
+      // Fetch documents (this will reset _documents)
+      final documents = await _firestoreService.getDocuments(
+        companyId: companyId,
+      );
+      _documents = documents;
+
+      // Build lookup maps for faster access
+      _buildLookupMaps();
+
+      // Only notify once after all data is loaded
+      notifyListeners();
     } catch (e) {
-      _error = 'Failed to fetch categories: $e';
+      _error = 'Failed to fetch data: $e';
+      notifyListeners();
     }
   }
 
-  // Fetch document types
+  // Helper to batch fetch categories and document types
+  Future<void> _batchFetchCategories() async {
+    try {
+      // Fetch categories
+      final categories = await _firestoreService.getCategories();
+      _categories = categories;
+
+      // Prepare list of futures for parallel fetching
+      final futures = <Future>[];
+      for (var category in _categories) {
+        futures.add(_fetchDocTypesForCategory(category.id));
+      }
+
+      // Wait for all document types to be fetched
+      await Future.wait(futures);
+    } catch (e) {
+      _error = 'Failed to fetch categories and document types: $e';
+      throw e; // Re-throw to be caught by the calling method
+    }
+  }
+
+  // Helper to fetch document types for a category
+  Future<void> _fetchDocTypesForCategory(String categoryId) async {
+    try {
+      final documentTypes = await _firestoreService.getDocumentTypes(categoryId);
+
+      // Add new document types and update existing ones
+      for (var docType in documentTypes) {
+        final index = _documentTypes.indexWhere((dt) => dt.id == docType.id);
+        if (index >= 0) {
+          _documentTypes[index] = docType;
+        } else {
+          _documentTypes.add(docType);
+        }
+      }
+    } catch (e) {
+      print('Error fetching document types for category $categoryId: $e');
+    }
+  }
+
+  // Build lookup maps for faster access
+  void _buildLookupMaps() {
+    _categoriesMap = {for (var c in _categories) c.id: c};
+    _documentTypesMap = {for (var dt in _documentTypes) dt.id: dt};
+    _documentsMap = {for (var doc in _documents) doc.id: doc};
+  }
+
+  // Original methods kept for backward compatibility but optimized
+
+  // Fetch categories - kept but optimized
+  Future<void> fetchCategories() async {
+    try {
+      // Using batch fetch to avoid multiple notifications
+      await _batchFetchCategories();
+      notifyListeners(); // Only notify once at the end
+    } catch (e) {
+      _error = 'Failed to fetch categories: $e';
+      notifyListeners();
+    }
+  }
+
+  // Fetch document types - kept but optimized
   Future<void> fetchDocumentTypes(String categoryId) async {
     try {
       final documentTypes = await _firestoreService.getDocumentTypes(categoryId);
@@ -104,13 +178,19 @@ class DocumentProvider with ChangeNotifier {
         }
       }
 
-      notifyListeners();
+      // Update document types map
+      for (var docType in documentTypes) {
+        _documentTypesMap[docType.id] = docType;
+      }
+
+      notifyListeners(); // Single notification
     } catch (e) {
       _error = 'Failed to fetch document types: $e';
+      notifyListeners();
     }
   }
 
-  // Fetch documents
+  // Fetch documents - unchanged signature but optimized
   Future<void> fetchDocuments({String? companyId, String? categoryId}) async {
     _setLoading(true);
 
@@ -129,7 +209,12 @@ class DocumentProvider with ChangeNotifier {
         _documents = documents;
       }
 
-      notifyListeners();
+      // Update documents map
+      for (var doc in documents) {
+        _documentsMap[doc.id] = doc;
+      }
+
+      notifyListeners(); // Single notification
     } catch (e) {
       _error = 'Failed to fetch documents: $e';
     } finally {
@@ -137,22 +222,33 @@ class DocumentProvider with ChangeNotifier {
     }
   }
 
-  // Get document by ID
+  // Get document by ID - unchanged but optimized with lookup map
   Future<DocumentModel?> getDocument(String documentId) async {
+    // Check cache first
+    if (_documentsMap.containsKey(documentId)) {
+      return _documentsMap[documentId];
+    }
+
     try {
-      return await _firestoreService.getDocument(documentId);
+      final document = await _firestoreService.getDocument(documentId);
+      if (document != null) {
+        _documentsMap[documentId] = document; // Update cache
+      }
+      return document;
     } catch (e) {
       _error = 'Failed to get document: $e';
       return null;
     }
   }
 
+  // Rest of the methods are unchanged
+
   // Create document
   Future<DocumentModel?> createDocument({
     required UserModel? user,
     required String categoryId,
     required String documentTypeId,
-    required List<File> files,
+    required List<dynamic> files,
     Map<String, dynamic>? formData,
     DateTime? expiryDate,
     bool isNotApplicable = false,
@@ -172,6 +268,7 @@ class DocumentProvider with ChangeNotifier {
 
       if (document != null) {
         _documents.add(document);
+        _documentsMap[document.id] = document; // Update lookup map
         notifyListeners();
       }
 
@@ -208,8 +305,9 @@ class DocumentProvider with ChangeNotifier {
           final index = _documents.indexWhere((doc) => doc.id == documentId);
           if (index >= 0) {
             _documents[index] = updatedDoc;
-            notifyListeners();
           }
+          _documentsMap[documentId] = updatedDoc; // Update lookup map
+          notifyListeners();
         }
       }
 
@@ -244,8 +342,9 @@ class DocumentProvider with ChangeNotifier {
           final index = _documents.indexWhere((doc) => doc.id == documentId);
           if (index >= 0) {
             _documents[index] = updatedDoc;
-            notifyListeners();
           }
+          _documentsMap[documentId] = updatedDoc; // Update lookup map
+          notifyListeners();
         }
       }
 
@@ -278,8 +377,9 @@ class DocumentProvider with ChangeNotifier {
           final index = _documents.indexWhere((doc) => doc.id == documentId);
           if (index >= 0) {
             _documents[index] = updatedDoc;
-            notifyListeners();
           }
+          _documentsMap[documentId] = updatedDoc; // Update lookup map
+          notifyListeners();
         }
       }
 
@@ -310,5 +410,14 @@ class DocumentProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // New helper methods for direct lookups
+  DocumentTypeModel? getDocumentTypeById(String id) {
+    return _documentTypesMap[id];
+  }
+
+  CategoryModel? getCategoryById(String id) {
+    return _categoriesMap[id];
   }
 }

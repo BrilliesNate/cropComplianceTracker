@@ -6,9 +6,9 @@ import '../../models/category_model.dart';
 import '../../models/document_type_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/category_provider.dart';
-import '../shared/custom_app_bar.dart';
 import '../shared/loading_indicator.dart';
 import '../shared/error_display.dart';
+import '../shared/app_scaffold_wrapper.dart';
 
 class CategoryManagementScreen extends StatefulWidget {
   const CategoryManagementScreen({Key? key}) : super(key: key);
@@ -170,30 +170,24 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
     final categoryProvider = Provider.of<CategoryProvider>(context);
 
     if (!authProvider.isAdmin) {
-      return Scaffold(
-        appBar: const CustomAppBar(
-          title: 'Category Management',
-          showBackButton: true,
-        ),
-        body: const Center(
+      return AppScaffoldWrapper(
+        title: 'Category Management',
+        child: const Center(
           child: Text('You do not have permission to access this page'),
         ),
       );
     }
 
-    return Scaffold(
-      appBar: const CustomAppBar(
-        title: 'Category Management',
-        showBackButton: true,
-      ),
-      body: categoryProvider.isLoading || _isLoading
-          ? const LoadingIndicator(message: 'Loading categories...')
-          : categoryProvider.error != null || _error != null
-          ? ErrorDisplay(
+    Widget content;
+    if (categoryProvider.isLoading || _isLoading) {
+      content = const LoadingIndicator(message: 'Loading categories...');
+    } else if (categoryProvider.error != null || _error != null) {
+      content = ErrorDisplay(
         error: categoryProvider.error ?? _error ?? 'Unknown error',
         onRetry: _loadData,
-      )
-          : SingleChildScrollView(
+      );
+    } else {
+      content = SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,7 +289,13 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
             ],
           ],
         ),
-      ),
+      );
+    }
+
+    return AppScaffoldWrapper(
+      title: 'Category Management',
+      backgroundColor: Colors.grey[100],
+      child: content,
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:cropcompliance/views/admin/category_management_screen.dart';
 import 'package:cropcompliance/views/admin/user_management_screen.dart';
+import 'package:cropcompliance/views/audit_index/category_documents_screen.dart';
 import 'package:flutter/material.dart';
 import '../core/constants/route_constants.dart';
 import '../views/auth/login_screen.dart';
@@ -33,6 +34,14 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const UserManagementScreen());
       case RouteConstants.categoryManagement:
         return MaterialPageRoute(builder: (_) => const CategoryManagementScreen());
+      case RouteConstants.categoryDocuments:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => CategoryDocumentsScreen(
+            categoryId: args['categoryId'],
+            categoryName: args['categoryName'],
+          ),
+        );
       case RouteConstants.documentDetail:
         final args = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(

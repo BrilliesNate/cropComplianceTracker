@@ -2,28 +2,31 @@ import 'package:flutter/material.dart';
 
 class ThemeConstants {
   // Brand colors
-  static const Color primaryColor = Color(0xFF2E7D32); // Green for agriculture
-  static const Color accentColor = Color(0xFFFFA000);  // Amber for warnings/alerts
+  static const Color primaryColor = Color(0xFF43A047); // Refined modern green
+  static const Color accentColor = Color(0xFFFDC060);  // Amber for highlights
 
   // Light theme colors
-  static const Color lightBackgroundColor = Color(0xFFF5F5F5);
+  static const Color lightBackgroundColor = Color(0xFFF0F2F5); // Soft neutral background
   static const Color lightCardColor = Colors.white;
 
   // Dark theme colors
-  static const Color darkBackgroundColor = Color(0xFF121212);
-  static const Color darkCardColor = Color(0xFF1E1E1E);
-  static const Color darkAppBarColor = Color(0xFF1E1E1E);
+  static const Color darkBackgroundColor = Color(0xFF1A1A1A); // Softer dark
+  static const Color darkCardColor = Color(0xFF2C2C2C);       // Subtle elevation
+  static const Color darkAppBarColor = Color(0xFF2C2C2C);
 
-  // Status colors
-  static const Color pendingColor = Color(0xFFFFC107);
-  static const Color approvedColor = Color(0xFF4CAF50);
-  static const Color rejectedColor = Color(0xFFF44336);
-  static const Color expiredColor = Color(0xFFFF5722);
+  // Status colors (muted for clean dashboard)
+  static const Color pendingColor = Color(0xFFFFD54F);   // Soft amber
+  static const Color approvedColor = Color(0xFF81C784);  // Pastel green
+  static const Color rejectedColor = Color(0xFFE57373);  // Soft red
+  static const Color expiredColor = Color(0xFFFF8A65);   // Salmon
 
   // Text colors
-  static const Color primaryTextColor = Color(0xFF212121);
-  static const Color secondaryTextColor = Color(0xFF757575);
+  static const Color primaryTextColor = Color(0xFF1E1E1E);     // Nearly black for strong contrast
+  static const Color secondaryTextColor = Color(0xFF616161);   // Soft neutral gray
   static const Color lightTextColor = Colors.white;
+
+  // Accent / border / subtle elements
+  static const Color neutralAccent = Color(0xFF90A4AE); // Blue-grey for subtle elements
 
   // Spacing
   static const double defaultPadding = 16.0;
