@@ -1456,7 +1456,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       arguments: {
                         'categoryId': selectedDocument?.categoryId,
                         'documentTypeId': selectedDocument?.documentTypeId,
-                        'documentId': selectedDocument?.id,
+                        'existingDocumentId': selectedDocument?.id,
                       },
                     );
                   },

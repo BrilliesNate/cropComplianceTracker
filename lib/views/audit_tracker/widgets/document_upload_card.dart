@@ -12,11 +12,13 @@ import '../../../models/document_type_model.dart';
 class DocumentUploadCard extends StatefulWidget {
   final String categoryId;
   final DocumentTypeModel documentType;
+  final String? existingDocumentId;
 
   const DocumentUploadCard({
     Key? key,
     required this.categoryId,
     required this.documentType,
+    this.existingDocumentId, // For resubmission
   }) : super(key: key);
 
   @override
@@ -160,6 +162,8 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
   }
 
   Future<void> _uploadDocuments() async {
+    print("DEBUG: _uploadDocuments called");
+    print("DEBUG: existingDocumentId: ${widget.existingDocumentId}");
     if (_uploadItems.isEmpty) {
       _showToast('Please select files to upload', isError: true);
       return;
@@ -183,122 +187,162 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
 
     try {
       if (authProvider.currentUser != null) {
-        int successCount = 0;
-        int failCount = 0;
-        List<String> failedFiles = [];
+        // Determine if this is a new document or an update
+        if (widget.existingDocumentId != null) {
+          // Update existing document (resubmission)
+          print("DEBUG: Resubmitting document: ${widget.existingDocumentId}");
 
-        // Upload each document individually with its own expiry date
-        for (var item in _uploadItems) {
-          try {
-            final filename = item.file.path.split('/').last;
-
+          // Prepare files for upload based on platform
+          List<dynamic> filesToUpload = [];
+          for (var item in _uploadItems) {
             if (kIsWeb) {
-              // For web
-              final webFile = {
-                'name': item.file.path,
-                'bytes': item.bytes,
-              };
-
-              print("DEBUG: Uploading web file: ${item.file.path} with expiry date: ${item.expiryDate}");
-
-              final document = await documentProvider.createDocument(
-                user: authProvider.currentUser!,
-                categoryId: widget.categoryId,
-                documentTypeId: widget.documentType.id,
-                files: [webFile], // Single file with its own expiry date
-                expiryDate: item.expiryDate, // Individual expiry date for this file
-              );
-
-              if (document != null) {
-                print("DEBUG: Document created with ID: ${document.id}");
-                print("DEBUG: Document expiryDate: ${document.expiryDate}");
-                successCount++;
-
-                // Show individual success toast
-                if (mounted) {
-                  _showToast("Successfully uploaded: $filename", isError: false);
-                }
-
-                // Handle signature requirement for the last document
-                if (mounted && item == _uploadItems.last && widget.documentType.requiresSignature) {
-                  Navigator.of(context).pushNamed(
-                    RouteConstants.documentDetail,
-                    arguments: {'documentId': document.id},
-                  );
-                }
-              } else {
-                // Document is null (upload failed)
-                failCount++;
-                failedFiles.add(filename);
-                if (mounted) {
-                  _showToast("Failed to upload: $filename", isError: true);
-                }
+              // For web platform
+              if (item.bytes != null) {
+                filesToUpload.add({
+                  'name': item.file.path,
+                  'bytes': item.bytes,
+                });
               }
             } else {
               // For mobile/desktop
-              print("DEBUG: Uploading file: ${item.file.path} with expiry date: ${item.expiryDate}");
-
-              final document = await documentProvider.createDocument(
-                user: authProvider.currentUser!,
-                categoryId: widget.categoryId,
-                documentTypeId: widget.documentType.id,
-                files: [item.file], // Single file with its own expiry date
-                expiryDate: item.expiryDate, // Individual expiry date for this file
-              );
-
-              if (document != null) {
-                print("DEBUG: Document created with ID: ${document.id}");
-                print("DEBUG: Document expiryDate: ${document.expiryDate}");
-                successCount++;
-
-                // Show individual success toast
-                if (mounted) {
-                  _showToast("Successfully uploaded: $filename", isError: false);
-                }
-
-                // Handle signature requirement for the last document
-                if (mounted && item == _uploadItems.last && widget.documentType.requiresSignature) {
-                  Navigator.of(context).pushNamed(
-                    RouteConstants.documentDetail,
-                    arguments: {'documentId': document.id},
-                  );
-                }
-              } else {
-                // Document is null (upload failed)
-                failCount++;
-                failedFiles.add(filename);
-                if (mounted) {
-                  _showToast("Failed to upload: $filename", isError: true);
-                }
-              }
-            }
-          } catch (e) {
-            // Handle individual file upload error
-            final filename = item.file.path.split('/').last;
-            print("ERROR uploading $filename: $e");
-            failCount++;
-            failedFiles.add(filename);
-            if (mounted) {
-              _showToast("Error uploading: $filename", isError: true);
+              filesToUpload.add(item.file);
             }
           }
-        }
 
-        // After all uploads complete, show summary toast and possibly pop the screen
-        if (mounted) {
-          if (successCount > 0 && failCount == 0) {
-            _showToast("All documents uploaded successfully!", isError: false);
-            // Only pop if all uploads were successful
+          final document = await documentProvider.updateDocumentFiles(
+            documentId: widget.existingDocumentId!,
+            files: filesToUpload,
+            user: authProvider.currentUser!,
+            expiryDate: widget.documentType.hasExpiryDate ? _uploadItems.first.expiryDate : null,
+          );
+
+          if (document != null && mounted) {
+            _showToast("Document successfully resubmitted", isError: false);
             Navigator.of(context).pop();
-          } else if (successCount > 0 && failCount > 0) {
-            _showToast("$successCount uploaded, $failCount failed", isError: true);
-            // If mixed results and all successful ones don't need signatures, pop
-            if (!widget.documentType.requiresSignature) {
-              Navigator.of(context).pop();
+          } else if (mounted) {
+            _showToast("Failed to resubmit document", isError: true);
+          }
+        } else {
+          // Create new document
+          print("DEBUG: Creating new document");
+
+          int successCount = 0;
+          int failCount = 0;
+          List<String> failedFiles = [];
+
+          // Upload each document individually with its own expiry date
+          for (var item in _uploadItems) {
+            try {
+              final filename = item.file.path.split('/').last;
+
+              if (kIsWeb) {
+                // For web
+                final webFile = {
+                  'name': item.file.path,
+                  'bytes': item.bytes,
+                };
+
+                print("DEBUG: Uploading web file: ${item.file.path} with expiry date: ${item.expiryDate}");
+
+                final document = await documentProvider.createDocument(
+                  user: authProvider.currentUser!,
+                  categoryId: widget.categoryId,
+                  documentTypeId: widget.documentType.id,
+                  files: [webFile], // Single file with its own expiry date
+                  expiryDate: item.expiryDate, // Individual expiry date for this file
+                );
+
+                if (document != null) {
+                  print("DEBUG: Document created with ID: ${document.id}");
+                  print("DEBUG: Document expiryDate: ${document.expiryDate}");
+                  successCount++;
+
+                  // Show individual success toast
+                  if (mounted) {
+                    _showToast("Successfully uploaded: $filename", isError: false);
+                  }
+
+                  // Handle signature requirement for the last document
+                  if (mounted && item == _uploadItems.last && widget.documentType.requiresSignature) {
+                    Navigator.of(context).pushNamed(
+                      RouteConstants.documentDetail,
+                      arguments: {'documentId': document.id},
+                    );
+                  }
+                } else {
+                  // Document is null (upload failed)
+                  failCount++;
+                  failedFiles.add(filename);
+                  if (mounted) {
+                    _showToast("Failed to upload: $filename", isError: true);
+                  }
+                }
+              } else {
+                // For mobile/desktop
+                print("DEBUG: Uploading file: ${item.file.path} with expiry date: ${item.expiryDate}");
+
+                final document = await documentProvider.createDocument(
+                  user: authProvider.currentUser!,
+                  categoryId: widget.categoryId,
+                  documentTypeId: widget.documentType.id,
+                  files: [item.file], // Single file with its own expiry date
+                  expiryDate: item.expiryDate, // Individual expiry date for this file
+                );
+
+                if (document != null) {
+                  print("DEBUG: Document created with ID: ${document.id}");
+                  print("DEBUG: Document expiryDate: ${document.expiryDate}");
+                  successCount++;
+
+                  // Show individual success toast
+                  if (mounted) {
+                    _showToast("Successfully uploaded: $filename", isError: false);
+                  }
+
+                  // Handle signature requirement for the last document
+                  if (mounted && item == _uploadItems.last && widget.documentType.requiresSignature) {
+                    Navigator.of(context).pushNamed(
+                      RouteConstants.documentDetail,
+                      arguments: {'documentId': document.id},
+                    );
+                  }
+                } else {
+                  // Document is null (upload failed)
+                  failCount++;
+                  failedFiles.add(filename);
+                  if (mounted) {
+                    _showToast("Failed to upload: $filename", isError: true);
+                  }
+                }
+              }
+            } catch (e) {
+              // Handle individual file upload error
+              final filename = item.file.path.split('/').last;
+              print("ERROR uploading $filename: $e");
+              failCount++;
+              failedFiles.add(filename);
+              if (mounted) {
+                _showToast("Error uploading: $filename", isError: true);
+              }
             }
-          } else if (successCount == 0 && failCount > 0) {
-            _showToast("All uploads failed", isError: true);
-            // Don't pop on complete failure
+          }
+
+          // After all uploads complete, show summary toast and possibly pop the screen
+          if (mounted) {
+            if (successCount > 0 && failCount == 0) {
+              _showToast("All documents uploaded successfully!", isError: false);
+              // Only pop if all uploads were successful
+              Navigator.of(context).pop();
+            } else if (successCount > 0 && failCount > 0) {
+              _showToast("$successCount uploaded, $failCount failed", isError: true);
+              // If mixed results and all successful ones don't need signatures, pop
+              if (!widget.documentType.requiresSignature) {
+                Navigator.of(context).pop();
+              }
+            } else if (successCount == 0 && failCount > 0) {
+              _showToast("All uploads failed", isError: true);
+              // Don't pop on complete failure
+            }
           }
         }
       }

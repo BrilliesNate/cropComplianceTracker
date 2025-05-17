@@ -1,5 +1,8 @@
 import 'dart:io';
+import 'package:cropcompliance/providers/auth_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/document_model.dart';
 import '../models/document_type_model.dart';
 import '../models/category_model.dart';
@@ -74,6 +77,93 @@ class DocumentProvider with ChangeNotifier {
       await _batchFetchAllData(companyId);
     } catch (e) {
       _error = 'Failed to initialize data: $e';
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<DocumentModel?> updateDocumentFiles({
+    required String documentId,
+    required List<dynamic> files,
+    required UserModel user, // Pass the user directly
+    DateTime? expiryDate,
+  }) async {
+    _setLoading(true);
+
+    try {
+      // Get the existing document
+      final document = await _firestoreService.getDocument(documentId);
+      if (document == null) {
+        _error = 'Document not found';
+        return null;
+      }
+
+      // Upload new files
+      List<String> fileUrls = [];
+      for (var file in files) {
+        String? fileUrl;
+
+        if (kIsWeb) {
+          // Handle web file upload
+          if (file is Map<String, dynamic> && file.containsKey('bytes')) {
+            fileUrl = await _storageService.uploadFile(
+              file,
+              user.companyId,
+              documentId,
+              file['name'] ?? 'file.pdf',
+            );
+          }
+        } else {
+          // Handle mobile/desktop file upload
+          if (file is File) {
+            final fileName = file.path.split('/').last;
+            fileUrl = await _storageService.uploadFile(
+              file,
+              user.companyId,
+              documentId,
+              fileName,
+            );
+          }
+        }
+
+        if (fileUrl != null) {
+          fileUrls.add(fileUrl);
+        }
+      }
+
+      // Update the document
+      final updatedDocument = document.copyWith(
+        fileUrls: fileUrls,
+        status: DocumentStatus.PENDING,
+        updatedAt: DateTime.now(),
+        expiryDate: expiryDate ?? document.expiryDate,
+      );
+
+      final success = await _firestoreService.updateDocument(updatedDocument);
+
+      if (success) {
+        // Add comment about resubmission
+        await _documentService.addComment(
+          documentId,
+          "Document resubmitted with updated files.",
+          user,
+        );
+
+        // Update local document list
+        final index = _documents.indexWhere((doc) => doc.id == documentId);
+        if (index >= 0) {
+          _documents[index] = updatedDocument;
+        }
+
+        notifyListeners();
+        return updatedDocument;
+      } else {
+        _error = 'Failed to update document';
+        return null;
+      }
+    } catch (e) {
+      _error = 'Error updating document: $e';
+      return null;
     } finally {
       _setLoading(false);
     }

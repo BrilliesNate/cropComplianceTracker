@@ -19,7 +19,7 @@ class DocumentService {
   DocumentService({
     required FirestoreService firestoreService,
     required StorageService storageService,
-  }) : _firestoreService = firestoreService,
+  })  : _firestoreService = firestoreService,
         _storageService = storageService;
 
   // In document_service.dart, update the createDocument method to handle web file uploads
@@ -52,7 +52,8 @@ class DocumentService {
       }
 
       // Get document type
-      final documentType = await _firestoreService.getDocumentType(documentTypeId);
+      final documentType =
+          await _firestoreService.getDocumentType(documentTypeId);
       if (documentType == null) {
         print("DEBUG: Document type not found: $documentTypeId");
         return null;
@@ -85,7 +86,8 @@ class DocumentService {
         formData: formData ?? {},
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        expiryDate: expiryDate, // Ensure this is set correctly
+        expiryDate: expiryDate,
+        // Ensure this is set correctly
         isNotApplicable: isNotApplicable,
         signatures: [],
         comments: [],
@@ -94,8 +96,71 @@ class DocumentService {
       // Upload files if needed
       List<String> fileUrls = [];
       if (!isNotApplicable && documentType.isUploadable && files.isNotEmpty) {
-        // File upload logic...
-        // (Rest of your existing upload code)
+        print("DEBUG: Beginning file upload process for ${files.length} files");
+
+        try {
+          // Process each file
+          for (int i = 0; i < files.length; i++) {
+            final file = files[i];
+
+            if (kIsWeb) {
+              // For web platform
+              if (file is Map<String, dynamic> && file.containsKey('bytes')) {
+                final fileName = file['name'] ??
+                    'file_${DateTime.now().millisecondsSinceEpoch}.pdf';
+                print(
+                    "DEBUG: Uploading web file ${i + 1}/${files.length}: $fileName");
+
+                final fileUrl = await _storageService.uploadFile(
+                  file,
+                  user.companyId,
+                  docId,
+                  fileName,
+                );
+
+                if (fileUrl != null) {
+                  print("DEBUG: File uploaded successfully. URL: $fileUrl");
+                  fileUrls.add(fileUrl);
+                } else {
+                  print("DEBUG: File upload failed for file $fileName");
+                }
+              } else {
+                print(
+                    "DEBUG: Invalid file format for web upload: ${file.runtimeType}");
+              }
+            } else {
+              // For mobile/desktop platforms
+              if (file is File) {
+                final fileName = file.path.split('/').last;
+                print(
+                    "DEBUG: Uploading file ${i + 1}/${files.length}: $fileName");
+
+                final fileUrl = await _storageService.uploadFile(
+                  file,
+                  user.companyId,
+                  docId,
+                  fileName,
+                );
+
+                if (fileUrl != null) {
+                  print("DEBUG: File uploaded successfully. URL: $fileUrl");
+                  fileUrls.add(fileUrl);
+                } else {
+                  print("DEBUG: File upload failed for file $fileName");
+                }
+              } else {
+                print(
+                    "DEBUG: Invalid file format for mobile/desktop upload: ${file.runtimeType}");
+              }
+            }
+          }
+
+          print(
+              "DEBUG: File upload process completed. Added ${fileUrls.length} URLs");
+        } catch (e) {
+          print("DEBUG: Error during file upload process: $e");
+          print("DEBUG: Stack trace: ${StackTrace.current}");
+        }
       }
 
       // Update document with file URLs - CAREFUL HERE
@@ -128,7 +193,8 @@ class DocumentService {
 
       // Save document to Firestore
       print("DEBUG: Saving document to Firestore...");
-      final savedDocId = await _firestoreService.addDocument(updatedDocument, firestoreData);
+      final savedDocId =
+          await _firestoreService.addDocument(updatedDocument, firestoreData);
       print("DEBUG: Document saved to Firestore. ID: $savedDocId");
 
       if (savedDocId != null) {
@@ -146,11 +212,11 @@ class DocumentService {
   }
 
   Future<bool> updateDocumentStatus(
-      String documentId,
-      DocumentStatus status,
-      String? comment,
-      UserModel user,
-      ) async {
+    String documentId,
+    DocumentStatus status,
+    String? comment,
+    UserModel user,
+  ) async {
     try {
       print("DEBUG: updateDocumentStatus called for document: $documentId");
       print("DEBUG: New status: ${status.toString()}");
@@ -197,10 +263,10 @@ class DocumentService {
   }
 
   Future<bool> addSignature(
-      String documentId,
-      File signatureFile,
-      UserModel user,
-      ) async {
+    String documentId,
+    File signatureFile,
+    UserModel user,
+  ) async {
     try {
       print("DEBUG: addSignature called for document: $documentId");
 
@@ -244,10 +310,10 @@ class DocumentService {
   }
 
   Future<bool> addComment(
-      String documentId,
-      String commentText,
-      UserModel user,
-      ) async {
+    String documentId,
+    String commentText,
+    UserModel user,
+  ) async {
     try {
       print("DEBUG: addComment called for document: $documentId");
       print("DEBUG: Comment text: $commentText");
@@ -274,7 +340,8 @@ class DocumentService {
 
   Future<double> calculateCompliancePercentage(String companyId) async {
     try {
-      final documents = await _firestoreService.getDocuments(companyId: companyId);
+      final documents =
+          await _firestoreService.getDocuments(companyId: companyId);
 
       if (documents.isEmpty) {
         return 0.0;
@@ -293,4 +360,139 @@ class DocumentService {
       return 0.0;
     }
   }
+
+  Future<DocumentModel?> updateDocumentFiles({
+    required String documentId,
+    required List<dynamic> files,
+    required UserModel user,
+    DateTime? expiryDate,
+  }) async {
+    try {
+      print("DEBUG: updateDocumentFiles called for document: $documentId");
+      print("DEBUG: files count: ${files.length}");
+      if (expiryDate != null) {
+        print("DEBUG: Expiry date: $expiryDate");
+      }
+
+      // Get the existing document
+      final document = await _firestoreService.getDocument(documentId);
+      if (document == null) {
+        print("DEBUG: Document not found: $documentId");
+        return null;
+      }
+
+      // Get document type
+      final documentType = await _firestoreService.getDocumentType(document.documentTypeId);
+      if (documentType == null) {
+        print("DEBUG: Document type not found: ${document.documentTypeId}");
+        return null;
+      }
+
+      // Upload new files
+      List<String> fileUrls = [];
+      if (documentType.isUploadable && files.isNotEmpty) {
+        print("DEBUG: Beginning file upload process for ${files.length} files");
+
+        try {
+          // Process each file
+          for (int i = 0; i < files.length; i++) {
+            final file = files[i];
+
+            if (kIsWeb) {
+              // For web platform
+              if (file is Map<String, dynamic> && file.containsKey('bytes')) {
+                final fileName = file['name'] ?? 'file_${DateTime.now().millisecondsSinceEpoch}.pdf';
+                print("DEBUG: Uploading web file ${i+1}/${files.length}: $fileName");
+
+                final fileUrl = await _storageService.uploadFile(
+                  file,
+                  user.companyId,
+                  documentId, // Use the existing document ID
+                  fileName,
+                );
+
+                if (fileUrl != null) {
+                  print("DEBUG: File uploaded successfully. URL: $fileUrl");
+                  fileUrls.add(fileUrl);
+                } else {
+                  print("DEBUG: File upload failed for file $fileName");
+                }
+              } else {
+                print("DEBUG: Invalid file format for web upload: ${file.runtimeType}");
+              }
+            } else {
+              // For mobile/desktop platforms
+              if (file is File) {
+                final fileName = file.path.split('/').last;
+                print("DEBUG: Uploading file ${i+1}/${files.length}: $fileName");
+
+                final fileUrl = await _storageService.uploadFile(
+                  file,
+                  user.companyId,
+                  documentId, // Use the existing document ID
+                  fileName,
+                );
+
+                if (fileUrl != null) {
+                  print("DEBUG: File uploaded successfully. URL: $fileUrl");
+                  fileUrls.add(fileUrl);
+                } else {
+                  print("DEBUG: File upload failed for file $fileName");
+                }
+              } else {
+                print("DEBUG: Invalid file format for mobile/desktop upload: ${file.runtimeType}");
+              }
+            }
+          }
+
+          print("DEBUG: File upload process completed. Added ${fileUrls.length} URLs");
+        } catch (e) {
+          print("DEBUG: Error during file upload process: $e");
+          print("DEBUG: Stack trace: ${StackTrace.current}");
+          return null;
+        }
+      }
+
+      // Update the document with new files and status
+      final updatedDocument = document.copyWith(
+        fileUrls: fileUrls,
+        status: DocumentStatus.PENDING, // Set status back to pending
+        updatedAt: DateTime.now(),
+        expiryDate: expiryDate ?? document.expiryDate, // Keep existing expiry date if not provided
+      );
+
+      print("DEBUG: Updating document with new file URLs: ${fileUrls.length}");
+      print("DEBUG: Document's new fileUrls: ${updatedDocument.fileUrls}");
+      print("DEBUG: Document's expiryDate: ${updatedDocument.expiryDate}");
+
+      // Save updated document to Firestore
+      final result = await _firestoreService.updateDocument(updatedDocument);
+      print("DEBUG: Document update result: $result");
+
+      if (result) {
+        // Add a system comment about resubmission
+        final commentModel = CommentModel(
+          id: _uuid.v4(),
+          documentId: documentId,
+          userId: user.id,
+          userName: user.name,
+          text: "Document resubmitted with updated files.",
+          createdAt: DateTime.now(),
+        );
+
+        await _firestoreService.addComment(commentModel);
+        print("DEBUG: Resubmission comment added");
+
+        return updatedDocument;
+      } else {
+        print("DEBUG: Document update failed");
+        return null;
+      }
+    } catch (e) {
+      print('ERROR updating document files: $e');
+      print('ERROR trace: ${e.toString()}');
+      return null;
+    }
+  }
+
 }

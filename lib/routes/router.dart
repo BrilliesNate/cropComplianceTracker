@@ -50,10 +50,12 @@ class AppRouter {
         );
       case RouteConstants.documentUpload:
         final args = settings.arguments as Map<String, dynamic>;
+        print("DEBUG Router: documentUpload arguments: $args");
         return MaterialPageRoute(
           builder: (_) => DocumentUploadScreen(
             categoryId: args['categoryId'],
             documentTypeId: args['documentTypeId'],
+            existingDocumentId: args['existingDocumentId'],
           ),
         );
 

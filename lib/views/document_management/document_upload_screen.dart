@@ -10,11 +10,13 @@ import '../audit_tracker/widgets/document_upload_card.dart';
 class DocumentUploadScreen extends StatefulWidget {
   final String categoryId;
   final String documentTypeId;
+  final String? existingDocumentId;
 
   const DocumentUploadScreen({
     Key? key,
     required this.categoryId,
     required this.documentTypeId,
+    this.existingDocumentId,
   }) : super(key: key);
 
   @override
@@ -25,6 +27,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
   @override
   void initState() {
     super.initState();
+    print("DEBUG: DocumentUploadScreen initialized with existingDocumentId: ${widget.existingDocumentId}");
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
     });
@@ -99,6 +102,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
         child: DocumentUploadCard(
           categoryId: widget.categoryId,
           documentType: documentType,
+          existingDocumentId: widget.existingDocumentId,
         ),
       ),
     );

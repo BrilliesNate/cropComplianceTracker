@@ -761,7 +761,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                     arguments: {
                       'categoryId': document.categoryId,
                       'documentTypeId': document.documentTypeId,
-                      'documentId': document.id,
+                      'existingDocumentId': document.id,
                     },
                   );
                 },
@@ -904,7 +904,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                         arguments: {
                           'categoryId': document.categoryId,
                           'documentTypeId': document.documentTypeId,
-                          'documentId': document.id,
+                          'existingDocumentId': document.id,
                         },
                       );
                     },
