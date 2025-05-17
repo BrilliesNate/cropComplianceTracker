@@ -1,0 +1,69 @@
+{
+    "documentTypeId": "continuousImprovementPlan",
+    "name": "Continuous Improvement Plan",
+    "fields": [
+      {
+        "id": "keyAreasSection",
+        "type": "section",
+        "label": "Key Areas for Improvement"
+      },
+      {
+        "id": "improvementAreas",
+        "type": "repeatGroup",
+        "label": "Improvement Areas",
+        "components": [
+          {
+            "id": "keyArea",
+            "type": "text",
+            "label": "Key Area"
+          },
+          {
+            "id": "details",
+            "type": "textarea",
+            "label": "Details",
+            "rows": 2
+          }
+        ]
+      },
+      {
+        "id": "actionsSection",
+        "type": "section",
+        "label": "Actions for Improvement"
+      },
+      {
+        "id": "actionPlan",
+        "type": "repeatGroup",
+        "label": "Improvement Actions",
+        "components": [
+          {
+            "id": "action",
+            "type": "text",
+            "label": "Action"
+          },
+          {
+            "id": "steps",
+            "type": "textarea",
+            "label": "Steps/Details",
+            "rows": 2
+          },
+          {
+            "id": "timeline",
+            "type": "text",
+            "label": "Timeline (MM/YYYY)"
+          },
+          {
+            "id": "responsibleParty",
+            "type": "text",
+            "label": "Responsible Party"
+          }
+        ]
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Authorized Signature",
+        "required": true
+      }
+    ]
+  }
+  

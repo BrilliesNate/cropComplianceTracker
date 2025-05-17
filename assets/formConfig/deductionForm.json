@@ -1,0 +1,62 @@
+{
+    "documentTypeId": "deductionForm",
+    "name": "Deduction Form",
+    "fields": [
+      {
+        "id": "employeeName",
+        "type": "text",
+        "label": "Employee Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "idNumber",
+        "type": "text",
+        "label": "ID Number",
+        "required": true
+      },
+      {
+        "id": "deductionReason",
+        "type": "textarea",
+        "label": "Reason for Deduction",
+        "required": true,
+        "rows": 2
+      },
+      {
+        "id": "deductionAmount",
+        "type": "text",
+        "label": "Deduction Amount (ZAR)",
+        "required": true
+      },
+      {
+        "id": "installments",
+        "type": "text",
+        "label": "Number of Installments",
+        "required": true
+      },
+      {
+        "id": "authorization",
+        "type": "paragraph",
+        "label": "Authorization Statement",
+        "description": "I hereby give permission for the above deduction to be made from my wages in the number of installments specified."
+      },
+      {
+        "id": "employeeSignature",
+        "type": "signature",
+        "label": "Employee Signature",
+        "required": true
+      },
+      {
+        "id": "dateSigned",
+        "type": "date",
+        "label": "Date Signed",
+        "required": true
+      }
+    ]
+  }
+  

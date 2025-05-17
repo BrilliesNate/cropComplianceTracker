@@ -1,0 +1,66 @@
+{
+    "documentTypeId": "transportVehicleInspectionForm",
+    "name": "Transport Vehicle Inspection Form",
+    "fields": [
+      {
+        "id": "inspectionDate",
+        "type": "date",
+        "label": "Inspection Date",
+        "required": true
+      },
+      {
+        "id": "inspectorName",
+        "type": "text",
+        "label": "Inspector Name",
+        "required": true
+      },
+      {
+        "id": "vehicleId",
+        "type": "text",
+        "label": "Vehicle ID / Registration",
+        "required": true
+      },
+      {
+        "id": "farmName",
+        "type": "text",
+        "label": "Farm Name",
+        "required": true
+      },
+      {
+        "id": "inspectionChecklist",
+        "type": "table",
+        "label": "Inspection Items",
+        "columns": [
+          { "id": "item", "type": "text", "label": "Item" },
+          { "id": "status", "type": "dropdown", "label": "Condition", "options": ["✓", "X", "N/A"] },
+          { "id": "comments", "type": "text", "label": "Comments" }
+        ],
+        "defaultRows": [
+          { "item": "Lights (headlights, taillights, brake lights)" },
+          { "item": "Brakes and handbrake" },
+          { "item": "Tires (condition, pressure, wear)" },
+          { "item": "Windshield wipers" },
+          { "item": "Seatbelts" },
+          { "item": "Mirrors" },
+          { "item": "Indicators and hazard lights" },
+          { "item": "Horn" },
+          { "item": "Cleanliness of interior and exterior" },
+          { "item": "Driver license displayed or available" }
+        ]
+      },
+      {
+        "id": "fitForTransport",
+        "type": "radio",
+        "label": "Is the vehicle fit for transporting workers?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Inspector Signature",
+        "required": true
+      }
+    ]
+  }
+  

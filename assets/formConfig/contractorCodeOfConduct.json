@@ -1,0 +1,49 @@
+{
+    "documentTypeId": "contractorCodeOfConduct",
+    "name": "Labour Contractor / Service Provider Code of Conduct",
+    "fields": [
+      {
+        "id": "contractorCompanyName",
+        "type": "text",
+        "label": "Contractor/Service Provider Company Name",
+        "required": true
+      },
+      {
+        "id": "representativeName",
+        "type": "text",
+        "label": "Company Representative Name",
+        "required": true
+      },
+      {
+        "id": "codeAcknowledgment",
+        "type": "checkbox",
+        "label": "I hereby confirm that our organization complies with the following principles:",
+        "options": [
+          "We do not use child labour",
+          "We do not use forced labour or any form of modern slavery",
+          "We support the right to freedom of association and collective bargaining",
+          "We ensure fair and safe working conditions",
+          "We do not discriminate in any form",
+          "We pay employees fairly, on time, and in line with legal requirements",
+          "We provide employees with adequate rest and working hours",
+          "We comply with all legal obligations and industry standards",
+          "We will submit to audits upon request by the client",
+          "We report any incidents or violations immediately"
+        ],
+        "required": true
+      },
+      {
+        "id": "dateSigned",
+        "type": "date",
+        "label": "Date Signed",
+        "required": true
+      },
+      {
+        "id": "companyStamp",
+        "type": "signature",
+        "label": "Signature / Stamp",
+        "required": true
+      }
+    ]
+  }
+  

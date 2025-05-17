@@ -1,0 +1,74 @@
+{
+    "documentTypeId": "chiefSafetyOfficer16_2",
+    "name": "Appointment of Chief Safety Officer 16(2)",
+    "fields": [
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "position",
+        "type": "text",
+        "label": "Position",
+        "defaultValue": "Chief Safety Officer",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Ensure compliance with the Occupational Health and Safety Act 85 of 1993",
+          "Support CEO/Employer (16(1) appointee) in legal duties",
+          "Conduct and review risk assessments",
+          "Implement health and safety policies",
+          "Monitor corrective and preventive actions",
+          "Oversee safety inspections and incident investigations",
+          "Coordinate safety training for employees",
+          "Ensure emergency preparedness (first aid, fire, evacuation)",
+          "Liaise with inspectors and ethical auditors",
+          "Lead or participate in the Health and Safety Committee",
+          "Maintain safety documentation and compliance records"
+        ]
+      },
+      {
+        "id": "appointeeSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "appointeeDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "authorizedByName",
+        "type": "text",
+        "label": "Authorized By (Name)",
+        "required": true
+      },
+      {
+        "id": "authorizedByPosition",
+        "type": "text",
+        "label": "Authorized By (Position)",
+        "required": true
+      },
+      {
+        "id": "authorizedSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "authorizedDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

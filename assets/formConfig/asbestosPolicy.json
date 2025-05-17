@@ -1,0 +1,98 @@
+{
+    "documentTypeId": "asbestosPolicy",
+    "name": "Asbestos Policy and Procedure",
+    "fields": [
+      {
+        "id": "overview",
+        "type": "paragraph",
+        "label": "Policy Overview",
+        "description": "Outlines procedures for managing asbestos risks, aligned with South African law and WIETA/SIZA standards."
+      },
+      {
+        "id": "objectives",
+        "type": "checkbox",
+        "label": "Objectives",
+        "options": [
+          "Prevent asbestos exposure",
+          "Ensure compliance with relevant laws",
+          "Protect workplace health and safety",
+          "Provide asbestos awareness training"
+        ]
+      },
+      {
+        "id": "legalCompliance",
+        "type": "checkbox",
+        "label": "Legal and Regulatory Compliance",
+        "options": [
+          "OHS Act (Act 85 of 1993)",
+          "Hazardous Chemical Substances Regulations",
+          "Asbestos Abatement Regulations",
+          "WIETA/SIZA standards"
+        ]
+      },
+      {
+        "id": "riskManagement",
+        "type": "checkbox",
+        "label": "Asbestos Risk Management",
+        "options": [
+          "Conduct asbestos surveys and maintain register",
+          "Mark ACMs clearly",
+          "Annual monitoring of ACMs"
+        ]
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Management ensures training, PPE, compliance",
+          "Employees report issues and follow safety procedures",
+          "Only licensed contractors handle asbestos"
+        ]
+      },
+      {
+        "id": "handlingProcedure",
+        "type": "checkbox",
+        "label": "Asbestos Handling Procedures",
+        "options": [
+          "Surveys done by licensed assessor",
+          "Use of PPE: respirators, gloves, protective clothing",
+          "Ventilation and filtration systems in place",
+          "Only professionals remove ACMs"
+        ]
+      },
+      {
+        "id": "emergencyResponse",
+        "type": "paragraph",
+        "label": "Emergency Response",
+        "description": "Disturbances of ACMs must be reported immediately; area must be secured and handled by licensed contractors."
+      },
+      {
+        "id": "disposal",
+        "type": "checkbox",
+        "label": "Asbestos Disposal",
+        "options": [
+          "Disposed of by licensed contractors",
+          "At certified waste sites",
+          "Document disposal procedures"
+        ]
+      },
+      {
+        "id": "training",
+        "type": "checkbox",
+        "label": "Training and Awareness",
+        "options": [
+          "Provided to those working near ACMs",
+          "Covers PPE, handling, emergency procedures",
+          "Signed acknowledgement required after training"
+        ]
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Monitoring and Review",
+        "description": "Policy reviewed annually or when legislation or risk conditions change."
+      }
+    ]
+  }
+  

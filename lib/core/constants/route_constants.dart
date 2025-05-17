@@ -19,4 +19,6 @@ class RouteConstants {
   // Admin routes
   static const String userManagement = '/user-management';
   static const String categoryManagement = '/category-management';
+  static const String formConfigManagement = '/form-config-management';
+  static const String formConfigEditor = '/form-config-editor';
 }

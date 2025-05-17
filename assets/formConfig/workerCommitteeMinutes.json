@@ -1,0 +1,74 @@
+{
+    "documentTypeId": "workerCommitteeMinutes",
+    "name": "Worker Committee Meeting Minutes",
+    "fields": [
+      {
+        "id": "meetingDate",
+        "type": "date",
+        "label": "Meeting Date",
+        "required": true
+      },
+      {
+        "id": "location",
+        "type": "text",
+        "label": "Meeting Location",
+        "required": true
+      },
+      {
+        "id": "facilitator",
+        "type": "text",
+        "label": "Facilitator/Chairperson",
+        "required": true
+      },
+      {
+        "id": "attendees",
+        "type": "textarea",
+        "label": "Names of Attendees",
+        "placeholder": "List all committee members present",
+        "required": true,
+        "rows": 2
+      },
+      {
+        "id": "agendaItems",
+        "type": "repeatGroup",
+        "label": "Agenda Items",
+        "components": [
+          {
+            "id": "item",
+            "type": "text",
+            "label": "Agenda Topic"
+          },
+          {
+            "id": "discussion",
+            "type": "textarea",
+            "label": "Discussion/Feedback",
+            "rows": 2
+          },
+          {
+            "id": "outcome",
+            "type": "textarea",
+            "label": "Decision/Outcome",
+            "rows": 2
+          }
+        ]
+      },
+      {
+        "id": "nextMeetingDate",
+        "type": "date",
+        "label": "Proposed Date for Next Meeting"
+      },
+      {
+        "id": "minutesRecordedBy",
+        "type": "text",
+        "label": "Minutes Recorded By",
+        "required": true
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Recorder's Signature",
+        "required": true
+      }
+    ]
+  }
+  

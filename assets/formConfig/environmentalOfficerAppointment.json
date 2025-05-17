@@ -1,0 +1,76 @@
+{
+    "documentTypeId": "environmentalOfficerAppointment",
+    "name": "Appointment of Environmental Officer",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "areaOfResponsibility",
+        "type": "text",
+        "label": "Area of Responsibility",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Promote environmental awareness among employees",
+          "Monitor compliance with environmental laws and internal policies",
+          "Conduct environmental inspections and audits",
+          "Manage waste, emissions, and recycling initiatives",
+          "Investigate and report environmental incidents",
+          "Assist in environmental impact assessments",
+          "Encourage continuous environmental improvements",
+          "Liaise with external environmental bodies when needed"
+        ]
+      },
+      {
+        "id": "appointeeSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "appointeeDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

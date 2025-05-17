@@ -6,8 +6,10 @@ class ThemeConstants {
   static const Color accentColor = Color(0xFFFDC060);  // Amber for highlights
 
   // Light theme colors
-  static const Color lightBackgroundColor = Color(0xFFF0F2F5); // Soft neutral background
+  static const Color lightBackgroundColor = Color(0xFFECECEC); // Soft neutral background
   static const Color lightCardColor = Colors.white;
+
+  static const Color cardColors = Color(0xFFEFEFEF);
 
   // Dark theme colors
   static const Color darkBackgroundColor = Color(0xFF1A1A1A); // Softer dark

@@ -1,0 +1,159 @@
+{
+    "documentTypeId": "recruitmentSelectionPolicy",
+    "name": "Recruitment and Selection Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Ensures fair, inclusive, and transparent recruitment for permanent, temporary, and seasonal positions."
+      },
+      {
+        "id": "newPositionApproval",
+        "type": "checkbox",
+        "label": "Approval for New Positions",
+        "options": [
+          "Senior management must approve new roles",
+          "Each position requires a clear job description and justification"
+        ]
+      },
+      {
+        "id": "advertising",
+        "type": "checkbox",
+        "label": "Advertising",
+        "options": [
+          "Internal advertising is prioritized",
+          "External ads must avoid discriminatory language",
+          "Clear closing dates and job-focused criteria required"
+        ]
+      },
+      {
+        "id": "selectionCriteria",
+        "type": "checkbox",
+        "label": "Selection Criteria",
+        "options": [
+          "Based on competencies, qualifications, and experience",
+          "Preference for Previously Disadvantaged Groups (PDGs)",
+          "ID and address verification mandatory"
+        ]
+      },
+      {
+        "id": "nonDiscrimination",
+        "type": "checkbox",
+        "label": "Non-Discrimination Principles",
+        "options": [
+          "No discrimination based on race, age, gender, etc.",
+          "All applicants treated fairly and consistently"
+        ]
+      },
+      {
+        "id": "selectionProcess",
+        "type": "checkbox",
+        "label": "Selection Process",
+        "options": [
+          "Panel-based standardized interviews",
+          "Only job-relevant criteria used in interviews"
+        ]
+      },
+      {
+        "id": "jobOffer",
+        "type": "checkbox",
+        "label": "Job Offer",
+        "options": [
+          "Offer includes job title, location, salary, responsibilities, reporting line, and start date",
+          "Acceptance deadline is included"
+        ]
+      },
+      {
+        "id": "seasonalHiring",
+        "type": "section",
+        "label": "Seasonal Employment"
+      },
+      {
+        "id": "seasonalAdvertising",
+        "type": "checkbox",
+        "label": "Seasonal Advertising",
+        "options": [
+          "Posted in local high-traffic areas",
+          "Fixed application dates provided"
+        ]
+      },
+      {
+        "id": "seasonalSelection",
+        "type": "checkbox",
+        "label": "Seasonal Selection",
+        "options": [
+          "Skills-based selection",
+          "Prior experience and attendance considered"
+        ]
+      },
+      {
+        "id": "seasonalInduction",
+        "type": "checkbox",
+        "label": "Induction and Training",
+        "options": [
+          "Safety and role-specific induction",
+          "Policies and procedures reviewed"
+        ]
+      },
+      {
+        "id": "seasonalContracts",
+        "type": "checkbox",
+        "label": "Contractual Terms",
+        "options": [
+          "Fixed-term contract provided",
+          "Includes duration, compensation, and eligibility for future seasons"
+        ]
+      },
+      {
+        "id": "contractorRecruitment",
+        "type": "section",
+        "label": "Labour Contractor Recruitment"
+      },
+      {
+        "id": "contractorStandards",
+        "type": "checkbox",
+        "label": "Recruitment Standards",
+        "options": [
+          "Contractors follow transparent, fair processes",
+          "No child, forced, or bonded labour permitted",
+          "Contractors must align with legal and ethical standards"
+        ]
+      },
+      {
+        "id": "contractorVerification",
+        "type": "checkbox",
+        "label": "Documentation and Verification",
+        "options": [
+          "Submit payslips, ID/work permits, and detailed contracts",
+          "No worker charged for job placement",
+          "Confidential reporting system in place"
+        ]
+      },
+      {
+        "id": "contractorCompliance",
+        "type": "checkbox",
+        "label": "Compliance and Monitoring",
+        "options": [
+          "Regular audits of labour contractors",
+          "Violations lead to corrective actions or termination"
+        ]
+      },
+      {
+        "id": "foreignWorkers",
+        "type": "checkbox",
+        "label": "Foreign Nationals and Work Permits",
+        "options": [
+          "Must present valid work permits or residency docs",
+          "Documents verified before employment"
+        ]
+      },
+      {
+        "id": "complianceStandards",
+        "type": "paragraph",
+        "label": "General Compliance",
+        "description": "All recruitment activities must comply with WIETA/SIZA and labor legislation."
+      }
+    ]
+  }
+  

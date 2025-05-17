@@ -1,0 +1,44 @@
+{
+    "documentTypeId": "employeeList",
+    "name": "List of Employees",
+    "fields": [
+      {
+        "id": "employeeTable",
+        "type": "table",
+        "label": "Employee Records",
+        "columns": [
+          {
+            "id": "fullName",
+            "type": "text",
+            "label": "Full Name"
+          },
+          {
+            "id": "idNumber",
+            "type": "text",
+            "label": "ID Number"
+          },
+          {
+            "id": "contactNumber",
+            "type": "text",
+            "label": "Contact Number"
+          },
+          {
+            "id": "jobTitle",
+            "type": "text",
+            "label": "Job Title"
+          },
+          {
+            "id": "department",
+            "type": "text",
+            "label": "Department"
+          },
+          {
+            "id": "startDate",
+            "type": "date",
+            "label": "Start Date"
+          }
+        ]
+      }
+    ]
+  }
+  

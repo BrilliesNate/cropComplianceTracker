@@ -1,0 +1,90 @@
+{
+    "documentTypeId": "antiCorruptionBriberyPolicy",
+    "name": "Anti-Corruption and Bribery Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Defines the company’s zero-tolerance stance toward corruption, bribery, and unethical practices."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all employees, contractors, officers, and business partners in all business activities."
+      },
+      {
+        "id": "zeroTolerance",
+        "type": "checkbox",
+        "label": "Zero-Tolerance Principles",
+        "options": [
+          "No bribery or kickbacks",
+          "No indirect corrupt practices",
+          "Strict integrity in business dealings"
+        ]
+      },
+      {
+        "id": "legalCompliance",
+        "type": "checkbox",
+        "label": "Compliance Framework",
+        "options": [
+          "UNCAC and OECD standards",
+          "South African anti-corruption laws",
+          "Internal legal obligations"
+        ]
+      },
+      {
+        "id": "gifts",
+        "type": "paragraph",
+        "label": "Gifts, Hospitality, and Entertainment",
+        "description": "Permitted only when reasonable, transparent, and approved in advance by compliance officer."
+      },
+      {
+        "id": "reporting",
+        "type": "checkbox",
+        "label": "Reporting and Investigation",
+        "options": [
+          "Use whistleblower system",
+          "Reports taken seriously and confidentially",
+          "No retaliation for good-faith reporting"
+        ]
+      },
+      {
+        "id": "ethicalSourcing",
+        "type": "checkbox",
+        "label": "Ethical Worker Sourcing",
+        "options": [
+          "Compliance with labor laws",
+          "No child or forced labor",
+          "Fair wages and clear contracts",
+          "Vet all recruitment agencies"
+        ]
+      },
+      {
+        "id": "supplierResponsibilities",
+        "type": "paragraph",
+        "label": "Supplier and Contractor Responsibilities",
+        "description": "Suppliers must adhere to policy and undergo due diligence or termination."
+      },
+      {
+        "id": "training",
+        "type": "paragraph",
+        "label": "Training and Awareness",
+        "description": "Mandatory for all staff and suppliers; refresher sessions provided periodically."
+      },
+      {
+        "id": "consequences",
+        "type": "paragraph",
+        "label": "Consequences of Violations",
+        "description": "Disciplinary or legal action may be taken for violations, including termination or prosecution."
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Policy Review",
+        "description": "Reviewed periodically to maintain alignment with laws and best practices."
+      }
+    ]
+  }
+  

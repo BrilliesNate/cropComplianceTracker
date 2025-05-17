@@ -1,0 +1,77 @@
+{
+    "documentTypeId": "hazardousChemicalCoordinatorAppointment",
+    "name": "Appointment of Person Responsible for Hazardous Chemical Substances Control and Coordination",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "areaOfResponsibility",
+        "type": "text",
+        "label": "Area of Responsibility (e.g. Farm or Facility Name)",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Control and manage all hazardous chemical substances (HCS)",
+          "Ensure proper labeling and storage of chemicals",
+          "Maintain and update the HCS register",
+          "Conduct HCS risk assessments and implement controls",
+          "Train staff on safe handling and PPE usage",
+          "Ensure appropriate spill kits and emergency equipment are available",
+          "Coordinate safe disposal of expired or unused chemicals",
+          "Monitor compliance with HCS legal requirements",
+          "Support incident investigations involving chemical exposure"
+        ]
+      },
+      {
+        "id": "appointeeSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "appointeeDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

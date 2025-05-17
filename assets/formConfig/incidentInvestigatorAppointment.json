@@ -1,0 +1,76 @@
+{
+    "documentTypeId": "incidentInvestigatorAppointment",
+    "name": "Appointment of Incident Investigator",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "areaOfResponsibility",
+        "type": "text",
+        "label": "Area of Responsibility (e.g. Farm or Department)",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Investigate all incidents and near misses",
+          "Identify root causes of incidents",
+          "Compile incident investigation reports",
+          "Recommend corrective and preventive actions",
+          "Assist with incident reporting to authorities",
+          "Coordinate follow-up investigations as needed",
+          "Support continuous safety improvement initiatives",
+          "Maintain confidentiality of investigation information"
+        ]
+      },
+      {
+        "id": "appointeeSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "appointeeDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

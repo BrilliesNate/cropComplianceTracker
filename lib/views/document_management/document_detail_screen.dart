@@ -259,72 +259,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                   ),
                 ],
 
-                // Admin actions
-                if (authProvider.isAdmin || authProvider.isAuditer) ...[
-                  const SizedBox(height: 24),
-                  Text(
-                    'Admin Actions',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          TextField(
-                            controller: _commentController,
-                            decoration: const InputDecoration(
-                              labelText: 'Comment',
-                              hintText: 'Add a comment...',
-                              border: OutlineInputBorder(),
-                            ),
-                            maxLines: 3,
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  icon: const Icon(Icons.check_circle),
-                                  label: const Text('Approve'),
-                                  onPressed: document.status == DocumentStatus.APPROVED
-                                      ? null
-                                      : () => _updateDocumentStatus(
-                                    document,
-                                    DocumentStatus.APPROVED,
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  icon: const Icon(Icons.cancel),
-                                  label: const Text('Reject'),
-                                  onPressed: document.status == DocumentStatus.REJECTED
-                                      ? null
-                                      : () => _updateDocumentStatus(
-                                    document,
-                                    DocumentStatus.REJECTED,
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-
-                // Comments section
+                // Comment section with actions
                 const SizedBox(height: 24),
                 Text(
                   'Comments',
@@ -371,7 +306,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                   ),
                 ),
 
-                // Add comment section (for all users)
+                // Combined comment input and action section
                 if (!document.isNotApplicable) ...[
                   const SizedBox(height: 24),
                   Card(
@@ -383,21 +318,52 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                           TextField(
                             controller: _commentController,
                             decoration: const InputDecoration(
-                              labelText: 'Add Comment',
-                              hintText: 'Type your comment here...',
+                              labelText: 'Comment',
+                              hintText: 'Add a comment...',
                               border: OutlineInputBorder(),
                             ),
                             maxLines: 3,
                           ),
                           const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.send),
-                            label: const Text('Submit Comment'),
-                            onPressed: () => _addComment(document),
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 48),
+
+                          // Admin-specific action buttons
+                          if (authProvider.isAdmin || authProvider.isAuditer) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    icon: const Icon(Icons.check_circle),
+                                    label: const Text('Approve'),
+                                    onPressed: document.status == DocumentStatus.APPROVED
+                                        ? null
+                                        : () => _updateDocumentStatus(
+                                      document,
+                                      DocumentStatus.APPROVED,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    icon: const Icon(Icons.cancel),
+                                    label: const Text('Reject'),
+                                    onPressed: document.status == DocumentStatus.REJECTED
+                                        ? null
+                                        : () => _updateDocumentStatus(
+                                      document,
+                                      DocumentStatus.REJECTED,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),

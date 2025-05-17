@@ -1,0 +1,74 @@
+{
+    "documentTypeId": "workingHoursRecord",
+    "name": "Working Hours",
+    "fields": [
+      {
+        "id": "employeeName",
+        "type": "text",
+        "label": "Employee Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "month",
+        "type": "text",
+        "label": "Month",
+        "required": true
+      },
+      {
+        "id": "dailyHours",
+        "type": "table",
+        "label": "Daily Working Hours",
+        "columns": [
+          {
+            "id": "date",
+            "type": "date",
+            "label": "Date"
+          },
+          {
+            "id": "startTime",
+            "type": "text",
+            "label": "Start Time"
+          },
+          {
+            "id": "endTime",
+            "type": "text",
+            "label": "End Time"
+          },
+          {
+            "id": "breakDuration",
+            "type": "text",
+            "label": "Break Duration (e.g. 1h)"
+          },
+          {
+            "id": "totalHours",
+            "type": "text",
+            "label": "Total Hours Worked"
+          },
+          {
+            "id": "overtimeHours",
+            "type": "text",
+            "label": "Overtime Hours"
+          }
+        ]
+      },
+      {
+        "id": "supervisorSignature",
+        "type": "signature",
+        "label": "Supervisor Signature",
+        "required": true
+      },
+      {
+        "id": "supervisorDate",
+        "type": "date",
+        "label": "Date Signed by Supervisor",
+        "required": true
+      }
+    ]
+  }
+  

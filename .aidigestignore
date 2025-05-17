@@ -1,0 +1,6 @@
+# Exclude everything
+*
+
+# Only include lib folder
+!lib/
+!lib/**

@@ -1,0 +1,78 @@
+{
+    "documentTypeId": "workingHoursRestPeriodsPolicy",
+    "name": "Working Hours and Rest Periods Policy",
+    "fields": [
+      {
+        "id": "policyStatement",
+        "type": "paragraph",
+        "label": "Policy Statement",
+        "description": "Ensures working hours, rest, and overtime practices comply with the BCEA and Sectoral Determination 13 while protecting young workers."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all employees, including full-time, part-time, temporary, and under-18 workers."
+      },
+      {
+        "id": "workingHours",
+        "type": "checkbox",
+        "label": "Working Hours",
+        "options": [
+          "Max 45 hours/week (9 hours/day)",
+          "Young workers max 35 hours/week",
+          "No night or Sunday shifts for young workers",
+          "Flexible hours permitted within legal limits"
+        ]
+      },
+      {
+        "id": "overtime",
+        "type": "checkbox",
+        "label": "Overtime",
+        "options": [
+          "Voluntary and with prior approval",
+          "Paid at 1.5x (normal) or 2x (public holidays/Sundays)",
+          "No overtime for workers under 18"
+        ]
+      },
+      {
+        "id": "restPeriods",
+        "type": "checkbox",
+        "label": "Rest Periods",
+        "options": [
+          "12-hour daily rest between shifts",
+          "36-hour weekly rest",
+          "15-min break after 5 hours worked",
+          "Additional breaks for shifts >8 hours",
+          "Young workers get a 30-min meal break"
+        ]
+      },
+      {
+        "id": "publicHolidays",
+        "type": "checkbox",
+        "label": "Work on Public Holidays",
+        "options": [
+          "Only with prior agreement",
+          "Paid at 2x regular rate",
+          "Young workers generally not allowed"
+        ]
+      },
+      {
+        "id": "compliance",
+        "type": "checkbox",
+        "label": "Compliance and Monitoring",
+        "options": [
+          "Working hours tracked and reviewed",
+          "Employees can report issues to supervisor/safety officer",
+          "Complaints handled through grievance procedure"
+        ]
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Review and Updates",
+        "description": "Reviewed annually for alignment with labor laws and company needs."
+      }
+    ]
+  }
+  

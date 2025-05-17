@@ -1,0 +1,78 @@
+{
+    "documentTypeId": "supplierContractorCodeOfConductPolicy",
+    "name": "Supplier/Labour Contractors Code of Conduct Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Outlines expectations for ethical, legal, and sustainable conduct from suppliers and labour contractors in line with WIETA/SIZA standards."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all suppliers, subcontractors, and labour contractors engaged with the company."
+      },
+      {
+        "id": "labourStandards",
+        "type": "checkbox",
+        "label": "Ethical Labour Practices",
+        "options": [
+          "No forced or child labour",
+          "Fair wages and working hours",
+          "Freedom of association respected",
+          "Safe and harassment-free workplace"
+        ]
+      },
+      {
+        "id": "environmentalStandards",
+        "type": "checkbox",
+        "label": "Environmental Responsibility",
+        "options": [
+          "Sustainable sourcing and production",
+          "Minimize waste, emissions, and resource use",
+          "Comply with chemical and waste regulations"
+        ]
+      },
+      {
+        "id": "businessIntegrity",
+        "type": "checkbox",
+        "label": "Business Integrity and Ethical Sourcing",
+        "options": [
+          "No bribery, fraud, or corruption",
+          "Ethical sourcing of raw materials",
+          "Fair trade and responsible sourcing practices"
+        ]
+      },
+      {
+        "id": "complianceMonitoring",
+        "type": "checkbox",
+        "label": "Compliance and Monitoring",
+        "options": [
+          "Internal supplier assessments conducted regularly",
+          "WIETA/SIZA standards and SA laws must be followed",
+          "Training and support may be provided to improve compliance"
+        ]
+      },
+      {
+        "id": "violationReporting",
+        "type": "paragraph",
+        "label": "Reporting Violations",
+        "description": "All breaches must be reported through designated channels without fear of retaliation."
+      },
+      {
+        "id": "consequences",
+        "type": "paragraph",
+        "label": "Consequences of Non-Compliance",
+        "description": "Non-compliance may result in corrective action, contract termination, or legal consequences."
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Policy Review",
+        "description": "Policy reviewed regularly to stay aligned with ethical, legal, and environmental standards."
+      }
+    ]
+  }
+  

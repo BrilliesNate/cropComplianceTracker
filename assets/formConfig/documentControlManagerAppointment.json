@@ -1,0 +1,86 @@
+{
+    "documentTypeId": "documentControlManagerAppointment",
+    "name": "Appointment of Document Control Manager",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Establish and maintain document control systems",
+          "Ensure documents are created, reviewed, approved, and archived",
+          "Ensure compliance with legislation and internal policies",
+          "Manage physical and digital document storage",
+          "Coordinate document review and approval",
+          "Control document access and distribution",
+          "Maintain revision tracking and ensure only current versions are used",
+          "Maintain audit trails for all documents",
+          "Conduct audits on document systems",
+          "Train employees on document procedures",
+          "Coordinate with departments for archiving or disposal",
+          "Resolve document-related issues and report to management"
+        ]
+      },
+      {
+        "id": "appointeeSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "appointeeDate",
+        "type": "date",
+        "label": "Appointee Signature Date",
+        "required": true
+      },
+      {
+        "id": "employerRepName",
+        "type": "text",
+        "label": "Employer Representative Name",
+        "required": true
+      },
+      {
+        "id": "employerDesignation",
+        "type": "text",
+        "label": "Employer Designation",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Employer Signature Date",
+        "required": true
+      }
+    ]
+  }
+  

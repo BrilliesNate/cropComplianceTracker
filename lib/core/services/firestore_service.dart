@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cropcompliance/models/form_config_model.dart';
 import 'dart:developer' as developer;
 import '../../models/category_model.dart';
 import '../../models/document_type_model.dart';
@@ -327,6 +330,157 @@ class FirestoreService {
       stopwatch.stop();
       developer.log('FirestoreService - Error getting document: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return null;
+    }
+  }
+
+  Future<FormConfig?> getFormConfig(String documentTypeId) async {
+    final stopwatch = Stopwatch()..start();
+    developer.log('FirestoreService - Starting getFormConfig: $documentTypeId');
+
+    try {
+      // First try to fetch from formConfigurations collection
+      final doc = await _firestore
+          .collection('formConfigurations')
+          .doc(documentTypeId)
+          .get();
+
+      stopwatch.stop();
+      developer.log('FirestoreService - getFormConfig completed: ${stopwatch.elapsedMilliseconds}ms - Found: ${doc.exists}');
+
+      if (doc.exists) {
+        return FormConfig.fromMap(doc.data()!);
+      }
+
+      return null;
+    } catch (e) {
+      stopwatch.stop();
+      developer.log('FirestoreService - Error getting form config: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      return null;
+    }
+  }
+
+  // Add to FirestoreService class
+  Future<String?> addFormConfig(FormConfig formConfig) async {
+    final stopwatch = Stopwatch()..start();
+    developer.log('FirestoreService - Starting addFormConfig for documentTypeId: ${formConfig.documentTypeId}');
+
+    try {
+      // Check if a config already exists for this document type
+      final existingConfig = await getFormConfig(formConfig.documentTypeId);
+
+      if (existingConfig != null) {
+        // Update existing config
+        await _firestore.collection('formConfigs')
+            .where('documentTypeId', isEqualTo: formConfig.documentTypeId)
+            .get()
+            .then((snapshot) {
+          if (snapshot.docs.isNotEmpty) {
+            return _firestore.collection('formConfigs')
+                .doc(snapshot.docs.first.id)
+                .update(formConfig.toMap());
+          }
+        });
+
+        stopwatch.stop();
+        developer.log('FirestoreService - Updated existing form config: ${stopwatch.elapsedMilliseconds}ms');
+
+        return formConfig.documentTypeId;
+      } else {
+        // Add new config
+        final docRef = await _firestore.collection('formConfigs').add(formConfig.toMap());
+
+        stopwatch.stop();
+        developer.log('FirestoreService - Added new form config: ${stopwatch.elapsedMilliseconds}ms');
+
+        return docRef.id;
+      }
+    } catch (e) {
+      stopwatch.stop();
+      developer.log('FirestoreService - Error adding form config: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      return null;
+    }
+  }
+
+  // Add this to lib/core/services/firestore_service.dart
+
+// Collection name for form templates
+  static const String formTemplatesCollection = 'formTemplates';
+
+// Save a form template to Firestore
+  Future<String?> saveFormTemplate(String documentTypeId, Map<String, dynamic> formData) async {
+    try {
+      // Log what we're saving
+      print('Saving form template for documentTypeId: $documentTypeId');
+
+      // Set the document ID to be the documentTypeId for easy retrieval
+      await _firestore
+          .collection(AppConstants.formTemplatesCollection)
+          .doc(documentTypeId)
+          .set(formData);
+
+      print('Form template saved successfully');
+      return documentTypeId;
+    } catch (e) {
+      print('Error saving form template: $e');
+      return null;
+    }
+  }
+
+// Get a form template from Firestore
+  Future<Map<String, dynamic>?> getFormTemplate(String documentTypeId) async {
+    try {
+      final doc = await _firestore
+          .collection(AppConstants.formTemplatesCollection)
+          .doc(documentTypeId)
+          .get();
+
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting form template: $e');
+      return null;
+    }
+  }
+
+// Get all form templates
+  Future<List<Map<String, dynamic>>> getAllFormTemplates() async {
+    try {
+      final snapshot = await _firestore
+          .collection(AppConstants.formTemplatesCollection)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      print('Error getting all form templates: $e');
+      return [];
+    }
+  }
+
+  Future<void> uploadFormTemplates(String jsonTemplates) async {
+    try {
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+      // Parse the JSON string
+      final List<dynamic> templates = json.decode(jsonTemplates);
+
+      // Loop through each template and upload it
+      for (var template in templates) {
+        String documentTypeId = template['documentTypeId'];
+        print('Uploading template for documentTypeId: $documentTypeId');
+
+        // Upload to Firestore
+        await firestore.collection('formTemplates').doc(documentTypeId).set(template);
+        print('Template $documentTypeId uploaded successfully');
+      }
+
+      print('All templates uploaded successfully');
+    } catch (e) {
+      print('Error uploading templates: $e');
+      rethrow; // Rethrow to handle the error elsewhere if needed
     }
   }
 

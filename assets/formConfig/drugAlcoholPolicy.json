@@ -1,0 +1,85 @@
+{
+    "documentTypeId": "drugAlcoholPolicy",
+    "name": "Drug and Alcohol Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Ensures a safe and productive workplace by regulating alcohol and drug use and offering support for addiction."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all employees, contractors, and visitors during working hours or company-related activities."
+      },
+      {
+        "id": "prohibition",
+        "type": "checkbox",
+        "label": "Substance Prohibition",
+        "options": [
+          "No alcohol consumption or possession on site",
+          "No illegal drug use, possession, trade, or influence at work"
+        ]
+      },
+      {
+        "id": "influenceSigns",
+        "type": "checkbox",
+        "label": "Signs of Influence",
+        "options": [
+          "Bloodshot eyes, slurred speech, off-balance, odor",
+          "Employee removed from site without pay"
+        ]
+      },
+      {
+        "id": "addictionSupport",
+        "type": "checkbox",
+        "label": "Addiction Support",
+        "options": [
+          "Support through counseling or referrals",
+          "Confidentiality ensured",
+          "Voluntary disclosure encouraged"
+        ]
+      },
+      {
+        "id": "disciplinaryActions",
+        "type": "checkbox",
+        "label": "Disciplinary Actions",
+        "options": [
+          "Termination for severe/repeated violations",
+          "Actions aligned with company disciplinary procedures"
+        ]
+      },
+      {
+        "id": "employeeResponsibilities",
+        "type": "checkbox",
+        "label": "Employee Responsibilities",
+        "options": [
+          "Comply with policy and report concerns"
+        ]
+      },
+      {
+        "id": "monitoring",
+        "type": "checkbox",
+        "label": "Monitoring and Testing",
+        "options": [
+          "Random or scheduled testing may occur if suspected",
+          "Positive results lead to disciplinary action"
+        ]
+      },
+      {
+        "id": "legalCompliance",
+        "type": "paragraph",
+        "label": "Legal Compliance",
+        "description": "Aligned with labor laws, safety regulations, and industry standards."
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Policy Review",
+        "description": "Policy reviewed periodically to reflect legal changes and best practices."
+      }
+    ]
+  }
+  

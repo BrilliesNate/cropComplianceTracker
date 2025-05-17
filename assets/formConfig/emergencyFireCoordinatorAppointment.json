@@ -1,0 +1,76 @@
+{
+    "documentTypeId": "emergencyFireCoordinatorAppointment",
+    "name": "Appointment of Emergency and Fire Coordinator",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "areaOfResponsibility",
+        "type": "text",
+        "label": "Area of Responsibility (e.g. Farm or Facility)",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Coordinate emergency evacuation plans",
+          "Conduct fire drills and ensure participation",
+          "Inspect fire extinguishers and related equipment",
+          "Train staff in fire prevention and emergency response",
+          "Report hazards and implement corrective actions",
+          "Lead during fire-related incidents and emergencies",
+          "Maintain communication with emergency services",
+          "Support compliance with OHSA and safety regulations"
+        ]
+      },
+      {
+        "id": "appointeeSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "appointeeDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

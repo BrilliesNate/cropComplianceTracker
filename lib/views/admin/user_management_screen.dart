@@ -21,12 +21,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _companyNameController = TextEditingController();
+  final _companyAddressController = TextEditingController();
+
   String? _selectedCompanyId;
   UserRole _selectedRole = UserRole.USER;
   bool _isLoading = false;
   String? _error;
   List<Map<String, dynamic>> _companies = [];
   List<UserModel> _users = [];
+
+  // Toggle between selecting existing company and creating new one
+  bool _createNewCompany = false;
 
   @override
   void initState() {
@@ -39,6 +45,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _companyNameController.dispose();
+    _companyAddressController.dispose();
     super.dispose();
   }
 
@@ -81,12 +89,41 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
   }
 
+  Future<String?> _createCompany() async {
+    if (_companyNameController.text.isEmpty) {
+      setState(() {
+        _error = 'Please enter a company name';
+      });
+      return null;
+    }
+
+    try {
+      // Create company document in Firestore
+      final companyRef = await FirebaseFirestore.instance
+          .collection('companies')
+          .add({
+        'name': _companyNameController.text.trim(),
+        'address': _companyAddressController.text.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // Return the new company ID
+      return companyRef.id;
+    } catch (e) {
+      setState(() {
+        _error = 'Error creating company: $e';
+      });
+      return null;
+    }
+  }
+
   Future<void> _createUser() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    if (_selectedCompanyId == null) {
+    // Check if we need to handle company creation or selection
+    if (!_createNewCompany && _selectedCompanyId == null) {
       setState(() {
         _error = 'Please select a company';
       });
@@ -99,6 +136,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     });
 
     try {
+      // Create or select company ID
+      String? companyId = _selectedCompanyId;
+
+      if (_createNewCompany) {
+        companyId = await _createCompany();
+        if (companyId == null) {
+          // Error already set in _createCompany method
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
       // Create user with Firebase Auth
       final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
@@ -114,7 +165,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           'email': _emailController.text.trim(),
           'name': _nameController.text.trim(),
           'role': _selectedRole.toString().split('.').last,
-          'companyId': _selectedCompanyId,
+          'companyId': companyId,
           'createdAt': FieldValue.serverTimestamp(),
         });
 
@@ -122,7 +173,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         _nameController.clear();
         _emailController.clear();
         _passwordController.clear();
+        _companyNameController.clear();
+        _companyAddressController.clear();
         _selectedRole = UserRole.USER;
+        _createNewCompany = false;
         _loadData();
 
         if (mounted) {
@@ -230,25 +284,83 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Company',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: _selectedCompanyId,
-                        items: _companies.map((company) {
-                          return DropdownMenuItem<String>(
-                            value: company['id'] as String,
-                            child: Text(company['name'] as String),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCompanyId = value;
-                          });
-                        },
+                      const SizedBox(height: 24),
+
+                      // Company section with toggle
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Company Information',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          Switch(
+                            value: _createNewCompany,
+                            onChanged: (value) {
+                              setState(() {
+                                _createNewCompany = value;
+                              });
+                            },
+                          ),
+                          Text(_createNewCompany ? 'Create New' : 'Select Existing'),
+                        ],
                       ),
+                      const SizedBox(height: 16),
+
+                      // Conditional company fields
+                      if (_createNewCompany) ...[
+                        // Fields for creating a new company
+                        TextFormField(
+                          controller: _companyNameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Company Name',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if (_createNewCompany && (value == null || value.isEmpty)) {
+                              return 'Please enter company name';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _companyAddressController,
+                          decoration: const InputDecoration(
+                            labelText: 'Company Address',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 2,
+                        ),
+                      ] else ...[
+                        // Dropdown for selecting existing company
+                        DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: 'Select Company',
+                            border: OutlineInputBorder(),
+                          ),
+                          value: _selectedCompanyId,
+                          items: _companies.map((company) {
+                            return DropdownMenuItem<String>(
+                              value: company['id'] as String,
+                              child: Text(company['name'] as String),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedCompanyId = value;
+                            });
+                          },
+                          validator: (value) {
+                            if (!_createNewCompany && (value == null || value.isEmpty)) {
+                              return 'Please select a company';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+
                       const SizedBox(height: 16),
                       DropdownButtonFormField<UserRole>(
                         decoration: const InputDecoration(

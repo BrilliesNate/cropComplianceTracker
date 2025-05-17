@@ -1,0 +1,75 @@
+{
+    "documentTypeId": "fireDrillReportForm",
+    "name": "Fire Drill Report Form",
+    "fields": [
+      {
+        "id": "drillDate",
+        "type": "date",
+        "label": "Date of Fire Drill",
+        "required": true
+      },
+      {
+        "id": "timeStarted",
+        "type": "text",
+        "label": "Time Drill Started",
+        "required": true
+      },
+      {
+        "id": "timeEnded",
+        "type": "text",
+        "label": "Time Drill Ended",
+        "required": true
+      },
+      {
+        "id": "location",
+        "type": "text",
+        "label": "Location of Drill",
+        "required": true
+      },
+      {
+        "id": "coordinator",
+        "type": "text",
+        "label": "Drill Coordinator",
+        "required": true
+      },
+      {
+        "id": "description",
+        "type": "textarea",
+        "label": "Description of Fire Drill Activity",
+        "rows": 3,
+        "required": true
+      },
+      {
+        "id": "evacuationTime",
+        "type": "text",
+        "label": "Evacuation Time (minutes)",
+        "required": true
+      },
+      {
+        "id": "successRating",
+        "type": "dropdown",
+        "label": "Drill Success Rating",
+        "options": ["Excellent", "Good", "Average", "Poor"],
+        "required": true
+      },
+      {
+        "id": "issuesNoted",
+        "type": "textarea",
+        "label": "Issues Noted During Drill",
+        "rows": 3
+      },
+      {
+        "id": "correctiveActions",
+        "type": "textarea",
+        "label": "Corrective Actions Taken or Planned",
+        "rows": 3
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Coordinator Signature",
+        "required": true
+      }
+    ]
+  }
+  

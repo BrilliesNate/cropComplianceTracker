@@ -1,6 +1,7 @@
 import 'package:cropcompliance/providers/audit_provider.dart';
 import 'package:cropcompliance/providers/category_provider.dart';
 import 'package:cropcompliance/providers/route_provider.dart';
+import 'package:cropcompliance/views/document_management/forms/company_orfanizational_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -43,6 +44,7 @@ class AgriComplianceApp extends StatelessWidget {
       themeMode: themeProvider.themeMode,
       onGenerateRoute: AppRouter.onGenerateRoute,
       initialRoute: AppRouter.initialRoute,
+      // home: const CompanyOrganizationalChart(),
     );
   }
 }

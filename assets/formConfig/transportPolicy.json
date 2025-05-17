@@ -1,0 +1,96 @@
+{
+    "documentTypeId": "transportPolicy",
+    "name": "Transport Policy",
+    "fields": [
+      {
+        "id": "overview",
+        "type": "paragraph",
+        "label": "Policy Overview",
+        "description": "Ensures safe and compliant transportation of workers to, from, and within farm operations in line with South African law and WIETA/SIZA standards."
+      },
+      {
+        "id": "objectives",
+        "type": "checkbox",
+        "label": "Objectives",
+        "options": [
+          "Ensure safe worker transport on and between sites",
+          "Comply with National Road Traffic Act and COIDA",
+          "Educate workers about transport risks",
+          "Maintain roadworthy vehicles"
+        ]
+      },
+      {
+        "id": "rolesResponsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Management maintains vehicles and ensures qualified drivers",
+          "Workers follow transport safety rules and report issues",
+          "Drivers inspect vehicles and comply with safety rules"
+        ]
+      },
+      {
+        "id": "vehicleRequirements",
+        "type": "checkbox",
+        "label": "Vehicle Requirements",
+        "options": [
+          "Roadworthy, registered, and licensed vehicles",
+          "Safety features including seatbelts and enclosed areas",
+          "Minimum enclosure height: 350mm (seated), 900mm (standing)"
+        ]
+      },
+      {
+        "id": "boardingRules",
+        "type": "checkbox",
+        "label": "Worker Seating and Boarding",
+        "options": [
+          "Workers must be seated",
+          "No sitting on trailer edges",
+          "Boarding/disembarking only after full stop"
+        ]
+      },
+      {
+        "id": "driverRequirements",
+        "type": "checkbox",
+        "label": "Driver Qualifications",
+        "options": [
+          "Valid driver’s license and PDP required",
+          "Tractor drivers must be trained",
+          "Drivers must understand terrain and hazards"
+        ]
+      },
+      {
+        "id": "externalTransport",
+        "type": "paragraph",
+        "label": "External Transport Providers",
+        "description": "Must comply with COIDA and National Road Traffic regulations for worker transport."
+      },
+      {
+        "id": "legalCompliance",
+        "type": "checkbox",
+        "label": "Legal Compliance",
+        "options": [
+          "Follow National Road Traffic Act and COIDA",
+          "Workers may not protrude from vehicles",
+          "Vehicles must be visible in all conditions"
+        ]
+      },
+      {
+        "id": "safetyRules",
+        "type": "checkbox",
+        "label": "Safety Rules During Transport",
+        "options": [
+          "Workers sit in designated areas only",
+          "Report unsafe transport conditions",
+          "Drivers maintain vehicles and follow traffic rules"
+        ]
+      },
+      {
+        "id": "application",
+        "type": "paragraph",
+        "label": "Application and Review",
+        "description": "Applies to all farm operations and reviewed periodically to align with legislation."
+      }
+    ]
+  }
+  

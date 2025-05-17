@@ -83,6 +83,8 @@ class AppDrawer extends StatelessWidget {
             },
           ),
           const Divider(),
+
+
           if (authProvider.isAdmin) ...[
             const ListTile(
               title: Text(
@@ -93,12 +95,21 @@ class AppDrawer extends StatelessWidget {
                 ),
               ),
             ),
+
             ListTile(
               leading: const Icon(Icons.people),
               title: const Text('User Management'),
               selected: currentRoute == RouteConstants.userManagement,
               onTap: () {
                 Navigator.of(context).pushReplacementNamed(RouteConstants.userManagement);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.file_copy),
+              title: const Text('formConfigManagement'),
+              selected: currentRoute == RouteConstants.formConfigManagement,
+              onTap: () {
+                Navigator.of(context).pushReplacementNamed(RouteConstants.formConfigManagement);
               },
             ),
             ListTile(

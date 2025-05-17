@@ -1,0 +1,74 @@
+{
+    "documentTypeId": "nonConformanceReport",
+    "name": "Non-Conformance Report",
+    "fields": [
+      {
+        "id": "reportDate",
+        "type": "date",
+        "label": "Report Date",
+        "required": true
+      },
+      {
+        "id": "reportedBy",
+        "type": "text",
+        "label": "Reported By",
+        "required": true
+      },
+      {
+        "id": "department",
+        "type": "text",
+        "label": "Department / Area",
+        "required": true
+      },
+      {
+        "id": "nonConformanceDescription",
+        "type": "textarea",
+        "label": "Description of Non-Conformance",
+        "rows": 3,
+        "required": true
+      },
+      {
+        "id": "immediateActionTaken",
+        "type": "textarea",
+        "label": "Immediate Action Taken",
+        "rows": 3
+      },
+      {
+        "id": "rootCause",
+        "type": "textarea",
+        "label": "Root Cause Analysis",
+        "rows": 3
+      },
+      {
+        "id": "correctiveAction",
+        "type": "textarea",
+        "label": "Corrective Action",
+        "rows": 3
+      },
+      {
+        "id": "responsiblePerson",
+        "type": "text",
+        "label": "Person Responsible",
+        "required": true
+      },
+      {
+        "id": "targetCompletionDate",
+        "type": "date",
+        "label": "Target Completion Date",
+        "required": true
+      },
+      {
+        "id": "reviewedBy",
+        "type": "text",
+        "label": "Reviewed By",
+        "required": true
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Signature",
+        "required": true
+      }
+    ]
+  }
+  

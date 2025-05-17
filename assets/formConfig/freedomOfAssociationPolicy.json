@@ -1,0 +1,68 @@
+{
+    "documentTypeId": "freedomOfAssociationPolicy",
+    "name": "Freedom of Association and Right to Collective Bargaining Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Affirms the right of employees to associate freely, join trade unions, and bargain collectively, aligned with WIETA/SIZA and South African law."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all employees, contractors, suppliers, and business partners."
+      },
+      {
+        "id": "rights",
+        "type": "checkbox",
+        "label": "Employee Rights",
+        "options": [
+          "Form or join trade unions",
+          "Engage in collective bargaining",
+          "Participate in lawful union activities",
+          "Raise concerns without fear of retaliation"
+        ]
+      },
+      {
+        "id": "prohibitions",
+        "type": "checkbox",
+        "label": "Company Prohibitions",
+        "options": [
+          "No intimidation or retaliation",
+          "No interference with worker organizations"
+        ]
+      },
+      {
+        "id": "compliance",
+        "type": "checkbox",
+        "label": "Compliance and Due Diligence",
+        "options": [
+          "Maintain open dialogue with unions",
+          "Employment decisions unaffected by union activity",
+          "Suppliers must uphold same standards",
+          "Training provided to management and employees"
+        ]
+      },
+      {
+        "id": "reporting",
+        "type": "paragraph",
+        "label": "Reporting Violations",
+        "description": "Use whistleblower channels; confidentiality protected; no retaliation for good-faith reporting."
+      },
+      {
+        "id": "consequences",
+        "type": "paragraph",
+        "label": "Consequences of Non-Compliance",
+        "description": "Disciplinary or legal action may be taken for policy violations."
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Review and Monitoring",
+        "description": "Policy reviewed periodically for continued effectiveness and compliance."
+      }
+    ]
+  }
+  

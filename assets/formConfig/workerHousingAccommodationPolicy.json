@@ -1,0 +1,99 @@
+{
+    "documentTypeId": "workerHousingAccommodationPolicy",
+    "name": "Worker Housing and Accommodation Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Ensures safe, healthy, and dignified housing for workers in line with ESTA, BCEA, OHSA, and WIETA/SIZA standards."
+      },
+      {
+        "id": "legalCompliance",
+        "type": "checkbox",
+        "label": "Legal and Ethical Compliance",
+        "options": [
+          "Extension of Security of Tenure Act (ESTA)",
+          "Basic Conditions of Employment Act (BCEA)",
+          "Occupational Health and Safety Act (OHSA)",
+          "WIETA/SIZA ethical standards"
+        ]
+      },
+      {
+        "id": "housingStandards",
+        "type": "checkbox",
+        "label": "Housing Provision and Conditions",
+        "options": [
+          "Adequate space and structure for privacy",
+          "Secure and hazard-free housing",
+          "Separate rooms for families"
+        ]
+      },
+      {
+        "id": "sanitation",
+        "type": "checkbox",
+        "label": "Hygiene and Sanitation",
+        "options": [
+          "Access to clean drinking water",
+          "Toilets, washbasins, and bathing areas maintained hygienically",
+          "Proper waste disposal systems in place"
+        ]
+      },
+      {
+        "id": "kitchen",
+        "type": "checkbox",
+        "label": "Cooking and Food Preparation",
+        "options": [
+          "Clean kitchen facilities provided",
+          "Meal arrangements made if no cooking area",
+          "Nutritious meals offered if food provided"
+        ]
+      },
+      {
+        "id": "healthSafety",
+        "type": "checkbox",
+        "label": "Health and Safety Standards",
+        "options": [
+          "Accommodation is pest-free and ventilated",
+          "Fire extinguishers and evacuation routes in place",
+          "Regular inspections conducted"
+        ]
+      },
+      {
+        "id": "tenure",
+        "type": "checkbox",
+        "label": "Security of Tenure and Rental",
+        "options": [
+          "No eviction without ESTA process",
+          "Rental fees must be reasonable and documented",
+          "Deductions from wages require transparency"
+        ]
+      },
+      {
+        "id": "dependents",
+        "type": "checkbox",
+        "label": "Family and Dependents",
+        "options": [
+          "Families may live with workers if space allows",
+          "Dependents receive same housing standards"
+        ]
+      },
+      {
+        "id": "grievances",
+        "type": "paragraph",
+        "label": "Grievance Procedures",
+        "description": "Workers may report issues confidentially and management will address concerns promptly."
+      },
+      {
+        "id": "monitoring",
+        "type": "checkbox",
+        "label": "Monitoring and Review",
+        "options": [
+          "Regular inspections for legal and ethical compliance",
+          "Feedback from workers encouraged",
+          "Continuous improvements implemented"
+        ]
+      }
+    ]
+  }
+  

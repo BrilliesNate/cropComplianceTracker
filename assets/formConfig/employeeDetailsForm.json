@@ -1,0 +1,103 @@
+{
+    "documentTypeId": "employeeDetailsForm",
+    "name": "Employee Details Form",
+    "fields": [
+      {
+        "id": "fullName",
+        "type": "text",
+        "label": "Full Name",
+        "required": true
+      },
+      {
+        "id": "idNumber",
+        "type": "text",
+        "label": "ID Number",
+        "required": true
+      },
+      {
+        "id": "contactNumber",
+        "type": "text",
+        "label": "Contact Number",
+        "required": true
+      },
+      {
+        "id": "emergencyContactName",
+        "type": "text",
+        "label": "Emergency Contact Name",
+        "required": true
+      },
+      {
+        "id": "emergencyContactNumber",
+        "type": "text",
+        "label": "Emergency Contact Number",
+        "required": true
+      },
+      {
+        "id": "residentialAddress",
+        "type": "textarea",
+        "label": "Residential Address",
+        "rows": 2,
+        "required": true
+      },
+      {
+        "id": "position",
+        "type": "text",
+        "label": "Job Position",
+        "required": true
+      },
+      {
+        "id": "department",
+        "type": "text",
+        "label": "Department",
+        "required": true
+      },
+      {
+        "id": "employmentStartDate",
+        "type": "date",
+        "label": "Employment Start Date",
+        "required": true
+      },
+      {
+        "id": "bankingDetails",
+        "type": "section",
+        "label": "Banking Details"
+      },
+      {
+        "id": "bankName",
+        "type": "text",
+        "label": "Bank Name",
+        "required": true
+      },
+      {
+        "id": "accountNumber",
+        "type": "text",
+        "label": "Account Number",
+        "required": true
+      },
+      {
+        "id": "accountType",
+        "type": "text",
+        "label": "Account Type",
+        "required": true
+      },
+      {
+        "id": "branchCode",
+        "type": "text",
+        "label": "Branch Code",
+        "required": true
+      },
+      {
+        "id": "employeeSignature",
+        "type": "signature",
+        "label": "Employee Signature",
+        "required": true
+      },
+      {
+        "id": "signatureDate",
+        "type": "date",
+        "label": "Date of Signature",
+        "required": true
+      }
+    ]
+  }
+  

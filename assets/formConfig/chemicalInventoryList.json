@@ -1,0 +1,43 @@
+{
+    "documentTypeId": "chemicalInventoryList",
+    "name": "Chemical Inventory List",
+    "fields": [
+      {
+        "id": "inventoryDate",
+        "type": "date",
+        "label": "Inventory Date",
+        "required": true
+      },
+      {
+        "id": "location",
+        "type": "text",
+        "label": "Storage Location",
+        "required": true
+      },
+      {
+        "id": "compiledBy",
+        "type": "text",
+        "label": "Compiled By",
+        "required": true
+      },
+      {
+        "id": "inventoryTable",
+        "type": "table",
+        "label": "Chemical Inventory Details",
+        "columns": [
+          { "id": "chemicalName", "type": "text", "label": "Chemical/Product Name" },
+          { "id": "quantity", "type": "text", "label": "Quantity" },
+          { "id": "containerType", "type": "text", "label": "Container Type (e.g. Drum, Bottle)" },
+          { "id": "expiryDate", "type": "date", "label": "Expiry Date" },
+          { "id": "msdsAvailable", "type": "dropdown", "label": "MSDS Available", "options": ["Yes", "No"] }
+        ]
+      },
+      {
+        "id": "compiledSignature",
+        "type": "signature",
+        "label": "Signature of Person Compiling List",
+        "required": true
+      }
+    ]
+  }
+  

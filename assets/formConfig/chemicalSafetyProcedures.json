@@ -1,0 +1,164 @@
+{
+    "documentTypeId": "chemicalSafetyProcedures",
+    "name": "Chemical Safety Procedures",
+    "fields": [
+      {
+        "id": "storageRequirements",
+        "type": "checkbox",
+        "label": "Storage Facility Requirements",
+        "options": [
+          "Locked at all times with limited key access",
+          "Fire-resistant",
+          "Structurally sound",
+          "Temperature-controlled",
+          "Well-ventilated",
+          "Adequately lit",
+          "Isolated from other materials"
+        ],
+        "required": true
+      },
+      {
+        "id": "interiorSetup",
+        "type": "checkbox",
+        "label": "Interior Storage Setup",
+        "options": [
+          "Shelving is non-absorbent",
+          "Leak containment in place",
+          "Design supports safe spill cleanup",
+          "Separate storage for different chemicals",
+          "Liquids not stored above powders",
+          "Original labels retained or replaced properly",
+          "Complete inventory maintained"
+        ],
+        "required": true
+      },
+      {
+        "id": "trainingRequirements",
+        "type": "checkbox",
+        "label": "Authorized Personnel Training",
+        "options": [
+          "Only certified trained personnel may access storage",
+          "Trained in chemical application",
+          "Certification records kept",
+          "Unauthorized handling prohibited"
+        ],
+        "required": true
+      },
+      {
+        "id": "reentryProcedure",
+        "type": "checkbox",
+        "label": "Re-Entry Protocol After Application",
+        "options": [
+          "Red flag signage placed visibly",
+          "Sign includes re-entry time info",
+          "Workers stay out until flag is removed",
+          "Max re-entry: 24 hrs (general)",
+          "Max re-entry: 48 hrs (pregnant/breastfeeding)",
+          "Yellow/green band: until dry"
+        ],
+        "required": true
+      },
+      {
+        "id": "mixingHandling",
+        "type": "checkbox",
+        "label": "Handling, Mixing and Application",
+        "options": [
+          "Only trained personnel mix products",
+          "No eating/smoking during mixing",
+          "PPE required at all times",
+          "Use appropriate measuring tools",
+          "Follow label instructions",
+          "Mark loose labels with waterproof pen",
+          "Ask management if unsure"
+        ],
+        "required": true
+      },
+      {
+        "id": "spillageProtocol",
+        "type": "checkbox",
+        "label": "Accidental Spillage Procedure",
+        "options": [
+          "Ventilate storeroom immediately",
+          "Contact responsible person",
+          "Use inert absorbent material (e.g., sand)",
+          "Isolate and label waste as TOXIC",
+          "Dispose through certified handler",
+          "Investigate cause and plan prevention"
+        ],
+        "required": true
+      },
+      {
+        "id": "contaminationProtocols",
+        "type": "checkbox",
+        "label": "Operator Contamination Protocols",
+        "options": [
+          "Remove contaminated clothing",
+          "Rinse skin or use eye wash as needed",
+          "Contact first-aid responder",
+          "Do not rinse chemical burns",
+          "Call medical help if ingestion occurs"
+        ],
+        "required": true
+      },
+      {
+        "id": "equipmentFacilities",
+        "type": "checkbox",
+        "label": "Safety Equipment & Facilities",
+        "options": [
+          "Nearby tap or shower",
+          "No PPE storage in chemical room",
+          "Protective gear cleaned at workplace",
+          "PPE not worn at home or near fresh produce"
+        ],
+        "required": true
+      },
+      {
+        "id": "emptyContainerDisposal",
+        "type": "checkbox",
+        "label": "Empty Container Management",
+        "options": [
+          "Triple rinse before disposal",
+          "Pierce containers after rinsing",
+          "Label and store until collection",
+          "Do not reuse for other products",
+          "Use certified collection service"
+        ],
+        "required": true
+      },
+      {
+        "id": "expiredDisposal",
+        "type": "checkbox",
+        "label": "Disposal of Expired Chemicals",
+        "options": [
+          "Supplier to remove expired stock",
+          "Keep disposal records"
+        ],
+        "required": true
+      },
+      {
+        "id": "responsiblePerson",
+        "type": "text",
+        "label": "Chemical Safety Responsible Person",
+        "required": true
+      },
+      {
+        "id": "implementationDate",
+        "type": "date",
+        "label": "Implementation Date",
+        "required": true
+      },
+      {
+        "id": "reviewDate",
+        "type": "date",
+        "label": "Next Review Date",
+        "required": true
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Manager Signature",
+        "required": true
+      }
+    ]
+  }
+  

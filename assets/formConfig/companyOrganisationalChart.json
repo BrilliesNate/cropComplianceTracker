@@ -1,0 +1,103 @@
+{
+    "documentTypeId": "companyOrganisationalChart",
+    "name": "Company Organisational Chart",
+    "fields": [
+      {
+        "id": "personResponsible",
+        "type": "text",
+        "label": "Person Responsible for Implementing the Ethical Code",
+        "required": false
+      },
+      {
+        "id": "chiefHealthSafety16_1",
+        "type": "text",
+        "label": "Chief Health and Safety Person 16(1)",
+        "required": false
+      },
+      {
+        "id": "chiefHealthSafety16_2",
+        "type": "text",
+        "label": "Chief Health and Safety Officer 16(2)",
+        "required": false
+      },
+      {
+        "id": "incidentInvestigator",
+        "type": "text",
+        "label": "Incident Investigator",
+        "required": false
+      },
+      {
+        "id": "fireCoordinator",
+        "type": "text",
+        "label": "Fire/Emergency Coordinator",
+        "required": false
+      },
+      {
+        "id": "chemicalCoordinator",
+        "type": "text",
+        "label": "Chemical Coordinator",
+        "required": false
+      },
+      {
+        "id": "machinerySupervisor",
+        "type": "text",
+        "label": "Supervisor of Machinery",
+        "required": false
+      },
+      {
+        "id": "ladderInspector",
+        "type": "text",
+        "label": "Ladder Inspector",
+        "required": false
+      },
+      {
+        "id": "storageCoordinator",
+        "type": "text",
+        "label": "Stacking and Storage Coordinator",
+        "required": false
+      },
+      {
+        "id": "workerRep",
+        "type": "text",
+        "label": "Worker Representative",
+        "required": false
+      },
+      {
+        "id": "healthSafetyRep",
+        "type": "text",
+        "label": "Health and Safety Representative",
+        "required": false
+      },
+      {
+        "id": "firstAidOfficer",
+        "type": "text",
+        "label": "First Aid Officer",
+        "required": false
+      },
+      {
+        "id": "fireFightingTeam",
+        "type": "text",
+        "label": "Fire-Fighting Team Members",
+        "required": false
+      },
+      {
+        "id": "forkliftOperators",
+        "type": "text",
+        "label": "Forklift Operators",
+        "required": false
+      },
+      {
+        "id": "tractorOperators",
+        "type": "text",
+        "label": "Tractor Operators",
+        "required": false
+      },
+      {
+        "id": "chemicalOperators",
+        "type": "text",
+        "label": "Chemical Operators",
+        "required": false
+      }
+    ]
+  }
+  

@@ -1,0 +1,80 @@
+{
+    "documentTypeId": "employmentEquityCommitteeMemberAppointment",
+    "name": "Appointment of Employment Equity Committee Member",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Participate in development and review of Employment Equity Plans",
+          "Advise on equity objectives and implementation",
+          "Assist in submitting reports to the Department of Labour",
+          "Promote diversity and equal opportunity in the workplace",
+          "Support education on anti-discrimination practices",
+          "Engage in equity-related decision-making meetings"
+        ]
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "signatureDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "employerRepName",
+        "type": "text",
+        "label": "Employer Representative Name",
+        "required": true
+      },
+      {
+        "id": "designation",
+        "type": "text",
+        "label": "Employer Designation",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

@@ -1,13 +1,15 @@
+import 'package:cropcompliance/models/document_type_model.dart';
 import 'package:flutter/material.dart';
-import '../../../models/document_type_model.dart';
 
 class DocumentFormBuilder extends StatefulWidget {
   final DocumentTypeModel documentType;
+  final Map<String, dynamic>? formConfig;
   final Function(String, dynamic) onFormDataChanged;
 
   const DocumentFormBuilder({
     Key? key,
     required this.documentType,
+    this.formConfig,
     required this.onFormDataChanged,
   }) : super(key: key);
 
@@ -16,13 +18,91 @@ class DocumentFormBuilder extends StatefulWidget {
 }
 
 class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
-  // This is where form field definitions would be stored for different document types
-  // In a real app, these would likely come from Firestore or another data source
+  @override
+  void initState() {
+    super.initState();
+    print("DocumentFormBuilder - Form config received: ${widget.formConfig != null ? 'Yes' : 'No'}");
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Based on the document type ID, generate appropriate form fields
+    // Check if we have a valid form config
+    if (widget.formConfig != null && widget.formConfig!.containsKey('configJson')) {
+      print("Using custom form config for ${widget.documentType.name}");
+      return _buildDynamicForm(widget.formConfig!);
+    }
+
+    // If no valid form config, use default implementation
+    print("Using default form for ${widget.documentType.name}");
     return _buildFormForDocumentType(widget.documentType.id);
+  }
+
+  Widget _buildDynamicForm(Map<String, dynamic> formConfig) {
+    print("Building dynamic form with config keys: ${formConfig.keys.toList()}");
+    try {
+      // Extract the fields from configJson
+      final configJson = formConfig['configJson'];
+      print("configJson type: ${configJson.runtimeType}");
+
+      if (configJson is Map && configJson.containsKey('fields')) {
+        print("Found fields array with ${(configJson['fields'] as List).length} items");
+        final fields = configJson['fields'] as List;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: fields.map<Widget>((field) {
+            // Extract field properties
+            final String label = field['label'] ?? 'Untitled Field';
+            final String type = field['type'] ?? 'text';
+            final String fieldKey = field['key'] ?? label.toLowerCase().replaceAll(' ', '_');
+
+            print("Building field: $label (type: $type, key: $fieldKey)");
+
+            // Build the appropriate field widget based on type
+            switch (type) {
+              case 'text':
+                return _buildTextField(
+                    fieldKey,
+                    label,
+                    field['placeholder'] ?? 'Enter $label'
+                );
+              case 'textarea':
+                return _buildMultilineTextField(
+                    fieldKey,
+                    label,
+                    field['placeholder'] ?? 'Enter $label'
+                );
+              case 'date':
+                return _buildDateField(fieldKey, label);
+              case 'dropdown':
+                if (field.containsKey('options') && field['options'] is List) {
+                  final options = (field['options'] as List)
+                      .map((o) => o.toString())
+                      .toList();
+                  return _buildDropdownField(fieldKey, label, options);
+                }
+                return _buildTextField(fieldKey, label, 'No options provided');
+              case 'checkbox':
+                return _buildCheckboxField(fieldKey, label);
+              default:
+                return _buildTextField(fieldKey, label, 'Enter $label');
+            }
+          }).toList(),
+        );
+      }
+
+      // If configJson doesn't have fields, return a message
+      print("Invalid form configuration: ${configJson is Map ? 'Missing fields key' : 'configJson is not a Map'}");
+      return const Center(
+        child: Text('Invalid form configuration: missing fields'),
+      );
+    } catch (e) {
+      // If any error occurs, log it and return a message
+      print('Error building dynamic form: $e');
+      return Center(
+        child: Text('Error building form: $e'),
+      );
+    }
   }
 
   Widget _buildFormForDocumentType(String documentTypeId) {

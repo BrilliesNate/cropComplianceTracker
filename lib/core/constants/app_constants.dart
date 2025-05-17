@@ -10,6 +10,7 @@ class AppConstants {
   static const String documentsCollection = 'documents';
   static const String signaturesCollection = 'signatures';
   static const String commentsCollection = 'comments';
+  static const String formTemplatesCollection = 'formConfig';
 
   // Storage paths
   static const String documentsStoragePath = 'companies/{companyId}/documents/{documentId}';

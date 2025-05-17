@@ -1,4 +1,5 @@
 import 'package:cropcompliance/views/admin/category_management_screen.dart';
+import 'package:cropcompliance/views/admin/form_config_management_screen.dart';
 import 'package:cropcompliance/views/admin/user_management_screen.dart';
 import 'package:cropcompliance/views/audit_index/category_documents_screen.dart';
 import 'package:flutter/material.dart';
@@ -53,6 +54,15 @@ class AppRouter {
           builder: (_) => DocumentUploadScreen(
             categoryId: args['categoryId'],
             documentTypeId: args['documentTypeId'],
+          ),
+        );
+
+      case RouteConstants.formConfigManagement:
+        return MaterialPageRoute(builder: (_) => const FormConfigManagementScreen());
+      case RouteConstants.formConfigEditor:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => FormConfigManagementScreen(
           ),
         );
       case RouteConstants.documentForm:

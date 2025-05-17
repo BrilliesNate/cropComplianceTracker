@@ -1,0 +1,70 @@
+{
+    "documentTypeId": "environmentalSustainabilityPolicy",
+    "name": "Environmental Sustainability Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Outlines the company’s commitment to minimizing environmental impact and promoting sustainable practices in line with South African law and WIETA/SIZA standards."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all employees, suppliers, contractors, and business partners across sourcing, production, distribution, and waste management."
+      },
+      {
+        "id": "policyAreas",
+        "type": "checkbox",
+        "label": "Key Sustainability Areas",
+        "options": [
+          "Water conservation and recycling",
+          "Effective waste management and cleanliness",
+          "Reducing carbon emissions and energy use",
+          "Sustainable farming and biodiversity practices",
+          "Pollution prevention and eco-friendly pest control",
+          "Legal compliance and innovation in sustainability"
+        ]
+      },
+      {
+        "id": "implementation",
+        "type": "checkbox",
+        "label": "Implementation and Responsibilities",
+        "options": [
+          "Conduct regular environmental assessments",
+          "Train staff and suppliers on sustainable practices",
+          "Track water usage, rainfall, and soil health",
+          "Collaborate with partners on sustainability goals"
+        ]
+      },
+      {
+        "id": "monitoring",
+        "type": "checkbox",
+        "label": "Monitoring and Reporting",
+        "options": [
+          "Annual sustainability reporting",
+          "Encourage employees to report environmental concerns",
+          "Non-compliance leads to corrective actions"
+        ]
+      },
+      {
+        "id": "legislation",
+        "type": "checkbox",
+        "label": "Applicable Legislation",
+        "options": [
+          "Conservation of Agricultural Resources Act (1983)",
+          "Agricultural Pests Act (1983)",
+          "Fertilizers and Remedies Act (1947)",
+          "Genetically Modified Organisms Act (1997)"
+        ]
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Policy Review and Continuous Improvement",
+        "description": "Reviewed periodically to align with best practices and evolving environmental standards."
+      }
+    ]
+  }
+  

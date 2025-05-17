@@ -1,0 +1,147 @@
+{
+    "documentTypeId": "healthAndSafetyPolicy",
+    "name": "Health and Safety Policy",
+    "fields": [
+      {
+        "id": "overview",
+        "type": "paragraph",
+        "label": "Policy Overview",
+        "description": "Outlines the company’s commitment to a safe working environment and legal compliance with WHS Act, OHS regulations, and WIETA/SIZA standards."
+      },
+      {
+        "id": "objectives",
+        "type": "checkbox",
+        "label": "Objectives",
+        "options": [
+          "Safe working environment",
+          "Minimize hazards and risks",
+          "Promote a safety culture",
+          "Continuous improvement"
+        ]
+      },
+      {
+        "id": "compliance",
+        "type": "checkbox",
+        "label": "Legal and Regulatory Compliance",
+        "options": [
+          "Work Health and Safety Act",
+          "OHS General Safety Regulations",
+          "WIETA/SIZA standards"
+        ]
+      },
+      {
+        "id": "riskManagement",
+        "type": "checkbox",
+        "label": "Risk Management and Hazard Identification",
+        "options": [
+          "Conduct regular risk assessments",
+          "Implement control measures",
+          "Display safety signage",
+          "Perform workplace inspections"
+        ]
+      },
+      {
+        "id": "rolesResponsibilities",
+        "type": "paragraph",
+        "label": "Roles and Responsibilities",
+        "description": "Defines roles for management, employees, and Health & Safety Reps."
+      },
+      {
+        "id": "training",
+        "type": "checkbox",
+        "label": "Safety Training and Induction",
+        "options": [
+          "Induction for new employees",
+          "Ongoing safety training",
+          "First aid and fire training",
+          "Chemical handling awareness"
+        ]
+      },
+      {
+        "id": "ppe",
+        "type": "checkbox",
+        "label": "Personal Protective Equipment (PPE)",
+        "options": [
+          "Provide gloves, masks, ear protection",
+          "Footwear for hazard zones",
+          "Rain gear for outdoor workers"
+        ]
+      },
+      {
+        "id": "incidentReporting",
+        "type": "checkbox",
+        "label": "Accident Reporting and Investigation",
+        "options": [
+          "Immediate reporting of incidents",
+          "Maintain registers and investigate causes",
+          "Provide first aid and medical support"
+        ]
+      },
+      {
+        "id": "fireSafety",
+        "type": "checkbox",
+        "label": "Fire Safety and Emergency Procedures",
+        "options": [
+          "Fire drills and coordinators",
+          "Clear signage and evacuation plans"
+        ]
+      },
+      {
+        "id": "medicalSurveillance",
+        "type": "checkbox",
+        "label": "Medical Surveillance",
+        "options": [
+          "Hearing tests for noise exposure",
+          "Blood tests for chemical exposure",
+          "Vision/lung function tests"
+        ]
+      },
+      {
+        "id": "chemicalSafety",
+        "type": "checkbox",
+        "label": "Chemical Safety",
+        "options": [
+          "Maintain MSDS",
+          "Proper chemical storage",
+          "PPE for handlers",
+          "Training on spill response"
+        ]
+      },
+      {
+        "id": "hygiene",
+        "type": "checkbox",
+        "label": "Hygiene and Waste Management",
+        "options": [
+          "Provide clean drinking water",
+          "Personal hygiene facilities",
+          "Waste disposal systems"
+        ]
+      },
+      {
+        "id": "equipmentSafety",
+        "type": "checkbox",
+        "label": "Machinery and Equipment Safety",
+        "options": [
+          "Authorized personnel only",
+          "Regular maintenance",
+          "Lockout/tagout procedures"
+        ]
+      },
+      {
+        "id": "workerTransport",
+        "type": "checkbox",
+        "label": "Worker Transport",
+        "options": [
+          "Certified drivers only",
+          "Adequate seating and restraints"
+        ]
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Policy Review",
+        "description": "Reviewed annually or when legislation or operations change."
+      }
+    ]
+  }
+  

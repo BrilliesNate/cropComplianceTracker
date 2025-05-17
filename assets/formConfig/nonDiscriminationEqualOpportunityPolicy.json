@@ -1,0 +1,88 @@
+{
+    "documentTypeId": "nonDiscriminationEqualOpportunityPolicy",
+    "name": "Non-Discrimination and Equal Opportunity Policy",
+    "fields": [
+      {
+        "id": "policyStatement",
+        "type": "paragraph",
+        "label": "Policy Statement",
+        "description": "Ensures fair, inclusive workplace free from discrimination, in line with South African and international standards."
+      },
+      {
+        "id": "scope",
+        "type": "checkbox",
+        "label": "Scope of Policy Application",
+        "options": [
+          "Recruitment and promotion",
+          "Compensation and benefits",
+          "Training and development",
+          "Work conditions and assignments",
+          "Disciplinary actions",
+          "Harassment prevention"
+        ]
+      },
+      {
+        "id": "protectedCharacteristics",
+        "type": "checkbox",
+        "label": "Protected Characteristics",
+        "options": [
+          "Race and Ethnicity",
+          "Gender and Identity",
+          "Age",
+          "Disability",
+          "Religion",
+          "Sexual Orientation",
+          "Marital or Parental Status",
+          "Nationality and Language"
+        ]
+      },
+      {
+        "id": "equalOpportunity",
+        "type": "checkbox",
+        "label": "Equal Opportunity Commitments",
+        "options": [
+          "Merit-based recruitment and hiring",
+          "Equal access to training and development",
+          "Fair promotion and advancement"
+        ]
+      },
+      {
+        "id": "antiHarassment",
+        "type": "checkbox",
+        "label": "Anti-Harassment and Bullying",
+        "options": [
+          "Zero tolerance for harassment or bullying",
+          "Employees can report anonymously",
+          "All complaints investigated confidentially"
+        ]
+      },
+      {
+        "id": "disabilityInclusion",
+        "type": "paragraph",
+        "label": "Accommodation for Disabilities",
+        "description": "Company will provide reasonable accommodation for workers with disabilities in line with law."
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Managers ensure implementation",
+          "Employees treat others respectfully and report concerns"
+        ]
+      },
+      {
+        "id": "reporting",
+        "type": "paragraph",
+        "label": "Reporting and Accountability",
+        "description": "Employees can report incidents confidentially; retaliation is prohibited."
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Policy Review",
+        "description": "Policy is reviewed annually and updated to ensure ongoing compliance."
+      }
+    ]
+  }
+  

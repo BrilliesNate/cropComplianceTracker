@@ -1,0 +1,66 @@
+{
+    "documentTypeId": "forkliftInspectionForm",
+    "name": "Forklift Inspection Form",
+    "fields": [
+      {
+        "id": "inspectionDate",
+        "type": "date",
+        "label": "Date of Inspection",
+        "required": true
+      },
+      {
+        "id": "inspectorName",
+        "type": "text",
+        "label": "Inspector Name",
+        "required": true
+      },
+      {
+        "id": "forkliftId",
+        "type": "text",
+        "label": "Forklift ID / Registration",
+        "required": true
+      },
+      {
+        "id": "location",
+        "type": "text",
+        "label": "Area of Use / Location",
+        "required": true
+      },
+      {
+        "id": "inspectionChecklist",
+        "type": "table",
+        "label": "Forklift Checklist",
+        "columns": [
+          { "id": "item", "type": "text", "label": "Inspection Item" },
+          { "id": "status", "type": "dropdown", "label": "Condition", "options": ["✓", "X", "N/A"] },
+          { "id": "comments", "type": "text", "label": "Comments" }
+        ],
+        "defaultRows": [
+          { "item": "Hydraulic system leaks" },
+          { "item": "Tyres condition" },
+          { "item": "Forks undamaged" },
+          { "item": "Controls operational" },
+          { "item": "Brakes functional" },
+          { "item": "Warning devices (horn, lights, reverse beeper)" },
+          { "item": "Seat and seatbelt" },
+          { "item": "Battery/charging" },
+          { "item": "Mast and lifting chains condition" },
+          { "item": "Fire extinguisher present" }
+        ]
+      },
+      {
+        "id": "fitForUse",
+        "type": "radio",
+        "label": "Is the forklift safe to use?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Inspector Signature",
+        "required": true
+      }
+    ]
+  }
+  

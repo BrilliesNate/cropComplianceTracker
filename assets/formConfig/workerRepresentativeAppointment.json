@@ -1,0 +1,83 @@
+{
+    "documentTypeId": "workerRepresentativeAppointment",
+    "name": "Appointment of Worker Representative",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "farmName",
+        "type": "text",
+        "label": "Farm Name / Area of Responsibility",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Represent employees in workplace discussions",
+          "Promote open dialogue with management",
+          "Help resolve concerns and conflicts",
+          "Participate in inspections and safety reviews",
+          "Convey staff feedback to management",
+          "Support improvements in working conditions",
+          "Uphold confidentiality and professionalism",
+          "Encourage workforce participation and communication"
+        ]
+      },
+      {
+        "id": "termOfAppointment",
+        "type": "text",
+        "label": "Term of Appointment",
+        "placeholder": "e.g. 'Until further notice' or specific date",
+        "required": true
+      },
+      {
+        "id": "appointeeSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "appointeeDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Representative Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

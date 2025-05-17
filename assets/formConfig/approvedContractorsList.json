@@ -1,0 +1,38 @@
+{
+    "documentTypeId": "approvedContractorsList",
+    "name": "List of Approved Contractors and Service Providers",
+    "fields": [
+      {
+        "id": "lastUpdated",
+        "type": "date",
+        "label": "Date Last Updated",
+        "required": true
+      },
+      {
+        "id": "contractorTable",
+        "type": "table",
+        "label": "Approved Contractors and Service Providers",
+        "columns": [
+          { "id": "companyName", "type": "text", "label": "Company Name" },
+          { "id": "contactPerson", "type": "text", "label": "Contact Person" },
+          { "id": "serviceProvided", "type": "text", "label": "Service Provided" },
+          { "id": "contactNumber", "type": "text", "label": "Contact Number" },
+          { "id": "approvalDate", "type": "date", "label": "Date Approved" },
+          { "id": "status", "type": "dropdown", "label": "Status", "options": ["Active", "Inactive", "Pending Review"] }
+        ]
+      },
+      {
+        "id": "compiledBy",
+        "type": "text",
+        "label": "Compiled By",
+        "required": true
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Signature",
+        "required": true
+      }
+    ]
+  }
+  

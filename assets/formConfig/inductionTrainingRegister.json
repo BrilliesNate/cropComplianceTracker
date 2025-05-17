@@ -1,0 +1,54 @@
+{
+    "documentTypeId": "inductionTrainingRegister",
+    "name": "Induction Training Register",
+    "fields": [
+      {
+        "id": "trainingDate",
+        "type": "date",
+        "label": "Date of Induction Training",
+        "required": true
+      },
+      {
+        "id": "trainerName",
+        "type": "text",
+        "label": "Trainer/Facilitator Name",
+        "required": true
+      },
+      {
+        "id": "trainingTopics",
+        "type": "textarea",
+        "label": "Training Topics Covered",
+        "rows": 3,
+        "required": true
+      },
+      {
+        "id": "attendees",
+        "type": "table",
+        "label": "Attendee Details",
+        "columns": [
+          {
+            "id": "fullName",
+            "type": "text",
+            "label": "Employee Name"
+          },
+          {
+            "id": "idNumber",
+            "type": "text",
+            "label": "ID Number"
+          },
+          {
+            "id": "signature",
+            "type": "signature",
+            "label": "Signature"
+          }
+        ]
+      },
+      {
+        "id": "trainerSignature",
+        "type": "signature",
+        "label": "Trainer Signature",
+        "required": true
+      }
+    ]
+  }
+  

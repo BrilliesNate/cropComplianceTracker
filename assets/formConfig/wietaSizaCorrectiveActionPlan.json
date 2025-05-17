@@ -1,0 +1,64 @@
+{
+    "documentTypeId": "wietaSizaCorrectiveActionPlan",
+    "name": "WIETA & SIZA Corrective Action Plan (CAP)",
+    "fields": [
+      {
+        "id": "auditDate",
+        "type": "date",
+        "label": "Audit Date",
+        "required": true
+      },
+      {
+        "id": "auditorName",
+        "type": "text",
+        "label": "Auditor Name",
+        "required": true
+      },
+      {
+        "id": "findingsTable",
+        "type": "table",
+        "label": "Non-Conformities and Corrective Actions",
+        "columns": [
+          {
+            "id": "nonConformity",
+            "type": "text",
+            "label": "Non-Conformity"
+          },
+          {
+            "id": "correctiveAction",
+            "type": "text",
+            "label": "Corrective Action"
+          },
+          {
+            "id": "responsiblePerson",
+            "type": "text",
+            "label": "Responsible Person"
+          },
+          {
+            "id": "dueDate",
+            "type": "date",
+            "label": "Due Date"
+          },
+          {
+            "id": "status",
+            "type": "dropdown",
+            "label": "Status",
+            "options": ["Open", "Closed", "In Progress"]
+          }
+        ]
+      },
+      {
+        "id": "managerSignature",
+        "type": "signature",
+        "label": "Manager Signature",
+        "required": true
+      },
+      {
+        "id": "signatureDate",
+        "type": "date",
+        "label": "Date Signed",
+        "required": true
+      }
+    ]
+  }
+  

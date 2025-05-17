@@ -1,0 +1,63 @@
+{
+    "documentTypeId": "asbestosRegisterForm",
+    "name": "Asbestos Register Form",
+    "fields": [
+      {
+        "id": "inspectionDate",
+        "type": "date",
+        "label": "Inspection Date",
+        "required": true
+      },
+      {
+        "id": "inspectedBy",
+        "type": "text",
+        "label": "Inspected By",
+        "required": true
+      },
+      {
+        "id": "location",
+        "type": "text",
+        "label": "Location of Asbestos Material",
+        "required": true
+      },
+      {
+        "id": "materialDescription",
+        "type": "text",
+        "label": "Description of Material",
+        "required": true
+      },
+      {
+        "id": "materialCondition",
+        "type": "dropdown",
+        "label": "Condition of Material",
+        "options": ["Good", "Fair", "Poor", "Damaged"],
+        "required": true
+      },
+      {
+        "id": "riskLevel",
+        "type": "dropdown",
+        "label": "Risk Assessment",
+        "options": ["Low", "Medium", "High"],
+        "required": true
+      },
+      {
+        "id": "actionsTaken",
+        "type": "textarea",
+        "label": "Action Taken / Notes",
+        "rows": 3
+      },
+      {
+        "id": "nextReviewDate",
+        "type": "date",
+        "label": "Next Review Date",
+        "required": true
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Inspector Signature",
+        "required": true
+      }
+    ]
+  }
+  

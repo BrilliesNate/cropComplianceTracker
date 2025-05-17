@@ -1,0 +1,60 @@
+{
+    "documentTypeId": "tractorInspectionForm",
+    "name": "Tractor Inspection Form",
+    "fields": [
+      {
+        "id": "inspectionDate",
+        "type": "date",
+        "label": "Inspection Date",
+        "required": true
+      },
+      {
+        "id": "inspectorName",
+        "type": "text",
+        "label": "Inspector Name",
+        "required": true
+      },
+      {
+        "id": "farmName",
+        "type": "text",
+        "label": "Farm Name",
+        "required": true
+      },
+      {
+        "id": "tractorId",
+        "type": "text",
+        "label": "Tractor ID",
+        "required": true
+      },
+      {
+        "id": "inspectionItems",
+        "type": "table",
+        "label": "Inspection Checklist",
+        "columns": [
+          { "id": "item", "type": "text", "label": "Check Item" },
+          { "id": "status", "type": "dropdown", "label": "Status", "options": ["✓", "X", "N/A"] },
+          { "id": "comments", "type": "text", "label": "Comments" }
+        ],
+        "defaultRows": [
+          { "item": "Fluid levels (oil, hydraulic, coolant)" },
+          { "item": "Leaks (check ground and under components)" },
+          { "item": "Tires (damage, wear, pressure)" },
+          { "item": "Radiator (Clean/Damage)" },
+          { "item": "Belts & Hoses" },
+          { "item": "Lights (Headlights, Taillights)" },
+          { "item": "PTO (Power Take-Off)" },
+          { "item": "3-Point Hitch" },
+          { "item": "Transmission/Gear Shift" },
+          { "item": "Horn (in working condition)" }
+        ]
+      },
+      {
+        "id": "safetyStatus",
+        "type": "radio",
+        "label": "Overall Safety Status",
+        "options": ["Tractor Safe to Operate", "Tractor Unsafe - Do Not Use (Tag out of service)"],
+        "required": true
+      }
+    ]
+  }
+  

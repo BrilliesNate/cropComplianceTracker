@@ -1,0 +1,73 @@
+{
+    "documentTypeId": "childLabourYoungWorkersPolicy",
+    "name": "Child Labour and Young Workers Policy",
+    "fields": [
+      {
+        "id": "policyStatement",
+        "type": "paragraph",
+        "label": "Policy Statement",
+        "description": "Outlines the company's commitment to prohibit child labour and regulate employment of young workers in accordance with legal and ethical standards."
+      },
+      {
+        "id": "prohibition",
+        "type": "checkbox",
+        "label": "Child Labour Prohibition",
+        "options": [
+          "No employment under age 15 or minimum schooling age",
+          "Proof of age required at hiring"
+        ]
+      },
+      {
+        "id": "youngWorkerRules",
+        "type": "checkbox",
+        "label": "Employment of Young Workers",
+        "options": [
+          "Aged 15–18 only",
+          "Max 35 hours/week, no overtime or night shifts",
+          "No hazardous work"
+        ]
+      },
+      {
+        "id": "healthSafety",
+        "type": "paragraph",
+        "label": "Health and Safety for Young Workers",
+        "description": "Ensure safe environment and prohibit exposure to harmful or hazardous work conditions."
+      },
+      {
+        "id": "monitoring",
+        "type": "checkbox",
+        "label": "Monitoring and Enforcement",
+        "options": [
+          "Mandatory age verification",
+          "Internal audits on compliance",
+          "Recruitment teams receive training"
+        ]
+      },
+      {
+        "id": "correctiveAction",
+        "type": "checkbox",
+        "label": "Corrective Action for Violations",
+        "options": [
+          "Immediate removal of child from workplace",
+          "Contractor sanctions or termination",
+          "Support child with access to education"
+        ]
+      },
+      {
+        "id": "reporting",
+        "type": "checkbox",
+        "label": "Reporting Mechanisms",
+        "options": [
+          "Anonymous reporting channels available",
+          "No retaliation for whistleblowers"
+        ]
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Review and Compliance",
+        "description": "Policy is reviewed annually and aligned with BCEA, WIETA/SIZA, and legal standards."
+      }
+    ]
+  }
+  

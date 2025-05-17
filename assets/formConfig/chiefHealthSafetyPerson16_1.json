@@ -1,0 +1,71 @@
+{
+    "documentTypeId": "chiefHealthSafetyPerson16_1",
+    "name": "Appointment of Chief Health and Safety Person 16(1)",
+    "fields": [
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointed Person Name",
+        "required": true
+      },
+      {
+        "id": "position",
+        "type": "text",
+        "label": "Job Title",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Ensure compliance with Occupational Health and Safety Act 85 of 1993",
+          "Implement workplace risk mitigation strategies",
+          "Conduct regular health and safety audits",
+          "Investigate incidents and ensure corrective actions",
+          "Train employees on health and safety",
+          "Oversee emergency preparedness and fire safety",
+          "Liaise with inspectors, auditors, and regulators",
+          "Maintain safety documentation and reports",
+          "Participate in the Health and Safety Committee"
+        ]
+      },
+      {
+        "id": "appointeeSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "appointmentDate",
+        "type": "date",
+        "label": "Date of Appointment",
+        "required": true
+      },
+      {
+        "id": "authorizedBy",
+        "type": "text",
+        "label": "Authorized By (Name)",
+        "required": true
+      },
+      {
+        "id": "authorizedPosition",
+        "type": "text",
+        "label": "Authorized Position",
+        "required": true
+      },
+      {
+        "id": "authorizedSignature",
+        "type": "signature",
+        "label": "Authorized Signature",
+        "required": true
+      },
+      {
+        "id": "authorizationDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

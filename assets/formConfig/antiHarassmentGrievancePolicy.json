@@ -1,0 +1,63 @@
+{
+    "documentTypeId": "antiHarassmentGrievancePolicy",
+    "name": "Anti-Harassment and Grievance Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Establishes a framework to prevent, report, and address harassment in the workplace."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all employees, contractors, suppliers, and partners; includes digital and in-person interactions."
+      },
+      {
+        "id": "prohibitedConduct",
+        "type": "checkbox",
+        "label": "Types of Prohibited Harassment",
+        "options": [
+          "Sexual harassment",
+          "Racial harassment",
+          "Verbal harassment",
+          "Any behavior undermining dignity and well-being"
+        ]
+      },
+      {
+        "id": "reportingChannels",
+        "type": "checkbox",
+        "label": "Reporting and Grievance Mechanism",
+        "options": [
+          "Report to supervisor, manager, or representative",
+          "Use of confidential whistleblowing hotline",
+          "Anonymous grievance box"
+        ]
+      },
+      {
+        "id": "investigationSteps",
+        "type": "checkbox",
+        "label": "Investigation and Resolution",
+        "options": [
+          "Conduct thorough investigation",
+          "Disciplinary action for offenders",
+          "Provide counseling or mediation support",
+          "Prevent future recurrence"
+        ]
+      },
+      {
+        "id": "consequences",
+        "type": "paragraph",
+        "label": "Consequences of Non-Compliance",
+        "description": "Violators face disciplinary action; failure to report may lead to corrective measures for management."
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Policy Review",
+        "description": "Regularly reviewed for alignment with labor laws and WIETA/SIZA standards."
+      }
+    ]
+  }
+  

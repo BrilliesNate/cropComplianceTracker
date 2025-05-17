@@ -9,10 +9,12 @@ class DocumentTypeModel {
   final bool hasNotApplicableOption;
   final bool requiresSignature;
   final int signatureCount;
+  final bool hasFormTemplate;
 
   DocumentTypeModel({
     required this.id,
     required this.categoryId,
+    this.hasFormTemplate = false,
     required this.name,
     required this.allowMultipleDocuments,
     required this.isUploadable,
@@ -32,6 +34,7 @@ class DocumentTypeModel {
       'hasNotApplicableOption': hasNotApplicableOption,
       'requiresSignature': requiresSignature,
       'signatureCount': signatureCount,
+      'hasFormTemplate': hasFormTemplate,
     };
   }
 
@@ -46,6 +49,7 @@ class DocumentTypeModel {
       hasNotApplicableOption: map['hasNotApplicableOption'] ?? false,
       requiresSignature: map['requiresSignature'] ?? false,
       signatureCount: map['signatureCount'] ?? 0,
+      hasFormTemplate: map['hasFormTemplate'] ?? false,
     );
   }
 

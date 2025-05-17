@@ -1,0 +1,83 @@
+{
+    "documentTypeId": "modernSlaveryComplianceAppointment",
+    "name": "Appointment of Modern Slavery Compliance Officer",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Ensure compliance with modern slavery laws and WIETA/SIZA standards",
+          "Implement policies to prevent and detect modern slavery",
+          "Conduct risk assessments for modern slavery risks",
+          "Train employees on modern slavery awareness",
+          "Collaborate with suppliers to promote ethical labor",
+          "Oversee whistleblower systems for reporting concerns",
+          "Report incidents to relevant authorities",
+          "Provide compliance updates to stakeholders",
+          "Lead investigations and ensure corrective action"
+        ]
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "signatureDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "employerRepName",
+        "type": "text",
+        "label": "Employer Representative Name",
+        "required": true
+      },
+      {
+        "id": "designation",
+        "type": "text",
+        "label": "Employer Designation",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "employerSignatureDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

@@ -1,0 +1,53 @@
+{
+    "documentTypeId": "trainingAttendanceRegister",
+    "name": "Training Attendance Register",
+    "fields": [
+      {
+        "id": "trainingTopic",
+        "type": "text",
+        "label": "Training Topic",
+        "required": true
+      },
+      {
+        "id": "trainingDate",
+        "type": "date",
+        "label": "Training Date",
+        "required": true
+      },
+      {
+        "id": "trainerName",
+        "type": "text",
+        "label": "Trainer/Facilitator Name",
+        "required": true
+      },
+      {
+        "id": "attendeeList",
+        "type": "table",
+        "label": "Attendee Information",
+        "columns": [
+          {
+            "id": "employeeName",
+            "type": "text",
+            "label": "Employee Name"
+          },
+          {
+            "id": "idNumber",
+            "type": "text",
+            "label": "ID Number"
+          },
+          {
+            "id": "employeeSignature",
+            "type": "signature",
+            "label": "Signature"
+          }
+        ]
+      },
+      {
+        "id": "trainerSignature",
+        "type": "signature",
+        "label": "Trainer Signature",
+        "required": true
+      }
+    ]
+  }
+  

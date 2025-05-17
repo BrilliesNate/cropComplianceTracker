@@ -1,0 +1,83 @@
+{
+    "documentTypeId": "employmentEquityOfficerAppointment",
+    "name": "Appointment of Employment Equity Officer",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Develop and implement the Employment Equity Plan",
+          "Monitor workforce equity targets",
+          "Submit Employment Equity Reports to the Department of Labour",
+          "Promote equal opportunity in hiring, training, and compensation",
+          "Advise management on compliance and equity-related policies",
+          "Consult with staff and unions regarding equity goals",
+          "Report on equity plan progress to management and authorities",
+          "Maintain monitoring and reporting systems",
+          "Provide training on diversity and affirmative action"
+        ]
+      },
+      {
+        "id": "acknowledgmentSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "acknowledgmentDate",
+        "type": "date",
+        "label": "Appointee Signature Date",
+        "required": true
+      },
+      {
+        "id": "employerRepName",
+        "type": "text",
+        "label": "Employer Representative Name",
+        "required": true
+      },
+      {
+        "id": "designation",
+        "type": "text",
+        "label": "Designation",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Employer Signature Date",
+        "required": true
+      }
+    ]
+  }
+  

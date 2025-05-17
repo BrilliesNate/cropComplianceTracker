@@ -1,0 +1,82 @@
+{
+    "documentTypeId": "wagesAndBenefitsPolicy",
+    "name": "Wages and Benefits Policy",
+    "fields": [
+      {
+        "id": "policyStatement",
+        "type": "paragraph",
+        "label": "Policy Statement",
+        "description": "Outlines commitment to fair and legal compensation, meeting Sectoral Determination 13 and BCEA standards."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all employees across all roles and locations."
+      },
+      {
+        "id": "compliance",
+        "type": "checkbox",
+        "label": "Compliance with Legal Requirements",
+        "options": [
+          "Sectoral Determination 13",
+          "Basic Conditions of Employment Act (BCEA)",
+          "National Minimum Wage Act"
+        ]
+      },
+      {
+        "id": "wages",
+        "type": "checkbox",
+        "label": "Wages and Salaries",
+        "options": [
+          "Pay meets or exceeds minimum wage",
+          "Regular, timely payment with payslips",
+          "Overtime is voluntary and paid 1.5x"
+        ]
+      },
+      {
+        "id": "benefits",
+        "type": "checkbox",
+        "label": "Employee Benefits",
+        "options": [
+          "21 days paid annual leave",
+          "30 days sick leave in 3 years",
+          "Public holiday pay or time off",
+          "4 months maternity leave",
+          "10 days paternity leave",
+          "3 days family responsibility leave"
+        ]
+      },
+      {
+        "id": "deductions",
+        "type": "checkbox",
+        "label": "Salary Deductions",
+        "options": [
+          "Legal deductions (UIF, tax, etc.)",
+          "Voluntary deductions require written consent"
+        ]
+      },
+      {
+        "id": "grievance",
+        "type": "paragraph",
+        "label": "Grievance and Dispute Resolution",
+        "description": "Employees can raise concerns with HR or line managers per grievance policy."
+      },
+      {
+        "id": "complianceAudit",
+        "type": "checkbox",
+        "label": "Compliance and Audits",
+        "options": [
+          "Regular wage audits",
+          "Prompt correction of discrepancies"
+        ]
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Policy Review and Updates",
+        "description": "Policy is reviewed annually and updated for legal compliance and best practice."
+      }
+    ]
+  }
+  

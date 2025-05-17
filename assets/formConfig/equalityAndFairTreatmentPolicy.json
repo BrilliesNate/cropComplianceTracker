@@ -1,0 +1,81 @@
+{
+    "documentTypeId": "equalityAndFairTreatmentPolicy",
+    "name": "Equality and Fair Treatment Policy",
+    "fields": [
+      {
+        "id": "policyOverview",
+        "type": "paragraph",
+        "label": "Policy Overview",
+        "description": "Outlines the company's commitment to fundamental human rights, dignity, and compliance with WIETA/SIZA standards."
+      },
+      {
+        "id": "objectives",
+        "type": "checkbox",
+        "label": "Objectives",
+        "options": [
+          "Adhere to local and international human rights standards",
+          "Promote fairness and dignity",
+          "Prevent discrimination, child and forced labor",
+          "Ensure a safe and respectful workplace"
+        ]
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Management ensures compliance and training",
+          "Employees report violations and support human rights",
+          "Suppliers and contractors confirm human rights adherence"
+        ]
+      },
+      {
+        "id": "principles",
+        "type": "checkbox",
+        "label": "Human Rights Principles",
+        "options": [
+          "Freedom from discrimination and forced labor",
+          "No child labor",
+          "Right to safe work conditions",
+          "Fair wages and benefits",
+          "Freedom of association",
+          "Zero tolerance for harassment"
+        ]
+      },
+      {
+        "id": "legalStandards",
+        "type": "checkbox",
+        "label": "Compliance with Legislation and Standards",
+        "options": [
+          "South African Constitution, BCEA, Employment Equity Act",
+          "ILO conventions and UDHR principles",
+          "WIETA/SIZA compliance"
+        ]
+      },
+      {
+        "id": "dueDiligence",
+        "type": "checkbox",
+        "label": "Human Rights Due Diligence",
+        "options": [
+          "Provide training on rights and responsibilities",
+          "Confidential reporting system available",
+          "No retaliation for whistleblowing"
+        ]
+      },
+      {
+        "id": "monitoringReview",
+        "type": "checkbox",
+        "label": "Monitoring and Review",
+        "options": [
+          "Regular policy updates and internal/external audits"
+        ]
+      },
+      {
+        "id": "acknowledgment",
+        "type": "signature",
+        "label": "Acknowledgment by Employees/Contractors",
+        "required": false
+      }
+    ]
+  }
+  

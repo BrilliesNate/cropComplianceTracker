@@ -1,0 +1,76 @@
+{
+    "documentTypeId": "stackingStorageCoordinatorAppointment",
+    "name": "Appointment of Stacking and Storage Coordinator",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "areaOfResponsibility",
+        "type": "text",
+        "label": "Area of Responsibility (e.g. Warehouse, Packhouse)",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Ensure materials are stacked safely and securely",
+          "Inspect storage areas for hazards or unsafe conditions",
+          "Maintain stacking height limits to prevent collapse",
+          "Ensure walkways and emergency exits remain clear",
+          "Coordinate corrective actions for stacking risks",
+          "Train staff in safe storage and material handling",
+          "Ensure compliance with OHSA stacking regulations",
+          "Maintain visual signage and demarcation in storage zones"
+        ]
+      },
+      {
+        "id": "appointeeSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "appointeeDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

@@ -1,0 +1,56 @@
+{
+    "documentTypeId": "workplaceCommunicationPolicy",
+    "name": "Workplace Communication Policy",
+    "fields": [
+      {
+        "id": "overview",
+        "type": "paragraph",
+        "label": "Policy Overview",
+        "description": "Outlines the company’s approach to clear, transparent, and accessible workplace communication, aligned with WIETA and SIZA."
+      },
+      {
+        "id": "communicationMethods",
+        "type": "checkbox",
+        "label": "Communication Methods",
+        "options": [
+          "Policies in employee-understandable language",
+          "Visible displays in common areas",
+          "Digital access provided where applicable"
+        ]
+      },
+      {
+        "id": "training",
+        "type": "checkbox",
+        "label": "Training and Awareness",
+        "options": [
+          "Regular refresher sessions for all employees",
+          "Supervisors reinforce awareness"
+        ]
+      },
+      {
+        "id": "engagement",
+        "type": "checkbox",
+        "label": "Employee Engagement",
+        "options": [
+          "Encouraged to ask questions and seek clarity",
+          "Feedback via meetings and suggestion boxes"
+        ]
+      },
+      {
+        "id": "updates",
+        "type": "checkbox",
+        "label": "Policy Updates",
+        "options": [
+          "Changes communicated before implementation",
+          "Updates shared through meetings and notices"
+        ]
+      },
+      {
+        "id": "compliance",
+        "type": "paragraph",
+        "label": "Compliance and Accountability",
+        "description": "All employees must adhere to workplace policies. Non-compliance may lead to corrective action."
+      }
+    ]
+  }
+  

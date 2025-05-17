@@ -1,0 +1,91 @@
+{
+    "documentTypeId": "ethicalCodeOfConductPolicy",
+    "name": "Ethical Code of Conduct Policy",
+    "fields": [
+      {
+        "id": "introduction",
+        "type": "paragraph",
+        "label": "Introduction",
+        "description": "Commitment to ethical, legal, and socially responsible business practices in line with WIETA/SIZA standards."
+      },
+      {
+        "id": "compliance",
+        "type": "checkbox",
+        "label": "Compliance with Laws and Regulations",
+        "options": [
+          "Comply with all national and international laws",
+          "Follow WIETA/SIZA social compliance standards"
+        ]
+      },
+      {
+        "id": "laborPractices",
+        "type": "checkbox",
+        "label": "Fair Labor Practices",
+        "options": [
+          "No forced, bonded, or child labor",
+          "Fair wages and benefits",
+          "Compliant working hours and rest breaks",
+          "Freedom of association and collective bargaining"
+        ]
+      },
+      {
+        "id": "healthSafety",
+        "type": "checkbox",
+        "label": "Health and Safety",
+        "options": [
+          "Safe and healthy environment",
+          "Protective equipment and training",
+          "Emergency procedures and first aid access"
+        ]
+      },
+      {
+        "id": "nonDiscrimination",
+        "type": "checkbox",
+        "label": "Non-Discrimination and Equal Opportunity",
+        "options": [
+          "No discrimination based on any protected characteristic",
+          "Equal opportunity in employment and advancement"
+        ]
+      },
+      {
+        "id": "ethicalPractices",
+        "type": "checkbox",
+        "label": "Ethical Business Practices",
+        "options": [
+          "Zero tolerance for corruption or fraud",
+          "Integrity and transparency in transactions",
+          "Accurate record-keeping"
+        ]
+      },
+      {
+        "id": "environmentalResponsibility",
+        "type": "checkbox",
+        "label": "Environmental Responsibility",
+        "options": [
+          "Compliance with environmental regulations",
+          "Waste management and pollution control",
+          "Sustainable practices encouraged"
+        ]
+      },
+      {
+        "id": "grievanceProtection",
+        "type": "checkbox",
+        "label": "Grievance and Whistleblower Protection",
+        "options": [
+          "Confidential grievance mechanism available",
+          "No retaliation for whistleblowers"
+        ]
+      },
+      {
+        "id": "complianceImplementation",
+        "type": "checkbox",
+        "label": "Implementation and Compliance",
+        "options": [
+          "Regular training provided",
+          "Periodic audits conducted",
+          "Corrective action for non-compliance"
+        ]
+      }
+    ]
+  }
+  

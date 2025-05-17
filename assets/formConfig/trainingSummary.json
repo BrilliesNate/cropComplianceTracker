@@ -1,0 +1,58 @@
+{
+    "documentTypeId": "trainingSummary",
+    "name": "Training Summary",
+    "fields": [
+      {
+        "id": "trainingPeriod",
+        "type": "text",
+        "label": "Training Period (e.g. Jan–Mar 2025)",
+        "required": true
+      },
+      {
+        "id": "summaryTable",
+        "type": "table",
+        "label": "Training Summary Table",
+        "columns": [
+          {
+            "id": "trainingTopic",
+            "type": "text",
+            "label": "Training Topic"
+          },
+          {
+            "id": "date",
+            "type": "date",
+            "label": "Date"
+          },
+          {
+            "id": "trainer",
+            "type": "text",
+            "label": "Trainer"
+          },
+          {
+            "id": "numberTrained",
+            "type": "text",
+            "label": "Number of Employees Trained"
+          }
+        ]
+      },
+      {
+        "id": "preparedBy",
+        "type": "text",
+        "label": "Prepared By",
+        "required": true
+      },
+      {
+        "id": "preparedBySignature",
+        "type": "signature",
+        "label": "Signature",
+        "required": true
+      },
+      {
+        "id": "summaryDate",
+        "type": "date",
+        "label": "Date Prepared",
+        "required": true
+      }
+    ]
+  }
+  

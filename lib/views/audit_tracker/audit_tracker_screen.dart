@@ -1,4 +1,5 @@
 import 'package:cropcompliance/models/enums.dart';
+import 'package:cropcompliance/theme/theme_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -148,7 +149,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
     return AppScaffoldWrapper(
       title: 'Compliance Tracker',
-      backgroundColor: Colors.grey[100],
+      backgroundColor: ThemeConstants.lightBackgroundColor,
       child: content,
     );
   }
@@ -1201,6 +1202,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
+
           Row(
             children: [
               _buildStatusChip(documentStatus),
@@ -1216,23 +1218,9 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                     visualDensity: VisualDensity.compact,
                   ),
-                  child: const Text('Upload'),
+                  child: Text(documentType.isUploadable ? 'Upload' : 'Fill Form'),
                 ),
-              if (hasDocument) ...[
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.visibility, size: 20),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  tooltip: 'View Document',
-                  onPressed: () {
-                    Navigator.of(context).pushNamed(
-                      RouteConstants.documentDetail,
-                      arguments: {'documentId': existingDocuments.first.id},
-                    );
-                  },
-                ),
-              ],
+              // ... rest of the code ...
             ],
           ),
         ],
@@ -1268,19 +1256,9 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                 visualDensity: VisualDensity.compact,
               ),
-              child: const Text('Upload'),
+              child: Text(documentType.isUploadable ? 'Upload' : 'Fill Form'),
             ),
-          if (hasDocument)
-            IconButton(
-              icon: const Icon(Icons.visibility),
-              tooltip: 'View Document',
-              onPressed: () {
-                Navigator.of(context).pushNamed(
-                  RouteConstants.documentDetail,
-                  arguments: {'documentId': existingDocuments.first.id},
-                );
-              },
-            ),
+          // ... rest of the code ...
         ],
       ),
     );

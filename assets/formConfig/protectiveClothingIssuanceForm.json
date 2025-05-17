@@ -1,0 +1,65 @@
+{
+    "documentTypeId": "protectiveClothingIssuanceForm",
+    "name": "Protective Clothing Issuance Form",
+    "fields": [
+      {
+        "id": "issueDate",
+        "type": "date",
+        "label": "Date of Issue",
+        "required": true
+      },
+      {
+        "id": "employeeName",
+        "type": "text",
+        "label": "Employee Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "department",
+        "type": "text",
+        "label": "Department / Section",
+        "required": true
+      },
+      {
+        "id": "clothingTable",
+        "type": "table",
+        "label": "Protective Items Issued",
+        "columns": [
+          { "id": "item", "type": "text", "label": "Item" },
+          { "id": "quantity", "type": "text", "label": "Quantity" },
+          { "id": "condition", "type": "dropdown", "label": "Condition", "options": ["New", "Used", "Reissued"] }
+        ]
+      },
+      {
+        "id": "acknowledgment",
+        "type": "paragraph",
+        "label": "Acknowledgment",
+        "description": "I acknowledge receipt of the above-mentioned protective clothing and agree to use them as required by safety regulations."
+      },
+      {
+        "id": "employeeSignature",
+        "type": "signature",
+        "label": "Employee Signature",
+        "required": true
+      },
+      {
+        "id": "issuerName",
+        "type": "text",
+        "label": "Issued By (Name)",
+        "required": true
+      },
+      {
+        "id": "issuerSignature",
+        "type": "signature",
+        "label": "Issuer Signature",
+        "required": true
+      }
+    ]
+  }
+  

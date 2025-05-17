@@ -1,0 +1,64 @@
+{
+    "documentTypeId": "aidsHivPolicy",
+    "name": "AIDS and HIV Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Ensures a supportive, non-discriminatory workplace for employees with HIV/AIDS, promoting equality and human rights."
+      },
+      {
+        "id": "testing",
+        "type": "checkbox",
+        "label": "HIV Testing Policy",
+        "options": [
+          "No mandatory testing unless legally required",
+          "Testing only with informed consent"
+        ]
+      },
+      {
+        "id": "confidentiality",
+        "type": "paragraph",
+        "label": "Confidentiality",
+        "description": "HIV status is confidential and only disclosed with employee consent or if legally required."
+      },
+      {
+        "id": "nonDiscrimination",
+        "type": "checkbox",
+        "label": "Non-Discrimination",
+        "options": [
+          "No discrimination in hiring, promotion, or benefits",
+          "Equal treatment regardless of HIV status"
+        ]
+      },
+      {
+        "id": "stigmaPrevention",
+        "type": "paragraph",
+        "label": "Stigma Prevention and Support",
+        "description": "Encourages open discussion, fosters understanding, and supports an inclusive culture."
+      },
+      {
+        "id": "employeeSupport",
+        "type": "checkbox",
+        "label": "Support for HIV-Positive Employees",
+        "options": [
+          "Access to healthcare and counseling",
+          "Workplace accommodations as needed"
+        ]
+      },
+      {
+        "id": "education",
+        "type": "paragraph",
+        "label": "Education and Awareness",
+        "description": "Regular HIV/AIDS training to reduce stigma and raise awareness."
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Policy Review",
+        "description": "Reviewed periodically to align with legal standards and employee needs."
+      }
+    ]
+  }
+  

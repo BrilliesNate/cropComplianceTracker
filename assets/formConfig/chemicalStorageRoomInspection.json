@@ -1,0 +1,59 @@
+{
+    "documentTypeId": "chemicalStorageRoomInspection",
+    "name": "Chemical Storage Room Inspection Form",
+    "fields": [
+      {
+        "id": "inspectionDate",
+        "type": "date",
+        "label": "Inspection Date",
+        "required": true
+      },
+      {
+        "id": "inspectorName",
+        "type": "text",
+        "label": "Inspector Name",
+        "required": true
+      },
+      {
+        "id": "location",
+        "type": "text",
+        "label": "Storage Room / Facility Location",
+        "required": true
+      },
+      {
+        "id": "inspectionChecklist",
+        "type": "table",
+        "label": "Inspection Items",
+        "columns": [
+          { "id": "item", "type": "text", "label": "Inspection Point" },
+          { "id": "status", "type": "dropdown", "label": "Status", "options": ["✓", "✗", "N/A"] },
+          { "id": "comments", "type": "text", "label": "Comments" }
+        ],
+        "defaultRows": [
+          { "item": "Room is locked with limited key access" },
+          { "item": "Fire-resistant structure" },
+          { "item": "Temperature is regulated" },
+          { "item": "Ventilation system is functional" },
+          { "item": "Lighting is sufficient" },
+          { "item": "No leaks or chemical spills" },
+          { "item": "Warning signage visible and legible" },
+          { "item": "Emergency contact list displayed" },
+          { "item": "Fire extinguisher present and accessible" },
+          { "item": "Spill kit available and complete" }
+        ]
+      },
+      {
+        "id": "generalComments",
+        "type": "textarea",
+        "label": "General Comments",
+        "rows": 3
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Inspector Signature",
+        "required": true
+      }
+    ]
+  }
+  

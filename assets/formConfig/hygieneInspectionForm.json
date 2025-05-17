@@ -1,0 +1,56 @@
+{
+    "documentTypeId": "hygieneInspectionForm",
+    "name": "Hygiene Inspection Form",
+    "fields": [
+      {
+        "id": "inspectionDate",
+        "type": "date",
+        "label": "Date of Inspection",
+        "required": true
+      },
+      {
+        "id": "inspectorName",
+        "type": "text",
+        "label": "Inspector Name",
+        "required": true
+      },
+      {
+        "id": "locationInspected",
+        "type": "text",
+        "label": "Location/Facility Inspected",
+        "required": true
+      },
+      {
+        "id": "checklist",
+        "type": "table",
+        "label": "Hygiene Checklist",
+        "columns": [
+          { "id": "item", "type": "text", "label": "Inspection Item" },
+          { "id": "status", "type": "dropdown", "label": "Condition", "options": ["✓", "X", "N/A"] },
+          { "id": "comments", "type": "text", "label": "Comments" }
+        ],
+        "defaultRows": [
+          { "item": "Toilets are clean and functional" },
+          { "item": "Soap and handwashing facilities available" },
+          { "item": "No signs of pests or rodents" },
+          { "item": "Eating areas are clean and designated" },
+          { "item": "Waste bins are emptied and clean" },
+          { "item": "No signs of food or beverage in work areas" },
+          { "item": "Protective clothing properly stored" }
+        ]
+      },
+      {
+        "id": "generalComments",
+        "type": "textarea",
+        "label": "General Comments / Observations",
+        "rows": 3
+      },
+      {
+        "id": "inspectorSignature",
+        "type": "signature",
+        "label": "Inspector Signature",
+        "required": true
+      }
+    ]
+  }
+  

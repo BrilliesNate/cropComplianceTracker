@@ -1,0 +1,92 @@
+{
+    "documentTypeId": "genderBasedViolencePolicy",
+    "name": "Gender-Based Violence Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Outlines commitment to preventing and addressing gender-based violence, aligned with WIETA/SIZA standards."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all employees, contractors, suppliers, and stakeholders in the workplace and supply chain."
+      },
+      {
+        "id": "zeroTolerance",
+        "type": "checkbox",
+        "label": "Zero-Tolerance Policy",
+        "options": [
+          "No form of gender-based violence is tolerated",
+          "Prompt and decisive action taken against perpetrators"
+        ]
+      },
+      {
+        "id": "compliance",
+        "type": "checkbox",
+        "label": "WIETA/SIZA Compliance",
+        "options": [
+          "No harassment or violence permitted in workplace/supply chain",
+          "Compliance with ethical labor and human rights standards"
+        ]
+      },
+      {
+        "id": "preventionAwareness",
+        "type": "checkbox",
+        "label": "Prevention and Awareness",
+        "options": [
+          "Mandatory training for employees and contractors",
+          "Education on legal rights and support access"
+        ]
+      },
+      {
+        "id": "reportingSupport",
+        "type": "checkbox",
+        "label": "Reporting and Support",
+        "options": [
+          "Confidential reporting channels provided",
+          "Access to counseling and external support services",
+          "Protection from retaliation for reporters"
+        ]
+      },
+      {
+        "id": "investigations",
+        "type": "checkbox",
+        "label": "Investigations and Disciplinary Measures",
+        "options": [
+          "Thorough, confidential investigation of reports",
+          "Disciplinary actions including termination or legal action",
+          "Cooperation with authorities where criminal conduct occurs"
+        ]
+      },
+      {
+        "id": "rolesResponsibilities",
+        "type": "checkbox",
+        "label": "Roles and Responsibilities",
+        "options": [
+          "Management enforces zero-tolerance policy",
+          "HR supports victims and manages procedures",
+          "Employees report incidents and attend training"
+        ]
+      },
+      {
+        "id": "monitoringReview",
+        "type": "checkbox",
+        "label": "Monitoring and Review",
+        "options": [
+          "Track reported incidents and responses",
+          "Collect feedback for improvement",
+          "Conduct regular compliance audits"
+        ]
+      },
+      {
+        "id": "nonCompliance",
+        "type": "paragraph",
+        "label": "Consequences of Non-Compliance",
+        "description": "Violators face disciplinary action up to termination and potential legal consequences."
+      }
+    ]
+  }
+  

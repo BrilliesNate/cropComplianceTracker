@@ -1,0 +1,61 @@
+{
+    "documentTypeId": "forcedLabourModernSlaveryPolicy",
+    "name": "Forced Labour and Modern Slavery Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Outlines the company’s commitment to preventing forced labour and modern slavery in all operations and supply chains."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all employees, contractors, suppliers, and business partners."
+      },
+      {
+        "id": "principles",
+        "type": "checkbox",
+        "label": "Policy Principles",
+        "options": [
+          "Employment must be freely chosen",
+          "No surrendering of IDs or deposits",
+          "Wages must meet legal standards",
+          "Safe working conditions required",
+          "No forced overtime",
+          "Strict prohibition of child labour"
+        ]
+      },
+      {
+        "id": "compliance",
+        "type": "checkbox",
+        "label": "Compliance and Due Diligence",
+        "options": [
+          "Conduct risk assessments and internal audits",
+          "Suppliers must adhere to this policy",
+          "Provide training to employees",
+          "Reporting channels established"
+        ]
+      },
+      {
+        "id": "reporting",
+        "type": "paragraph",
+        "label": "Reporting Violations",
+        "description": "Violations can be reported confidentially via whistleblowing channels; all reports will be investigated."
+      },
+      {
+        "id": "consequences",
+        "type": "paragraph",
+        "label": "Consequences of Non-Compliance",
+        "description": "Policy breaches may result in disciplinary or legal action, including contract termination."
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Review and Monitoring",
+        "description": "Policy will be reviewed periodically to maintain compliance and effectiveness."
+      }
+    ]
+  }
+  

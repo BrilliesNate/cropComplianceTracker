@@ -1,0 +1,37 @@
+{
+    "documentTypeId": "managementReviewMinutes",
+    "name": "Management Review of Meeting Minutes",
+    "fields": [
+      {
+        "id": "reviewDate",
+        "type": "date",
+        "label": "Date of Review",
+        "required": true
+      },
+      {
+        "id": "meetingDate",
+        "type": "date",
+        "label": "Date of Meeting Minutes Reviewed",
+        "required": true
+      },
+      {
+        "id": "discussionPoints",
+        "type": "textarea",
+        "label": "Points Discussed",
+        "rows": 5
+      },
+      {
+        "id": "managementFeedback",
+        "type": "textarea",
+        "label": "Management Feedback",
+        "rows": 5
+      },
+      {
+        "id": "managementSignature",
+        "type": "signature",
+        "label": "Management Signature",
+        "required": true
+      }
+    ]
+  }
+  

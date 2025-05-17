@@ -1,0 +1,123 @@
+{
+    "documentTypeId": "medicalScreeningForm",
+    "name": "Medical Screening Form",
+    "fields": [
+      {
+        "id": "nameAndSurname",
+        "type": "text",
+        "label": "Name and Surname",
+        "placeholder": "Enter full name and surname",
+        "required": true
+      },
+      {
+        "id": "healthScreeningSection",
+        "type": "section",
+        "label": "Health Screening",
+        "description": "Do you currently have any of the following symptoms?"
+      },
+      {
+        "id": "fever",
+        "type": "radio",
+        "label": "Fever or Elevated Temperature?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "cough",
+        "type": "radio",
+        "label": "Cough or Sore Throat?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "diarrhea",
+        "type": "radio",
+        "label": "Diarrhea?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "vomiting",
+        "type": "radio",
+        "label": "Vomiting?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "openCuts",
+        "type": "radio",
+        "label": "Open Cuts or Wounds?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "skinInfection",
+        "type": "radio",
+        "label": "Skin Infection?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "infectedCondition",
+        "type": "radio",
+        "label": "Infected Eye, Ear or Mouth Condition?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "jaundice",
+        "type": "radio",
+        "label": "Jaundice or Yellowing of Skin/Eyes?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "medicalHistorySection",
+        "type": "section",
+        "label": "Medical History",
+        "description": "Have you had any of the following in the past 3 months?"
+      },
+      {
+        "id": "foodPoisoning",
+        "type": "radio",
+        "label": "Food Poisoning?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "infectiousDisease",
+        "type": "radio",
+        "label": "Infectious Disease Diagnosis?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "salmonellaPoisoning",
+        "type": "radio",
+        "label": "Salmonella Poisoning?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "ecoliInfection",
+        "type": "radio",
+        "label": "E. coli Infection?",
+        "options": ["Yes", "No"],
+        "required": true
+      },
+      {
+        "id": "employeeSignature",
+        "type": "signature",
+        "label": "Employee Signature",
+        "required": true
+      },
+      {
+        "id": "date",
+        "type": "date",
+        "label": "Date",
+        "required": true,
+        "defaultValue": "today"
+      }
+    ]
+  }
+  

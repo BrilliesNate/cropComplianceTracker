@@ -1,0 +1,67 @@
+{
+    "documentTypeId": "labourStandardsComplianceAppointment",
+    "name": "Appointment of Responsible Person for Labour Standards Compliance",
+    "fields": [
+      {
+        "id": "appointedPerson",
+        "type": "text",
+        "label": "Appointed Person Full Name",
+        "required": true
+      },
+      {
+        "id": "position",
+        "type": "text",
+        "label": "Position/Job Title",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Ensure compliance with labour laws and WIETA/SIZA requirements",
+          "Monitor working conditions and labour practices",
+          "Conduct training and awareness on ethical labour standards",
+          "Report non-conformities and compliance status",
+          "Liaise with management, employees, and auditors"
+        ]
+      },
+      {
+        "id": "acceptanceSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "acceptanceDate",
+        "type": "date",
+        "label": "Appointee Acceptance Date",
+        "required": true
+      },
+      {
+        "id": "authorizedByName",
+        "type": "text",
+        "label": "Authorized By (Name)",
+        "required": true
+      },
+      {
+        "id": "authorizedByPosition",
+        "type": "text",
+        "label": "Authorized By (Position)",
+        "required": true
+      },
+      {
+        "id": "authorizedSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "authorizedDate",
+        "type": "date",
+        "label": "Employer Signature Date",
+        "required": true
+      }
+    ]
+  }
+  

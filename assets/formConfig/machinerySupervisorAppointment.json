@@ -1,0 +1,76 @@
+{
+    "documentTypeId": "machinerySupervisorAppointment",
+    "name": "Appointment of Supervisor of Machinery",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "responsibilityArea",
+        "type": "text",
+        "label": "Area of Responsibility",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Ensure machinery is properly maintained and safe for use",
+          "Inspect machinery regularly for defects",
+          "Report unsafe conditions immediately",
+          "Supervise safe operation of machinery by employees",
+          "Ensure machinery operators are trained and authorized",
+          "Implement lockout/tagout procedures where necessary",
+          "Maintain accurate records of inspections and maintenance",
+          "Ensure compliance with OHS Act and internal policies"
+        ]
+      },
+      {
+        "id": "appointeeSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "appointeeDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

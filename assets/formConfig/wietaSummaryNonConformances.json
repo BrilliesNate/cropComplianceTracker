@@ -1,0 +1,65 @@
+{
+    "documentTypeId": "wietaSummaryNonConformances",
+    "name": "WIETA Summary of Non-Conformances",
+    "fields": [
+      {
+        "id": "auditDate",
+        "type": "date",
+        "label": "Date of Audit",
+        "required": true
+      },
+      {
+        "id": "auditorName",
+        "type": "text",
+        "label": "Auditor Name",
+        "required": true
+      },
+      {
+        "id": "summaryTable",
+        "type": "table",
+        "label": "Non-Conformance Summary",
+        "columns": [
+          {
+            "id": "findingCategory",
+            "type": "text",
+            "label": "Finding Category"
+          },
+          {
+            "id": "nonConformance",
+            "type": "text",
+            "label": "Non-Conformance"
+          },
+          {
+            "id": "severity",
+            "type": "dropdown",
+            "label": "Severity",
+            "options": ["Critical", "Major", "Minor"]
+          },
+          {
+            "id": "recommendedAction",
+            "type": "text",
+            "label": "Recommended Action"
+          }
+        ]
+      },
+      {
+        "id": "reviewedBy",
+        "type": "text",
+        "label": "Reviewed By",
+        "required": true
+      },
+      {
+        "id": "reviewedBySignature",
+        "type": "signature",
+        "label": "Signature",
+        "required": true
+      },
+      {
+        "id": "reviewDate",
+        "type": "date",
+        "label": "Review Date",
+        "required": true
+      }
+    ]
+  }
+  

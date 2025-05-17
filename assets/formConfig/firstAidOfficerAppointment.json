@@ -1,0 +1,87 @@
+{
+    "documentTypeId": "firstAidOfficerAppointment",
+    "name": "Appointment of First Aid Officer",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "responsibilityArea",
+        "type": "text",
+        "label": "Designated Area of Responsibility (e.g. Farm Name)",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Provide first aid assistance",
+          "Maintain and restock first aid kits",
+          "Keep records of treatments",
+          "Respond in emergencies until professional help arrives",
+          "Inspect first aid equipment regularly",
+          "Attend first aid training",
+          "Promote health and safety awareness"
+        ]
+      },
+      {
+        "id": "appointeeSignature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "appointeeDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "employerRepName",
+        "type": "text",
+        "label": "Employer Representative Name",
+        "required": true
+      },
+      {
+        "id": "designation",
+        "type": "text",
+        "label": "Employer Designation",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  

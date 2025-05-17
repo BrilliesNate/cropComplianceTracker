@@ -1,0 +1,69 @@
+{
+    "documentTypeId": "loanAgreementForm",
+    "name": "Loan Agreement",
+    "fields": [
+      {
+        "id": "employeeName",
+        "type": "text",
+        "label": "Employee Name",
+        "required": true
+      },
+      {
+        "id": "idNumber",
+        "type": "text",
+        "label": "ID Number",
+        "required": true
+      },
+      {
+        "id": "loanAmount",
+        "type": "text",
+        "label": "Loan Amount (ZAR)",
+        "required": true
+      },
+      {
+        "id": "reasonForLoan",
+        "type": "textarea",
+        "label": "Reason for Loan",
+        "rows": 2,
+        "required": true
+      },
+      {
+        "id": "repaymentTerms",
+        "type": "text",
+        "label": "Repayment Terms",
+        "placeholder": "e.g. R200 over 4 weeks",
+        "required": true
+      },
+      {
+        "id": "authorizationClause",
+        "type": "paragraph",
+        "label": "Agreement",
+        "description": "I, the undersigned, agree to repay the loan as per the above terms. I understand that any default may lead to disciplinary procedures."
+      },
+      {
+        "id": "employeeSignature",
+        "type": "signature",
+        "label": "Employee Signature",
+        "required": true
+      },
+      {
+        "id": "signatureDate",
+        "type": "date",
+        "label": "Date of Signature",
+        "required": true
+      },
+      {
+        "id": "managerApproval",
+        "type": "signature",
+        "label": "Manager Approval Signature",
+        "required": true
+      },
+      {
+        "id": "managerApprovalDate",
+        "type": "date",
+        "label": "Date Approved by Manager",
+        "required": true
+      }
+    ]
+  }
+  

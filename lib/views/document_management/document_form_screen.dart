@@ -1,10 +1,11 @@
-import 'package:cropcompliance/core/constants/route_constants.dart';
+import 'dart:math';
+import 'package:cropcompliance/models/document_type_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/document_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../models/document_type_model.dart';
+import '../../core/services/firestore_service.dart';
 import '../shared/custom_app_bar.dart';
 import '../shared/loading_indicator.dart';
 import '../shared/error_display.dart';
@@ -28,18 +29,52 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
   final Map<String, dynamic> _formData = {};
   DateTime? _expiryDate;
   bool _isSubmitting = false;
+  bool _isLoadingFormConfig = true;
+  Map<String, dynamic>? _formConfig;
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
+      _loadFormConfig();
     });
   }
 
   Future<void> _initializeData() async {
     final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
     await categoryProvider.initialize();
+  }
+
+  Future<void> _loadFormConfig() async {
+    try {
+      setState(() {
+        _isLoadingFormConfig = true;
+      });
+
+      // Get the form template from Firestore
+      final config = await _firestoreService.getFormTemplate(widget.documentTypeId);
+
+      if (config != null) {
+        setState(() {
+          _formConfig = config;
+          _isLoadingFormConfig = false;
+        });
+        print("Form config loaded: ${config.toString().substring(0, min(100, config.toString().length))}...");
+      } else {
+        // No config found, proceed with default form
+        setState(() {
+          _isLoadingFormConfig = false;
+        });
+        print("No form config found for document type: ${widget.documentTypeId}");
+      }
+    } catch (e) {
+      print("Error loading form config: $e");
+      setState(() {
+        _isLoadingFormConfig = false;
+      });
+    }
   }
 
   Future<void> _selectExpiryDate() async {
@@ -97,8 +132,13 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
 
     try {
       if (authProvider.currentUser != null) {
+        // Save form configuration ID with form data for reference
+        if (_formConfig != null) {
+          _formData['_formConfigId'] = widget.documentTypeId;
+        }
+
         final document = await documentProvider.createDocument(
-          user: authProvider.currentUser!,
+          user: authProvider.currentUser,
           categoryId: widget.categoryId,
           documentTypeId: widget.documentTypeId,
           files: [],
@@ -107,23 +147,24 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
         );
 
         if (document != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Document created successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
           Navigator.of(context).pop();
-
-          if (documentType.requiresSignature) {
-            Navigator.of(context).pushNamed(
-              RouteConstants.documentDetail,
-              arguments: {'documentId': document.id},
-            );
-          }
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error submitting form: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error submitting form: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -180,6 +221,19 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
       );
     }
 
+    // Show loading indicator if still loading form config
+    if (_isLoadingFormConfig) {
+      return Scaffold(
+        appBar: CustomAppBar(
+          title: 'Fill ${documentType.name}',
+          showBackButton: true,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: CustomAppBar(
         title: 'Fill ${documentType.name}',
@@ -199,9 +253,10 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Use form builder based on document type
+                // Pass the form config to the DocumentFormBuilder
                 DocumentFormBuilder(
                   documentType: documentType,
+                  formConfig: _formConfig,
                   onFormDataChanged: (key, value) {
                     setState(() {
                       _formData[key] = value;

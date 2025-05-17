@@ -1,0 +1,82 @@
+{
+    "documentTypeId": "trainingAndAwarenessPolicy",
+    "name": "Training and Awareness Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Ensures employees, managers, and contractors are trained on ethics, safety, human rights, and sustainability."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all staff at all company levels, including labor contractors."
+      },
+      {
+        "id": "keyFocusAreas",
+        "type": "checkbox",
+        "label": "Key Areas of Focus",
+        "options": [
+          "Ethical Standards and Code of Conduct",
+          "Labor Policies and Employee Rights",
+          "Health and Safety Procedures",
+          "Child Labor and Human Rights",
+          "Ethical Sourcing"
+        ]
+      },
+      {
+        "id": "methods",
+        "type": "checkbox",
+        "label": "Training Methods",
+        "options": [
+          "Workshops",
+          "On-the-job training",
+          "External expert sessions"
+        ]
+      },
+      {
+        "id": "frequency",
+        "type": "checkbox",
+        "label": "Frequency of Training",
+        "options": [
+          "Initial training for new employees",
+          "Annual ongoing training",
+          "Specialized workshops as needed"
+        ]
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Training Responsibilities",
+        "options": [
+          "Managers ensure participation and application",
+          "Employees attend and apply knowledge"
+        ]
+      },
+      {
+        "id": "monitoring",
+        "type": "checkbox",
+        "label": "Monitoring and Evaluation",
+        "options": [
+          "Participant feedback collected",
+          "Assessments and audits",
+          "Training programs improved continuously"
+        ]
+      },
+      {
+        "id": "reporting",
+        "type": "paragraph",
+        "label": "Reporting and Documentation",
+        "description": "Training records including participation and feedback will be maintained."
+      },
+      {
+        "id": "nonCompliance",
+        "type": "paragraph",
+        "label": "Non-Compliance",
+        "description": "Failure to complete training or follow policies may lead to corrective actions."
+      }
+    ]
+  }
+  

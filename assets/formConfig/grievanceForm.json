@@ -1,0 +1,80 @@
+{
+    "documentTypeId": "grievanceForm",
+    "name": "Grievance Form",
+    "fields": [
+      {
+        "id": "employeeName",
+        "type": "text",
+        "label": "Employee Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "idNumber",
+        "type": "text",
+        "label": "ID Number",
+        "required": true
+      },
+      {
+        "id": "department",
+        "type": "text",
+        "label": "Department / Section",
+        "required": true
+      },
+      {
+        "id": "grievanceDate",
+        "type": "date",
+        "label": "Date of Grievance",
+        "required": true
+      },
+      {
+        "id": "grievanceDetails",
+        "type": "textarea",
+        "label": "Details of Grievance",
+        "rows": 4,
+        "required": true
+      },
+      {
+        "id": "proposedResolution",
+        "type": "textarea",
+        "label": "Employee’s Proposed Resolution",
+        "rows": 3
+      },
+      {
+        "id": "employeeSignature",
+        "type": "signature",
+        "label": "Employee Signature",
+        "required": true
+      },
+      {
+        "id": "grievanceHandlerName",
+        "type": "text",
+        "label": "Grievance Handler / Supervisor Name",
+        "required": true
+      },
+      {
+        "id": "grievanceHandlerComments",
+        "type": "textarea",
+        "label": "Comments from Supervisor",
+        "rows": 3
+      },
+      {
+        "id": "supervisorSignature",
+        "type": "signature",
+        "label": "Supervisor Signature",
+        "required": true
+      },
+      {
+        "id": "reviewDate",
+        "type": "date",
+        "label": "Date Reviewed",
+        "required": true
+      }
+    ]
+  }
+  

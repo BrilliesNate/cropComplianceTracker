@@ -1,0 +1,61 @@
+{
+    "documentTypeId": "sickLeavePolicy",
+    "name": "Sick Leave Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Outlines entitlements and procedures for claiming paid sick leave, ensuring fairness and accountability."
+      },
+      {
+        "id": "entitlement",
+        "type": "checkbox",
+        "label": "Sick Leave Entitlements",
+        "options": [
+          "1 day for every 26 days worked during first 6 months",
+          "30 days paid sick leave over 3 years after 6 months employment"
+        ]
+      },
+      {
+        "id": "notification",
+        "type": "checkbox",
+        "label": "Notification of Absence",
+        "options": [
+          "Employee must notify employer personally",
+          "Failure to notify may result in unpaid leave"
+        ]
+      },
+      {
+        "id": "medicalCertificate",
+        "type": "checkbox",
+        "label": "Medical Certificate Requirements",
+        "options": [
+          "Required for absences >2 days or >2 occasions in 8 weeks",
+          "Failure to provide may result in disciplinary action",
+          "Certificate must be provided from 3rd day of absence"
+        ]
+      },
+      {
+        "id": "claimingProcedure",
+        "type": "checkbox",
+        "label": "How to Claim Sick Leave",
+        "options": [
+          "Notify management before shift starts",
+          "Provide expected return date",
+          "Submit medical certificate if required"
+        ]
+      },
+      {
+        "id": "discipline",
+        "type": "checkbox",
+        "label": "Disciplinary Actions",
+        "options": [
+          "Failure to provide medical certificate when required",
+          "Failure to notify management of absence",
+          "Absence without valid reason may lead to warning or action"
+        ]
+      }
+    ]
+  }
+  

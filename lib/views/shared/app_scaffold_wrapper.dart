@@ -85,6 +85,11 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
       'icon': Icons.category_outlined,
       'route': RouteConstants.categoryManagement,
     },
+    {
+      'title': 'formConfigManagement',
+      'icon': Icons.category_outlined,
+      'route': RouteConstants.formConfigManagement,
+    },
   ];
 
   @override
@@ -146,7 +151,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                   // Banner image
                   ClipRRect(
                     child: Image.asset(
-                      'assets/images/menuImage.png',
+                      'assets/images/menuImage.webp',
                       width: effectiveSidebarWidth,
                       height: 120,
                       fit: BoxFit.cover,

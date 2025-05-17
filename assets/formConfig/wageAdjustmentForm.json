@@ -1,0 +1,80 @@
+{
+    "documentTypeId": "wageAdjustmentForm",
+    "name": "Wage Adjustment Form",
+    "fields": [
+      {
+        "id": "employeeName",
+        "type": "text",
+        "label": "Employee Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "idNumber",
+        "type": "text",
+        "label": "ID Number",
+        "required": true
+      },
+      {
+        "id": "currentWage",
+        "type": "text",
+        "label": "Current Wage (ZAR per hour/day)",
+        "required": true
+      },
+      {
+        "id": "newWage",
+        "type": "text",
+        "label": "New Wage (ZAR per hour/day)",
+        "required": true
+      },
+      {
+        "id": "effectiveDate",
+        "type": "date",
+        "label": "Effective Date",
+        "required": true
+      },
+      {
+        "id": "adjustmentReason",
+        "type": "textarea",
+        "label": "Reason for Adjustment",
+        "rows": 2,
+        "required": true
+      },
+      {
+        "id": "employeeAcknowledgment",
+        "type": "paragraph",
+        "label": "Employee Acknowledgment",
+        "description": "I acknowledge that I understand and accept the above wage adjustment."
+      },
+      {
+        "id": "employeeSignature",
+        "type": "signature",
+        "label": "Employee Signature",
+        "required": true
+      },
+      {
+        "id": "employeeDate",
+        "type": "date",
+        "label": "Date Signed by Employee",
+        "required": true
+      },
+      {
+        "id": "managerSignature",
+        "type": "signature",
+        "label": "Manager Signature",
+        "required": true
+      },
+      {
+        "id": "managerDate",
+        "type": "date",
+        "label": "Date Signed by Manager",
+        "required": true
+      }
+    ]
+  }
+  

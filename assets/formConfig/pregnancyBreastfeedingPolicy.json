@@ -1,0 +1,89 @@
+{
+    "documentTypeId": "pregnancyBreastfeedingPolicy",
+    "name": "Pregnancy and Breastfeeding Policy",
+    "fields": [
+      {
+        "id": "purpose",
+        "type": "paragraph",
+        "label": "Purpose",
+        "description": "Supports health and safety of pregnant and breastfeeding employees, ensures accommodations, and promotes a respectful workplace."
+      },
+      {
+        "id": "scope",
+        "type": "paragraph",
+        "label": "Scope",
+        "description": "Applies to all female employees who are pregnant or breastfeeding."
+      },
+      {
+        "id": "notification",
+        "type": "checkbox",
+        "label": "Notification of Pregnancy",
+        "options": [
+          "Employees must notify employer promptly",
+          "Information treated confidentially"
+        ]
+      },
+      {
+        "id": "safety",
+        "type": "checkbox",
+        "label": "Health and Safety Considerations",
+        "options": [
+          "No hazardous work for pregnant/breastfeeding employees",
+          "Alternate duties offered if current work is unsafe",
+          "Risks assessed and mitigated by employer"
+        ]
+      },
+      {
+        "id": "nonDiscrimination",
+        "type": "checkbox",
+        "label": "Non-Discrimination",
+        "options": [
+          "No dismissal or penalty for pregnancy/breastfeeding",
+          "No unfair treatment or bias"
+        ]
+      },
+      {
+        "id": "breastfeedingSupport",
+        "type": "checkbox",
+        "label": "Breastfeeding Support",
+        "options": [
+          "Reasonable breaks for breastfeeding or expressing milk",
+          "Private space provided for up to 6 months post-birth"
+        ]
+      },
+      {
+        "id": "maternityLeave",
+        "type": "checkbox",
+        "label": "Maternity Leave",
+        "options": [
+          "4 months unpaid maternity leave (1 month before, 3 after birth)",
+          "Company assists in claiming UIF benefits"
+        ]
+      },
+      {
+        "id": "employerDuties",
+        "type": "checkbox",
+        "label": "Employer Responsibilities",
+        "options": [
+          "Provide safe work environment",
+          "Assist with UIF application process"
+        ]
+      },
+      {
+        "id": "employeeDuties",
+        "type": "checkbox",
+        "label": "Employee Responsibilities",
+        "options": [
+          "Promptly notify employer",
+          "Communicate needs/concerns openly"
+        ]
+      },
+      {
+        "id": "review",
+        "type": "paragraph",
+        "label": "Review and Improvement",
+        "description": "Policy reviewed regularly and improved based on employee feedback and legal updates."
+      }
+    ]
+  }
+  

@@ -1,0 +1,76 @@
+{
+    "documentTypeId": "healthSafetyRepresentativeAppointment",
+    "name": "Appointment of Health and Safety Representative",
+    "fields": [
+      {
+        "id": "companyName",
+        "type": "text",
+        "label": "Company Name",
+        "required": true
+      },
+      {
+        "id": "employerName",
+        "type": "text",
+        "label": "Employer Name",
+        "required": true
+      },
+      {
+        "id": "appointeeName",
+        "type": "text",
+        "label": "Appointee Full Name",
+        "required": true
+      },
+      {
+        "id": "employeeNumber",
+        "type": "text",
+        "label": "Employee Number",
+        "required": true
+      },
+      {
+        "id": "areaOfResponsibility",
+        "type": "text",
+        "label": "Area of Responsibility (e.g. Farm Name or Department)",
+        "required": true
+      },
+      {
+        "id": "responsibilities",
+        "type": "checkbox",
+        "label": "Responsibilities",
+        "options": [
+          "Conduct health and safety inspections regularly",
+          "Identify and report hazards and risks",
+          "Participate in incident investigations",
+          "Promote compliance with OHSA and company safety policies",
+          "Engage with employees regarding safety concerns",
+          "Assist in emergency drills and preparedness",
+          "Collaborate with Health and Safety Committee",
+          "Provide feedback on health and safety performance"
+        ]
+      },
+      {
+        "id": "signature",
+        "type": "signature",
+        "label": "Appointee Signature",
+        "required": true
+      },
+      {
+        "id": "signatureDate",
+        "type": "date",
+        "label": "Date Signed by Appointee",
+        "required": true
+      },
+      {
+        "id": "employerSignature",
+        "type": "signature",
+        "label": "Employer Representative Signature",
+        "required": true
+      },
+      {
+        "id": "employerDate",
+        "type": "date",
+        "label": "Date Signed by Employer",
+        "required": true
+      }
+    ]
+  }
+  
