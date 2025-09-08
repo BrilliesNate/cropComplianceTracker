@@ -28,9 +28,13 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
   Future<void> _initializeData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
 
     if (authProvider.currentUser != null) {
       await categoryProvider.initialize();
+
+      // Use the company-aware method instead of the old initialize method
+      await documentProvider.refreshForUserContext(context);
     }
   }
 
@@ -38,6 +42,7 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final categoryProvider = Provider.of<CategoryProvider>(context);
+    final documentProvider = Provider.of<DocumentProvider>(context);
 
     if (authProvider.currentUser == null) {
       return const Scaffold(
@@ -47,9 +52,9 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
       );
     }
 
-    final isLoading = categoryProvider.isLoading;
-    final hasError = categoryProvider.error != null;
-    final error = categoryProvider.error ?? '';
+    final isLoading = categoryProvider.isLoading || documentProvider.isLoading;
+    final hasError = categoryProvider.error != null || documentProvider.error != null;
+    final error = categoryProvider.error ?? documentProvider.error ?? '';
 
     Widget content;
     if (isLoading) {
@@ -60,7 +65,7 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
         onRetry: _initializeData,
       );
     } else {
-      content = _buildCategoryList(categoryProvider);
+      content = _buildCategoryList(categoryProvider, documentProvider);
     }
 
     return AppScaffoldWrapper(
@@ -70,7 +75,7 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
     );
   }
 
-  Widget _buildCategoryList(CategoryProvider categoryProvider) {
+  Widget _buildCategoryList(CategoryProvider categoryProvider, DocumentProvider documentProvider) {
     // Filter out duplicates by creating a unique list of category IDs
     final categories = categoryProvider.categories;
     final uniqueIds = <String>{};
@@ -89,12 +94,28 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
       itemCount: uniqueCategories.length,
       itemBuilder: (context, index) {
         final category = uniqueCategories[index];
+
+        // Get document count for this category
+        final documentsInCategory = documentProvider.getDocumentsByCategory(category.id);
+        final documentCount = documentsInCategory.length;
+
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: Icon(
-              _getCategoryIcon(category.name),
-              color: Theme.of(context).primaryColor,
+            leading: Stack(
+              children: [
+                Icon(
+                  _getCategoryIcon(category.name),
+                  color: Theme.of(context).primaryColor,
+                  size: 28,
+                ),
+                if (documentCount > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: _buildDocumentCountBadge(documentCount),
+                  ),
+              ],
             ),
             title: Text(category.name),
             subtitle: Text(
@@ -102,7 +123,21 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (documentCount > 0)
+                  Text(
+                    '$documentCount doc${documentCount == 1 ? '' : 's'}',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
             onTap: () {
               Navigator.of(context).pushNamed(
                 RouteConstants.categoryDocuments,
@@ -112,6 +147,33 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildDocumentCountBadge(int count) {
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white,
+          width: 1,
+        ),
+      ),
+      constraints: const BoxConstraints(
+        minWidth: 16,
+        minHeight: 16,
+      ),
+      child: Text(
+        count > 99 ? '99+' : count.toString(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 

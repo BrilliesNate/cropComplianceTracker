@@ -1,13 +1,16 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cropCompliance/models/document_type_model.dart';
+import 'package:cropCompliance/providers/auth_provider.dart';
+import 'package:cropCompliance/providers/category_provider.dart';
+import 'package:cropCompliance/views/admin/widgets/company_category_settings.dart';
+import 'package:cropCompliance/views/admin/widgets/docuement_type_form.dart';
+import 'package:cropCompliance/views/admin/widgets/document_types_table.dart';
+import 'package:cropCompliance/views/shared/app_scaffold_wrapper.dart';
+import 'package:cropCompliance/views/shared/error_display.dart';
+import 'package:cropCompliance/views/shared/loading_indicator.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/category_model.dart';
-import '../../models/document_type_model.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/category_provider.dart';
-import '../shared/loading_indicator.dart';
-import '../shared/error_display.dart';
-import '../shared/app_scaffold_wrapper.dart';
 
 class CategoryManagementScreen extends StatefulWidget {
   const CategoryManagementScreen({Key? key}) : super(key: key);
@@ -16,24 +19,27 @@ class CategoryManagementScreen extends StatefulWidget {
   State<CategoryManagementScreen> createState() => _CategoryManagementScreenState();
 }
 
-class _CategoryManagementScreenState extends State<CategoryManagementScreen> with SingleTickerProviderStateMixin {
-  bool _isLoading = false;
+class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
+  // Main loading states
+  bool _isInitialLoading = false;
+  bool _isSavingSettings = false;
+  bool _isSavingDocType = false;
+  bool _isDeletingDocType = false;
   String? _error;
+
+  // Company and category settings
   String? _selectedCompanyId;
   List<Map<String, dynamic>> _companies = [];
   Map<String, bool> _enabledCategories = {};
+  bool _isLoadingCategories = false;
+
+  // Document type management
   List<DocumentTypeModel> _allDocumentTypes = [];
   List<DocumentTypeModel> _filteredDocumentTypes = [];
   String? _categoryFilterId;
+  bool _isLoadingDocTypes = false;
 
-  // For adding new category
-  final _newCategoryFormKey = GlobalKey<FormState>();
-  final _categoryNameController = TextEditingController();
-  final _categoryDescriptionController = TextEditingController();
-  int _categoryOrder = 0;
-  bool _isCreatingNewCategory = false;
-
-  // For adding/editing document type
+  // Document type form
   final _docTypeFormKey = GlobalKey<FormState>();
   final _docTypeNameController = TextEditingController();
   String? _selectedCategoryId;
@@ -45,60 +51,38 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> wit
   int _signatureCount = 0;
   DocumentTypeModel? _editingDocType;
 
-  // Tab controller
-  late TabController _tabController;
+  // Track individual operations
+  final Set<String> _updatingDocTypes = {};
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadData();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
-    _categoryNameController.dispose();
-    _categoryDescriptionController.dispose();
     _docTypeNameController.dispose();
     super.dispose();
   }
 
   Future<void> _loadData() async {
     setState(() {
-      _isLoading = true;
+      _isInitialLoading = true;
       _error = null;
     });
 
     try {
-      // Load companies
-      final companiesSnapshot = await FirebaseFirestore.instance
-          .collection('companies')
-          .get();
+      // Load companies first
+      await _loadCompanies();
 
-      final companies = companiesSnapshot.docs.map((doc) => {
-        'id': doc.id,
-        'name': doc.data()['name'] ?? 'Unnamed Company',
-      }).toList();
+      // Then load other data in parallel
+      await Future.wait([
+        _loadAllDocumentTypes(),
+        if (_selectedCompanyId != null) _loadEnabledCategories(),
+      ]);
 
-      // Set initial state
-      setState(() {
-        _companies = companies;
-        if (companies.isNotEmpty && _selectedCompanyId == null) {
-          _selectedCompanyId = companies[0]['id'] as String;
-        }
-        _isLoading = false;
-      });
-
-      // Load enabled categories if company is selected
-      if (_selectedCompanyId != null) {
-        _loadEnabledCategories();
-      }
-
-      // Load all document types
-      await _loadAllDocumentTypes();
-
-      // For the add new document type section, set the initial selected category
+      // Set initial category for form
       final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
       final categories = categoryProvider.categories;
       if (categories.isNotEmpty && _selectedCategoryId == null) {
@@ -110,12 +94,41 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> wit
     } catch (e) {
       setState(() {
         _error = 'Error loading data: $e';
-        _isLoading = false;
+      });
+    } finally {
+      setState(() {
+        _isInitialLoading = false;
       });
     }
   }
 
+  Future<void> _loadCompanies() async {
+    try {
+      final companiesSnapshot = await FirebaseFirestore.instance
+          .collection('companies')
+          .get();
+
+      final companies = companiesSnapshot.docs.map((doc) => {
+        'id': doc.id,
+        'name': doc.data()['name'] ?? 'Unnamed Company',
+      }).toList();
+
+      setState(() {
+        _companies = companies;
+        if (companies.isNotEmpty && _selectedCompanyId == null) {
+          _selectedCompanyId = companies[0]['id'] as String;
+        }
+      });
+    } catch (e) {
+      throw Exception('Failed to load companies: $e');
+    }
+  }
+
   Future<void> _loadAllDocumentTypes() async {
+    setState(() {
+      _isLoadingDocTypes = true;
+    });
+
     try {
       final docTypesSnapshot = await FirebaseFirestore.instance
           .collection('documentTypes')
@@ -131,6 +144,11 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> wit
       });
     } catch (e) {
       print('Error loading document types: $e');
+      _showSnackBar('Error loading document types: $e', Colors.red);
+    } finally {
+      setState(() {
+        _isLoadingDocTypes = false;
+      });
     }
   }
 
@@ -148,11 +166,10 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> wit
     if (_selectedCompanyId == null) return;
 
     setState(() {
-      _isLoading = true;
+      _isLoadingCategories = true;
     });
 
     try {
-      // Check if configuration exists
       final configDoc = await FirebaseFirestore.instance
           .collection('companySettings')
           .doc(_selectedCompanyId)
@@ -167,42 +184,36 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> wit
         }
       }
 
-      // Get all categories
+      // Get all categories and set defaults
       final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
       final allCategories = categoryProvider.categories;
 
-      // Initialize missing categories as enabled by default
       for (var category in allCategories) {
         if (!enabledCategories.containsKey(category.id)) {
-          enabledCategories[category.id] = true; // Enable by default
+          enabledCategories[category.id] = true;
         }
       }
 
       setState(() {
         _enabledCategories = enabledCategories;
-        _isLoading = false;
       });
     } catch (e) {
+      _showSnackBar('Error loading category configuration: $e', Colors.red);
+    } finally {
       setState(() {
-        _error = 'Error loading category configuration: $e';
-        _isLoading = false;
+        _isLoadingCategories = false;
       });
     }
   }
 
   Future<void> _saveConfiguration() async {
     if (_selectedCompanyId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a company'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Please select a company', Colors.red);
       return;
     }
 
     setState(() {
-      _isLoading = true;
+      _isSavingSettings = true;
     });
 
     try {
@@ -214,86 +225,12 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> wit
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Category settings saved successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+      _showSnackBar('Category settings saved successfully', Colors.green);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving settings: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<String?> _addNewCategory() async {
-    if (!_newCategoryFormKey.currentState!.validate()) {
-      return null;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Create the new category in Firestore
-      final newCategory = {
-        'name': _categoryNameController.text.trim(),
-        'description': _categoryDescriptionController.text.trim(),
-        'order': _categoryOrder,
-      };
-
-      final docRef = await FirebaseFirestore.instance
-          .collection('categories')
-          .add(newCategory);
-
-      final categoryId = docRef.id;
-
-      // Refresh categories
-      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
-      await categoryProvider.initialize();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Category added successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      // Reset form
-      _categoryNameController.clear();
-      _categoryDescriptionController.clear();
-      _categoryOrder = 0;
-      setState(() {
-        _isCreatingNewCategory = false;
-      });
-
-      return categoryId;
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error adding category: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return null;
+      _showSnackBar('Error saving settings: $e', Colors.red);
     } finally {
       setState(() {
-        _isLoading = false;
+        _isSavingSettings = false;
       });
     }
   }
@@ -303,46 +240,21 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> wit
       return;
     }
 
-    // Handle new category creation if needed
-    if (_isCreatingNewCategory) {
-      final newCategoryId = await _addNewCategory();
-      if (newCategoryId != null) {
-        setState(() {
-          _selectedCategoryId = newCategoryId;
-        });
-      } else {
-        // Category creation failed
-        return;
-      }
-    }
-
     if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a category'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Please select a category', Colors.red);
       return;
     }
 
-    // Validate signature count if signatures are required
     if (_requiresSignature && _signatureCount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Signature count must be greater than 0 if signatures are required'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Signature count must be greater than 0', Colors.red);
       return;
     }
 
     setState(() {
-      _isLoading = true;
+      _isSavingDocType = true;
     });
 
     try {
-      // Create/update document type data
       final docTypeData = {
         'name': _docTypeNameController.text.trim(),
         'categoryId': _selectedCategoryId,
@@ -355,47 +267,25 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> wit
       };
 
       if (_editingDocType != null) {
-        // Update existing document type
         await FirebaseFirestore.instance
             .collection('documentTypes')
             .doc(_editingDocType!.id)
             .update(docTypeData);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Document type updated successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _showSnackBar('Document type updated successfully', Colors.green);
       } else {
-        // Create new document type
         await FirebaseFirestore.instance
             .collection('documentTypes')
             .add(docTypeData);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Document type added successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _showSnackBar('Document type added successfully', Colors.green);
       }
 
-      // Reset form
       _resetDocTypeForm();
-
-      // Refresh document types
       await _loadAllDocumentTypes();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saving document type: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Error saving document type: $e', Colors.red);
     } finally {
       setState(() {
-        _isLoading = false;
+        _isSavingDocType = false;
       });
     }
   }
@@ -424,38 +314,20 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> wit
       _hasNotApplicableOption = docType.hasNotApplicableOption;
       _requiresSignature = docType.requiresSignature;
       _signatureCount = docType.signatureCount;
-
-      // Scroll to form
-      // In a real app, you might want to use a ScrollController to scroll to the form
     });
   }
 
   Future<void> _deleteDocumentType(String docTypeId) async {
-    // Show confirmation dialog
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: const Text(
-          'Are you sure you want to delete this document type? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final confirm = await _showConfirmDialog(
+      'Delete Document Type',
+      'Are you sure you want to delete this document type? This action cannot be undone.',
     );
 
     if (confirm != true) return;
 
     setState(() {
-      _isLoading = true;
+      _isDeletingDocType = true;
+      _updatingDocTypes.add(docTypeId);
     });
 
     try {
@@ -464,103 +336,95 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> wit
           .doc(docTypeId)
           .delete();
 
-      // Reset form if currently editing this document type
       if (_editingDocType?.id == docTypeId) {
         _resetDocTypeForm();
       }
 
-      // Refresh document types
       await _loadAllDocumentTypes();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Document type deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      _showSnackBar('Document type deleted successfully', Colors.green);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error deleting document type: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Error deleting document type: $e', Colors.red);
     } finally {
       setState(() {
-        _isLoading = false;
+        _isDeletingDocType = false;
+        _updatingDocTypes.remove(docTypeId);
       });
     }
   }
 
-  Future<void> _deleteCategory(String categoryId) async {
-    // Check if category has document types
-    final docTypes = _allDocumentTypes.where((dt) => dt.categoryId == categoryId).toList();
-
-    if (docTypes.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot delete category with existing document types. Delete the document types first.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Show confirmation dialog
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: const Text(
-          'Are you sure you want to delete this category? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
+  Future<void> _quickUpdateDocumentType(DocumentTypeModel docType, Map<String, dynamic> updates) async {
     setState(() {
-      _isLoading = true;
+      _updatingDocTypes.add(docType.id);
     });
 
     try {
       await FirebaseFirestore.instance
-          .collection('categories')
-          .doc(categoryId)
-          .delete();
+          .collection('documentTypes')
+          .doc(docType.id)
+          .update(updates);
 
-      // Update category provider
-      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
-      await categoryProvider.initialize();
+      // Update local state immediately for better UX
+      final index = _allDocumentTypes.indexWhere((dt) => dt.id == docType.id);
+      if (index != -1) {
+        // Create updated document type
+        final updatedDocType = DocumentTypeModel(
+          id: docType.id,
+          categoryId: updates['categoryId'] ?? docType.categoryId,
+          name: updates['name'] ?? docType.name,
+          allowMultipleDocuments: updates['allowMultipleDocuments'] ?? docType.allowMultipleDocuments,
+          isUploadable: updates['isUploadable'] ?? docType.isUploadable,
+          hasExpiryDate: updates['hasExpiryDate'] ?? docType.hasExpiryDate,
+          hasNotApplicableOption: updates['hasNotApplicableOption'] ?? docType.hasNotApplicableOption,
+          requiresSignature: updates['requiresSignature'] ?? docType.requiresSignature,
+          signatureCount: updates['signatureCount'] ?? docType.signatureCount,
+        );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Category deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+        setState(() {
+          _allDocumentTypes[index] = updatedDocType;
+          _applyDocumentTypeFilter();
+        });
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error deleting category: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Error updating document type: $e', Colors.red);
+      // Refresh data on error
+      await _loadAllDocumentTypes();
     } finally {
       setState(() {
-        _isLoading = false;
+        _updatingDocTypes.remove(docType.id);
       });
     }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: color,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<bool?> _showConfirmDialog(String title, String content) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontSize: 16)),
+        content: Text(content, style: const TextStyle(fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(fontSize: 12)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -577,707 +441,235 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> wit
       );
     }
 
-    Widget content;
-    if (categoryProvider.isLoading || _isLoading) {
-      content = const LoadingIndicator(message: 'Loading categories...');
-    } else if (categoryProvider.error != null || _error != null) {
-      content = ErrorDisplay(
-        error: categoryProvider.error ?? _error ?? 'Unknown error',
-        onRetry: _loadData,
+    // Show main loading screen for initial load
+    if (_isInitialLoading || categoryProvider.isLoading) {
+      return AppScaffoldWrapper(
+        title: 'Category Management',
+        backgroundColor: Colors.grey[100],
+        child: const LoadingIndicator(message: 'Loading category management...'),
       );
-    } else {
-      content = Column(
-        children: [
-          // Tab Bar
-          Container(
-            color: Colors.white,
-            child: TabBar(
-              controller: _tabController,
-              labelColor: Theme.of(context).primaryColor,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: Theme.of(context).primaryColor,
-              tabs: const [
-                Tab(text: 'Manage Categories'),
-                Tab(text: 'Document Types'),
-              ],
-            ),
-          ),
+    }
 
-          // Tab Bar View
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // First Tab - Manage Categories
-                _buildManageCategoriesTab(categoryProvider),
-
-                // Second Tab - Document Types
-                _buildDocumentTypesTab(categoryProvider),
-              ],
-            ),
-          ),
-        ],
+    // Show error screen
+    if (categoryProvider.error != null || _error != null) {
+      return AppScaffoldWrapper(
+        title: 'Category Management',
+        backgroundColor: Colors.grey[100],
+        child: ErrorDisplay(
+          error: categoryProvider.error ?? _error ?? 'Unknown error',
+          onRetry: _loadData,
+        ),
       );
     }
 
     return AppScaffoldWrapper(
       title: 'Category Management',
       backgroundColor: Colors.grey[100],
-      child: content,
-    );
-  }
-
-  Widget _buildManageCategoriesTab(CategoryProvider categoryProvider) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Enable/Disable Categories by Company',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Control which categories are enabled for specific companies.',
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Company selection
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: 'Select Company',
-                      border: OutlineInputBorder(),
-                    ),
-                    value: _selectedCompanyId,
-                    items: _companies.map((company) {
-                      return DropdownMenuItem<String>(
-                        value: company['id'] as String,
-                        child: Text(company['name'] as String),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedCompanyId = value;
-                      });
-                      _loadEnabledCategories();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          if (_selectedCompanyId != null) ...[
-            const SizedBox(height: 24),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Company Category Settings with loading overlay
+                Stack(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Categories',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        ElevatedButton(
-                          onPressed: _saveConfiguration,
-                          child: const Text('Save Settings'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: categoryProvider.categories.length,
-                      separatorBuilder: (context, index) => const Divider(),
-                      itemBuilder: (context, index) {
-                        final category = categoryProvider.categories[index];
-                        return Row(
-                          children: [
-                            Expanded(
-                              child: SwitchListTile(
-                                title: Text(category.name),
-                                subtitle: Text(category.description),
-                                value: _enabledCategories[category.id] ?? true,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _enabledCategories[category.id] = value;
-                                  });
-                                },
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteCategory(category.id),
-                              tooltip: 'Delete Category',
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                        );
+                    CompanyCategorySettings(
+                      companies: _companies,
+                      selectedCompanyId: _selectedCompanyId,
+                      enabledCategories: _enabledCategories,
+                      categories: categoryProvider.categories,
+                      onCompanyChanged: (companyId) {
+                        setState(() {
+                          _selectedCompanyId = companyId;
+                        });
+                        _loadEnabledCategories();
                       },
+                      onCategoryToggle: (categoryId, enabled) {
+                        setState(() {
+                          _enabledCategories[categoryId] = enabled;
+                        });
+                      },
+                      onSave: _saveConfiguration,
+                      isLoading: _isSavingSettings,
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _saveConfiguration,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48),
+                    if (_isLoadingCategories)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.white.withOpacity(0.7),
+                          child: const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        ),
                       ),
-                      child: const Text('Save Category Settings'),
-                    ),
                   ],
                 ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
-  Widget _buildDocumentTypesTab(CategoryProvider categoryProvider) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Add/Edit Document Type Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _docTypeFormKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 16),
+
+                // Document Type Form with loading overlay
+                Stack(
                   children: [
-                    Text(
-                      _editingDocType != null
-                          ? 'Edit Document Type'
-                          : 'Add New Document Type',
-                      style: Theme.of(context).textTheme.headlineSmall,
+                    DocumentTypeForm(
+                      formKey: _docTypeFormKey,
+                      nameController: _docTypeNameController,
+                      categories: categoryProvider.categories,
+                      selectedCategoryId: _selectedCategoryId,
+                      allowMultipleDocuments: _allowMultipleDocuments,
+                      isUploadable: _isUploadable,
+                      hasExpiryDate: _hasExpiryDate,
+                      hasNotApplicableOption: _hasNotApplicableOption,
+                      requiresSignature: _requiresSignature,
+                      signatureCount: _signatureCount,
+                      editingDocType: _editingDocType,
+                      isLoading: _isSavingDocType,
+                      onCategoryChanged: (categoryId) {
+                        setState(() {
+                          _selectedCategoryId = categoryId;
+                        });
+                      },
+                      onAllowMultipleChanged: (value) {
+                        setState(() {
+                          _allowMultipleDocuments = value;
+                        });
+                      },
+                      onUploadableChanged: (value) {
+                        setState(() {
+                          _isUploadable = value;
+                        });
+                      },
+                      onExpiryDateChanged: (value) {
+                        setState(() {
+                          _hasExpiryDate = value;
+                        });
+                      },
+                      onNotApplicableChanged: (value) {
+                        setState(() {
+                          _hasNotApplicableOption = value;
+                        });
+                      },
+                      onSignatureRequiredChanged: (value) {
+                        setState(() {
+                          _requiresSignature = value;
+                          if (!_requiresSignature) {
+                            _signatureCount = 0;
+                          } else if (_signatureCount == 0) {
+                            _signatureCount = 1;
+                          }
+                        });
+                      },
+                      onSignatureCountChanged: (count) {
+                        setState(() {
+                          _signatureCount = count;
+                        });
+                      },
+                      onSave: _saveDocumentType,
+                      onReset: _resetDocTypeForm,
                     ),
-                    const SizedBox(height: 16),
-
-                    // Category selection with option to create new
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: _isCreatingNewCategory
-                              ? Form(
-                            key: _newCategoryFormKey,
+                    if (_isSavingDocType)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.white.withOpacity(0.7),
+                          child: const Center(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                TextFormField(
-                                  controller: _categoryNameController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'New Category Name',
-                                    border: OutlineInputBorder(),
-                                    hintText: 'e.g., Health and Safety',
-                                  ),
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Please enter a category name';
-                                    }
-                                    return null;
-                                  },
+                                SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
                                 ),
-                                const SizedBox(height: 8),
-                                TextFormField(
-                                  controller: _categoryDescriptionController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Description',
-                                    border: OutlineInputBorder(),
-                                    hintText: 'e.g., Documents related to workplace health and safety',
-                                  ),
-                                  maxLines: 2,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Please enter a description';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 8),
-                                TextFormField(
-                                  initialValue: _categoryOrder.toString(),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Display Order',
-                                    border: OutlineInputBorder(),
-                                    hintText: 'e.g., 1',
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Please enter an order number';
-                                    }
-                                    if (int.tryParse(value) == null) {
-                                      return 'Please enter a valid number';
-                                    }
-                                    return null;
-                                  },
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _categoryOrder = int.tryParse(value) ?? 0;
-                                    });
-                                  },
+                                SizedBox(height: 8),
+                                Text(
+                                  'Saving...',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
                                 ),
                               ],
                             ),
-                          )
-                              : DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(
-                              labelText: 'Category',
-                              border: OutlineInputBorder(),
-                            ),
-                            value: _selectedCategoryId,
-                            items: categoryProvider.categories.map((category) {
-                              return DropdownMenuItem<String>(
-                                value: category.id,
-                                child: Text(category.name),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedCategoryId = value;
-                              });
-                            },
-                            validator: (value) {
-                              if (!_isCreatingNewCategory && (value == null || value.isEmpty)) {
-                                return 'Please select a category';
-                              }
-                              return null;
-                            },
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        TextButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _isCreatingNewCategory = !_isCreatingNewCategory;
-                            });
-                          },
-                          icon: Icon(_isCreatingNewCategory ? Icons.list : Icons.add),
-                          label: Text(_isCreatingNewCategory ? 'Select Existing' : 'Create New'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Document type name
-                    TextFormField(
-                      controller: _docTypeNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Document Type Name',
-                        border: OutlineInputBorder(),
-                        hintText: 'e.g., Fire Safety Certificate',
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a document type name';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Properties checkboxes in a grid
-                    Text(
-                      'Document Type Properties',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-
-                    Wrap(
-                      spacing: 16,
-                      runSpacing: 0,
-                      children: [
-                        SizedBox(
-                          width: 250,
-                          child: CheckboxListTile(
-                            title: const Text('Allow Multiple Documents'),
-                            value: _allowMultipleDocuments,
-                            onChanged: (value) {
-                              setState(() {
-                                _allowMultipleDocuments = value ?? false;
-                              });
-                            },
-                            controlAffinity: ListTileControlAffinity.leading,
-                            dense: true,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 250,
-                          child: CheckboxListTile(
-                            title: const Text('Is Uploadable'),
-                            value: _isUploadable,
-                            onChanged: (value) {
-                              setState(() {
-                                _isUploadable = value ?? true;
-                              });
-                            },
-                            controlAffinity: ListTileControlAffinity.leading,
-                            dense: true,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 250,
-                          child: CheckboxListTile(
-                            title: const Text('Has Expiry Date'),
-                            value: _hasExpiryDate,
-                            onChanged: (value) {
-                              setState(() {
-                                _hasExpiryDate = value ?? false;
-                              });
-                            },
-                            controlAffinity: ListTileControlAffinity.leading,
-                            dense: true,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 250,
-                          child: CheckboxListTile(
-                            title: const Text('Not Applicable Option'),
-                            value: _hasNotApplicableOption,
-                            onChanged: (value) {
-                              setState(() {
-                                _hasNotApplicableOption = value ?? false;
-                              });
-                            },
-                            controlAffinity: ListTileControlAffinity.leading,
-                            dense: true,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 250,
-                          child: CheckboxListTile(
-                            title: const Text('Requires Signature'),
-                            value: _requiresSignature,
-                            onChanged: (value) {
-                              setState(() {
-                                _requiresSignature = value ?? false;
-                                if (!_requiresSignature) {
-                                  _signatureCount = 0;
-                                } else if (_signatureCount == 0) {
-                                  _signatureCount = 1;
-                                }
-                              });
-                            },
-                            controlAffinity: ListTileControlAffinity.leading,
-                            dense: true,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Signature count if required
-                    if (_requiresSignature) ...[
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        initialValue: _signatureCount.toString(),
-                        decoration: const InputDecoration(
-                          labelText: 'Signature Count',
-                          border: OutlineInputBorder(),
-                          hintText: 'e.g., 1',
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter signature count';
-                          }
-                          final count = int.tryParse(value);
-                          if (count == null || count <= 0) {
-                            return 'Please enter a valid positive number';
-                          }
-                          return null;
-                        },
-                        onChanged: (value) {
-                          setState(() {
-                            _signatureCount = int.tryParse(value) ?? 1;
-                          });
-                        },
-                      ),
-                    ],
-
-                    const SizedBox(height: 24),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        if (_editingDocType != null)
-                          OutlinedButton(
-                            onPressed: _resetDocTypeForm,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            ),
-                            child: const Text('Cancel Editing'),
-                          ),
-                        const Spacer(),
-                        SizedBox(
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _saveDocumentType,
-                            child: _isLoading
-                                ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                                : Text(_editingDocType != null ? 'Update Document Type' : 'Add Document Type'),
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Document Types Table with loading overlay
+                Stack(
+                  children: [
+                    DocumentTypesTable(
+                      documentTypes: _filteredDocumentTypes,
+                      categories: categoryProvider.categories,
+                      categoryFilter: _categoryFilterId,
+                      onCategoryFilterChanged: (categoryId) {
+                        setState(() {
+                          _categoryFilterId = categoryId;
+                          _applyDocumentTypeFilter();
+                        });
+                      },
+                      onEdit: _editDocumentType,
+                      onDelete: _deleteDocumentType,
+                      onQuickUpdate: _quickUpdateDocumentType,
+                    ),
+                    if (_isLoadingDocTypes)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.white.withOpacity(0.7),
+                          child: const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                                SizedBox(height: 12),
+                                Text(
+                                  'Loading document types...',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Global overlay for delete operation
+          if (_isDeletingDocType)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.3),
+                child: const Center(
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text(
+                            'Deleting document type...',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Existing Document Types
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Manage Document Types',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Category filter dropdown
-                  DropdownButtonFormField<String?>(
-                    decoration: const InputDecoration(
-                      labelText: 'Filter by Category',
-                      border: OutlineInputBorder(),
-                    ),
-                    value: _categoryFilterId,
-                    items: [
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('All Categories'),
-                      ),
-                      ...categoryProvider.categories.map((category) {
-                        return DropdownMenuItem<String?>(
-                          value: category.id,
-                          child: Text(category.name),
-                        );
-                      }),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _categoryFilterId = value;
-                        _applyDocumentTypeFilter();
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Document types table
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columnSpacing: 20,
-                      headingRowColor: MaterialStateProperty.all(
-                        Theme.of(context).primaryColor.withOpacity(0.1),
-                      ),
-                      columns: const [
-                        DataColumn(label: Text('Name')),
-                        DataColumn(label: Text('Category')),
-                        DataColumn(label: Text('Multiple')),
-                        DataColumn(label: Text('Uploadable')),
-                        DataColumn(label: Text('Expiry')),
-                        DataColumn(label: Text('N/A Option')),
-                        DataColumn(label: Text('Signatures')),
-                        DataColumn(label: Text('Actions')),
-                      ],
-                      rows: _filteredDocumentTypes.map((docType) {
-                        // Find category name
-                        String categoryName = 'Unknown';
-                        try {
-                          final category = categoryProvider.categories
-                              .firstWhere((c) => c.id == docType.categoryId);
-                          categoryName = category.name;
-                        } catch (_) {}
-
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(docType.name)),
-                            DataCell(Text(categoryName)),
-                            // Multiple documents
-                            DataCell(
-                              Switch(
-                                value: docType.allowMultipleDocuments,
-                                onChanged: (value) async {
-                                  await FirebaseFirestore.instance
-                                      .collection('documentTypes')
-                                      .doc(docType.id)
-                                      .update({'allowMultipleDocuments': value});
-                                  _loadAllDocumentTypes();
-                                },
-                              ),
-                            ),
-                            // Uploadable
-                            DataCell(
-                              Switch(
-                                value: docType.isUploadable,
-                                onChanged: (value) async {
-                                  await FirebaseFirestore.instance
-                                      .collection('documentTypes')
-                                      .doc(docType.id)
-                                      .update({'isUploadable': value});
-                                  _loadAllDocumentTypes();
-                                },
-                              ),
-                            ),
-                            // Has expiry date
-                            DataCell(
-                              Switch(
-                                value: docType.hasExpiryDate,
-                                onChanged: (value) async {
-                                  await FirebaseFirestore.instance
-                                      .collection('documentTypes')
-                                      .doc(docType.id)
-                                      .update({'hasExpiryDate': value});
-                                  _loadAllDocumentTypes();
-                                },
-                              ),
-                            ),
-                            // Not applicable option
-                            DataCell(
-                              Switch(
-                                value: docType.hasNotApplicableOption,
-                                onChanged: (value) async {
-                                  await FirebaseFirestore.instance
-                                      .collection('documentTypes')
-                                      .doc(docType.id)
-                                      .update({'hasNotApplicableOption': value});
-                                  _loadAllDocumentTypes();
-                                },
-                              ),
-                            ),
-                            // Signature info
-                            DataCell(
-                              docType.requiresSignature
-                                  ? Row(
-                                children: [
-                                  Text('${docType.signatureCount}'),
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, size: 16),
-                                    onPressed: () {
-                                      // Show dialog to edit signature count
-                                      _showSignatureCountDialog(docType);
-                                    },
-                                  ),
-                                ],
-                              )
-                                  : Switch(
-                                value: docType.requiresSignature,
-                                onChanged: (value) async {
-                                  await FirebaseFirestore.instance
-                                      .collection('documentTypes')
-                                      .doc(docType.id)
-                                      .update({
-                                    'requiresSignature': value,
-                                    'signatureCount': value ? 1 : 0,
-                                  });
-                                  _loadAllDocumentTypes();
-                                },
-                              ),
-                            ),
-                            // Actions
-                            DataCell(
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, color: Colors.blue),
-                                    onPressed: () => _editDocumentType(docType),
-                                    tooltip: 'Edit Document Type',
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () => _deleteDocumentType(docType.id),
-                                    tooltip: 'Delete Document Type',
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper method to show signature count editing dialog
-  Future<void> _showSignatureCountDialog(DocumentTypeModel docType) async {
-    int count = docType.signatureCount;
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Signature Count'),
-        content: TextFormField(
-          initialValue: count.toString(),
-          decoration: const InputDecoration(
-            labelText: 'Number of Signatures Required',
-            border: OutlineInputBorder(),
-          ),
-          keyboardType: TextInputType.number,
-          onChanged: (value) {
-            count = int.tryParse(value) ?? 1;
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              if (count > 0) {
-                await FirebaseFirestore.instance
-                    .collection('documentTypes')
-                    .doc(docType.id)
-                    .update({
-                  'signatureCount': count,
-                });
-                _loadAllDocumentTypes();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Signature count must be greater than 0'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text('Save'),
-          ),
         ],
       ),
     );

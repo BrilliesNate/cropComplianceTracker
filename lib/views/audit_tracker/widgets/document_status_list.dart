@@ -1,13 +1,15 @@
-import 'package:cropcompliance/providers/auth_provider.dart';
+
+
+import 'package:cropCompliance/core/constants/route_constants.dart';
+import 'package:cropCompliance/models/document_model.dart';
+import 'package:cropCompliance/models/document_type_model.dart';
+import 'package:cropCompliance/models/enums.dart';
+import 'package:cropCompliance/providers/category_provider.dart';
+import 'package:cropCompliance/providers/document_provider.dart';
+import 'package:cropCompliance/views/shared/status_badge.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../providers/document_provider.dart';
-import '../../../providers/category_provider.dart';
-import '../../../core/constants/route_constants.dart';
-import '../../../models/document_model.dart';
-import '../../../models/document_type_model.dart';
-import '../../../models/enums.dart';
-import '../../shared/status_badge.dart';
 
 class DocumentStatusList extends StatelessWidget {
   final String categoryId;

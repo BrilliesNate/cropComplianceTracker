@@ -1,18 +1,21 @@
-import 'package:cropcompliance/models/document_type_model.dart';
+
+
+import 'package:cropCompliance/models/document_model.dart';
+import 'package:cropCompliance/models/document_type_model.dart';
+import 'package:cropCompliance/models/enums.dart';
+import 'package:cropCompliance/providers/auth_provider.dart';
+import 'package:cropCompliance/providers/category_provider.dart';
+import 'package:cropCompliance/providers/document_provider.dart';
+import 'package:cropCompliance/views/document_management/widgets/document_viewer.dart';
+import 'package:cropCompliance/views/document_management/widgets/signature_pad.dart';
+import 'package:cropCompliance/views/shared/custom_app_bar.dart';
+import 'package:cropCompliance/views/shared/error_display.dart';
+import 'package:cropCompliance/views/shared/loading_indicator.dart';
+import 'package:cropCompliance/views/shared/status_badge.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../providers/document_provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/category_provider.dart';
-import '../../models/document_model.dart';
-import '../../models/enums.dart';
-import '../shared/custom_app_bar.dart';
-import '../shared/loading_indicator.dart';
-import '../shared/error_display.dart';
-import '../shared/status_badge.dart';
-import 'widgets/document_viewer.dart';
-import 'widgets/signature_pad.dart';
+import 'package:provider/provider.dart';
 
 class DocumentDetailScreen extends StatefulWidget {
   final String documentId;

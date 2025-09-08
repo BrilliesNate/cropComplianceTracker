@@ -1,8 +1,8 @@
-import 'package:cropcompliance/core/constants/route_constants.dart';
-import 'package:cropcompliance/models/document_model.dart';
-import 'package:cropcompliance/models/document_type_model.dart';
-import 'package:cropcompliance/models/enums.dart';
-import 'package:cropcompliance/providers/document_provider.dart';
+import 'package:cropCompliance/core/constants/route_constants.dart';
+import 'package:cropCompliance/models/document_model.dart';
+import 'package:cropCompliance/models/document_type_model.dart';
+import 'package:cropCompliance/models/enums.dart';
+import 'package:cropCompliance/providers/document_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';

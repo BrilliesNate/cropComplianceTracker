@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cropcompliance/models/form_config_model.dart';
+import 'package:cropCompliance/models/form_config_model.dart';
 import 'dart:developer' as developer;
 import '../../models/category_model.dart';
 import '../../models/document_type_model.dart';

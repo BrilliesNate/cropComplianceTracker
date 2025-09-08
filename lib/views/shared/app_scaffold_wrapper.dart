@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/route_provider.dart'; // Add this import
+import '../../providers/route_provider.dart';
 import '../../core/constants/route_constants.dart';
+import '../../models/user_model.dart';
 
 class AppScaffoldWrapper extends StatefulWidget {
   final Widget child;
@@ -32,6 +33,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
   bool _isSidebarCollapsed = false;
   final double _sidebarWidth = 210;
   final double _collapsedSidebarWidth = 70;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -85,17 +87,23 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
       'icon': Icons.category_outlined,
       'route': RouteConstants.categoryManagement,
     },
+
     {
-      'title': 'formConfigManagement',
+      'title': 'override',
       'icon': Icons.category_outlined,
-      'route': RouteConstants.formConfigManagement,
+      'route': RouteConstants.overrid,
+    },
+    {
+      'title': 'Company Management',
+      'icon': Icons.business_outlined,
+      'route': RouteConstants.companyManagement,
     },
   ];
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    final routeProvider = Provider.of<RouteProvider>(context); // Get the route provider
+    final routeProvider = Provider.of<RouteProvider>(context);
 
     final isLargeScreen = MediaQuery.of(context).size.width > 1100;
     final isMediumScreen = MediaQuery.of(context).size.width > 800 && MediaQuery.of(context).size.width <= 1100;
@@ -109,20 +117,54 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
       effectiveSidebarWidth = _collapsedSidebarWidth;
     }
 
-    // Create AppBar with back button style
+    // Create AppBar with user selection indicator
     final appBar = widget.appBar ?? AppBar(
       title: Row(
         children: [
           IconButton(
             icon: const Icon(Icons.menu_open, color: Colors.white),
             onPressed: () {
-              setState(() {
-                _isSidebarCollapsed = !_isSidebarCollapsed;
-              });
+              // Check if we're on mobile (where drawer is used)
+              if (!isLargeScreen && !isMediumScreen) {
+                // Open the drawer on mobile
+                _scaffoldKey.currentState?.openDrawer();
+              } else {
+                // Toggle sidebar collapse on larger screens
+                setState(() {
+                  _isSidebarCollapsed = !_isSidebarCollapsed;
+                });
+              }
             },
           ),
           const SizedBox(width: 8),
           Text(widget.title),
+          // Selected user indicator in app bar for mobile/tablet
+          if (authProvider.isAdmin && authProvider.selectedUser != null && (!isLargeScreen)) ...[
+            const SizedBox(width: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade600,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white, width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.person, color: Colors.white, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Managing: ${authProvider.selectedUser!.name}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
       elevation: 0,
@@ -132,204 +174,374 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
     );
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: widget.backgroundColor ?? Colors.grey[100],
       resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
       appBar: appBar,
       drawer: (!isLargeScreen && !isMediumScreen)
           ? _buildDrawer(context, authProvider, routeProvider)
           : null,
-      body: Row(
+      body: Column(
         children: [
-          // Persistent sidebar for large and medium screens
-          if (isLargeScreen || isMediumScreen)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: effectiveSidebarWidth,
-              color: Colors.white,
-              child: Column(
-                children: [
-                  // Banner image
-                  ClipRRect(
-                    child: Image.asset(
-                      'assets/images/menuImage.webp',
-                      width: effectiveSidebarWidth,
-                      height: 120,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        width: effectiveSidebarWidth,
-                        height: 120,
-                        color: primaryColor.withOpacity(0.1),
-                        child: Icon(
-                          Icons.image,
-                          color: primaryColor.withOpacity(0.3),
-                          size: 48,
-                        ),
-                      ),
-                    ),
-                  ),
+          // Prominent user selection banner for admins
+          if (authProvider.isAdmin) _buildUserSelectionBanner(context, authProvider),
 
-                  // User profile
-                  _buildUserProfile(context, authProvider, _isSidebarCollapsed),
-
-                  // Divider
-                  const Divider(height: 1),
-
-                  // Menu header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Row(
+          Expanded(
+            child: Row(
+              children: [
+                // Persistent sidebar for large and medium screens
+                if (isLargeScreen || isMediumScreen)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: effectiveSidebarWidth,
+                    color: Colors.white,
+                    child: Column(
                       children: [
-                        Text(
-                          "MENU",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey[500],
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Menu items
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.zero,
-                      child: Column(
-                        children: [
-                          ..._menuItems.map((item) {
-                            // Check if this item is selected based on the active route
-                            final bool isSelected = routeProvider.activeRoute == item['route'];
-
-                            return _buildMenuItem(
-                              context,
-                              item['icon'],
-                              item['title'],
-                              item['route'],
-                              isSelected,
-                              _isSidebarCollapsed,
-                              onTap: () {
-                                // Update the route provider when navigating
-                                routeProvider.setActiveRoute(item['route']);
-                                Navigator.of(context).pushReplacementNamed(item['route']);
-                              },
-                            );
-                          }).toList(),
-
-                          if (authProvider.isAdmin) ...[
-                            // Admin header
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    "ADMIN",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey[500],
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ],
+                        // Banner image
+                        ClipRRect(
+                          child: Image.asset(
+                            'assets/images/menuImage.webp',
+                            width: effectiveSidebarWidth,
+                            height: 120,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: effectiveSidebarWidth,
+                              height: 120,
+                              color: primaryColor.withOpacity(0.1),
+                              child: Icon(
+                                Icons.image,
+                                color: primaryColor.withOpacity(0.3),
+                                size: 48,
                               ),
                             ),
-
-                            // Admin menu items
-                            ..._adminMenuItems.map((item) {
-                              // Check if this item is selected
-                              final bool isSelected = routeProvider.activeRoute == item['route'];
-
-                              return _buildMenuItem(
-                                context,
-                                item['icon'],
-                                item['title'],
-                                item['route'],
-                                isSelected,
-                                _isSidebarCollapsed,
-                                onTap: () {
-                                  // Update the route provider when navigating
-                                  routeProvider.setActiveRoute(item['route']);
-                                  Navigator.of(context).pushReplacementNamed(item['route']);
-                                },
-                              );
-                            }).toList(),
-                          ],
-
-                          // Divider before logout
-                          const SizedBox(height: 16),
-                          const Divider(height: 1),
-                          const SizedBox(height: 16),
-
-                          // Logout
-                          _buildMenuItem(
-                            context,
-                            Icons.logout,
-                            'Logout',
-                            '',
-                            false,
-                            _isSidebarCollapsed,
-                            onTap: () {
-                              authProvider.logout();
-                              routeProvider.setActiveRoute(RouteConstants.login);
-                              Navigator.of(context).pushReplacementNamed(RouteConstants.login);
-                            },
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
+                        ),
 
-                  // Collapse button at the bottom
-                  if (!_isSidebarCollapsed)
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            _isSidebarCollapsed = true;
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(4),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+                        // User profile
+                        _buildUserProfile(context, authProvider, _isSidebarCollapsed),
+
+                        // User selector for admins in sidebar
+                        if (authProvider.isAdmin && !_isSidebarCollapsed)
+                          // _buildSidebarUserSelector(context, authProvider),
+
+                        // Divider
+                        const Divider(height: 1),
+
+                        // Menu header
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.chevron_left,
-                                size: 16,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 8),
                               Text(
-                                'Collapse',
+                                "MENU",
                                 style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[500],
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
 
-          // Main content
-          Expanded(
-            child: widget.child,
+                        // Menu items
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              children: [
+                                ..._menuItems.map((item) {
+                                  final bool isSelected = routeProvider.activeRoute == item['route'];
+
+                                  return _buildMenuItem(
+                                    context,
+                                    item['icon'],
+                                    item['title'],
+                                    item['route'],
+                                    isSelected,
+                                    _isSidebarCollapsed,
+                                    onTap: () {
+                                      routeProvider.setActiveRoute(item['route']);
+                                      Navigator.of(context).pushReplacementNamed(item['route']);
+                                    },
+                                  );
+                                }).toList(),
+
+                                if (authProvider.isAdmin) ...[
+                                  // Admin header
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          "ADMIN",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.grey[500],
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  // Admin menu items
+                                  ..._adminMenuItems.map((item) {
+                                    final bool isSelected = routeProvider.activeRoute == item['route'];
+
+                                    return _buildMenuItem(
+                                      context,
+                                      item['icon'],
+                                      item['title'],
+                                      item['route'],
+                                      isSelected,
+                                      _isSidebarCollapsed,
+                                      onTap: () {
+                                        routeProvider.setActiveRoute(item['route']);
+                                        Navigator.of(context).pushReplacementNamed(item['route']);
+                                      },
+                                    );
+                                  }).toList(),
+                                ],
+
+                                // Divider before logout
+                                const SizedBox(height: 16),
+                                const Divider(height: 1),
+                                const SizedBox(height: 16),
+
+                                // Logout
+                                _buildMenuItem(
+                                  context,
+                                  Icons.logout,
+                                  'Logout',
+                                  '',
+                                  false,
+                                  _isSidebarCollapsed,
+                                  onTap: () {
+                                    authProvider.logout();
+                                    routeProvider.setActiveRoute(RouteConstants.login);
+                                    Navigator.of(context).pushReplacementNamed(RouteConstants.login);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Collapse button at the bottom
+                        if (!_isSidebarCollapsed)
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _isSidebarCollapsed = true;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.chevron_left,
+                                      size: 16,
+                                      color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Collapse',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                // Main content
+                Expanded(
+                  child: widget.child,
+                ),
+              ],
+            ),
           ),
         ],
       ),
       floatingActionButton: widget.floatingActionButton,
+    );
+  }
+
+  Widget _buildUserSelectionBanner(BuildContext context, AuthProvider authProvider) {
+    final primaryColor = Theme.of(context).primaryColor;
+    final isLargeScreen = MediaQuery.of(context).size.width > 1100;
+
+    return Container(
+      width: double.infinity,
+      color: authProvider.selectedUser != null ? Colors.orange.shade100 : primaryColor.withOpacity(0.1),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            authProvider.selectedUser != null ? Icons.warning : Icons.admin_panel_settings,
+            color: authProvider.selectedUser != null ? Colors.orange.shade700 : primaryColor,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: authProvider.selectedUser != null
+                ? RichText(
+              text: TextSpan(
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.orange.shade800,
+                  fontWeight: FontWeight.w500,
+                ),
+                children: [
+                  const TextSpan(text: 'ADMIN MODE: Managing documents for '),
+                  TextSpan(
+                    text: authProvider.selectedUser!.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            )
+                : Text(
+              'Admin Mode: Managing your own documents',
+              style: TextStyle(
+                fontSize: 14,
+                color: primaryColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          if (authProvider.selectedUser != null)
+            TextButton.icon(
+              onPressed: () => authProvider.clearUserSelection(),
+              icon: const Icon(Icons.close, size: 18, color: Colors.white),
+              label: const Text(
+                'Switch Back',
+                style: TextStyle(color: Colors.white, fontSize: 12),
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.orange.shade600,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                minimumSize: Size.zero,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          if (!isLargeScreen) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: () => _showUserSelectorDialog(context, authProvider),
+              icon: Icon(
+                Icons.people,
+                color: authProvider.selectedUser != null ? Colors.orange.shade700 : primaryColor,
+              ),
+              tooltip: 'Select User to Manage',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+
+
+  void _showUserSelectorDialog(BuildContext context, AuthProvider authProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: 400,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Select User to Manage',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Choose a user to manage their documents and compliance status.',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Option to manage own documents
+                      ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          child: const Icon(Icons.person, color: Colors.white),
+                        ),
+                        title: Text(authProvider.currentUser?.name ?? 'You'),
+                        subtitle: const Text('Manage your own documents'),
+                        trailing: authProvider.selectedUser == null
+                            ? Icon(Icons.check, color: Theme.of(context).primaryColor)
+                            : null,
+                        onTap: () {
+                          authProvider.clearUserSelection();
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                      const Divider(),
+                      // Other users from company
+                      ...authProvider.companyUsers.where((user) =>
+                      user.id != authProvider.currentUser?.id).map((user) => ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.grey.shade400,
+                          child: Text(
+                            user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                        title: Text(user.name),
+                        subtitle: Text(user.role.name),
+                        trailing: authProvider.selectedUser?.id == user.id
+                            ? Icon(Icons.check, color: Theme.of(context).primaryColor)
+                            : null,
+                        onTap: () {
+                          authProvider.selectUser(user);
+                          Navigator.of(context).pop();
+                        },
+                      )).toList(),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -395,6 +607,10 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                 // User profile
                 _buildUserProfile(context, authProvider, false),
 
+                // User selector for admins in drawer
+                if (authProvider.isAdmin)
+                  // _buildSidebarUserSelector(context, authProvider),
+
                 // Divider
                 const Divider(height: 1),
               ],
@@ -425,7 +641,6 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
               padding: EdgeInsets.zero,
               children: [
                 ..._menuItems.map((item) {
-                  // Check if this item is selected
                   final bool isSelected = routeProvider.activeRoute == item['route'];
 
                   return _buildMenuItem(
@@ -436,7 +651,6 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                     isSelected,
                     false,
                     onTap: () {
-                      // Update the route provider when navigating
                       routeProvider.setActiveRoute(item['route']);
                       Navigator.of(context).pushReplacementNamed(item['route']);
                     },
@@ -464,7 +678,6 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
 
                   // Admin menu items
                   ..._adminMenuItems.map((item) {
-                    // Check if this item is selected
                     final bool isSelected = routeProvider.activeRoute == item['route'];
 
                     return _buildMenuItem(
@@ -475,7 +688,6 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                       isSelected,
                       false,
                       onTap: () {
-                        // Update the route provider when navigating
                         routeProvider.setActiveRoute(item['route']);
                         Navigator.of(context).pushReplacementNamed(item['route']);
                       },

@@ -21,4 +21,6 @@ class RouteConstants {
   static const String categoryManagement = '/category-management';
   static const String formConfigManagement = '/form-config-management';
   static const String formConfigEditor = '/form-config-editor';
+  static const String overrid = '/company-overrides';
+  static const String companyManagement = '/company-management';
 }

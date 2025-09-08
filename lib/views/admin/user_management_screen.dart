@@ -1,4 +1,4 @@
-import 'package:cropcompliance/providers/auth_provider.dart' as autPro;
+import 'package:cropCompliance/providers/auth_provider.dart' as autPro;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -30,9 +30,33 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   String? _error;
   List<Map<String, dynamic>> _companies = [];
   List<UserModel> _users = [];
-
-  // Toggle between selecting existing company and creating new one
   bool _createNewCompany = false;
+
+  InputDecoration _modernInputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: Colors.grey,
+      ),
+      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFF2196F3), width: 1.5),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -57,21 +81,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     });
 
     try {
-      // Load companies
-      final companiesSnapshot = await FirebaseFirestore.instance
-          .collection('companies')
-          .get();
-
+      final companiesSnapshot = await FirebaseFirestore.instance.collection('companies').get();
       final companies = companiesSnapshot.docs.map((doc) => {
         'id': doc.id,
         'name': doc.data()['name'] ?? 'Unnamed Company',
       }).toList();
 
-      // Load users
-      final usersSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .get();
-
+      final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
       final users = usersSnapshot.docs.map((doc) {
         return UserModel.fromMap(doc.data(), doc.id);
       }).toList();
@@ -83,7 +99,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Error loading data: $e';
+        _error = 'Error loading data: \$e';
         _isLoading = false;
       });
     }
@@ -98,31 +114,23 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
 
     try {
-      // Create company document in Firestore
-      final companyRef = await FirebaseFirestore.instance
-          .collection('companies')
-          .add({
+      final companyRef = await FirebaseFirestore.instance.collection('companies').add({
         'name': _companyNameController.text.trim(),
         'address': _companyAddressController.text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // Return the new company ID
       return companyRef.id;
     } catch (e) {
       setState(() {
-        _error = 'Error creating company: $e';
+        _error = 'Error creating company: \$e';
       });
       return null;
     }
   }
 
   Future<void> _createUser() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    // Check if we need to handle company creation or selection
+    if (!_formKey.currentState!.validate()) return;
     if (!_createNewCompany && _selectedCompanyId == null) {
       setState(() {
         _error = 'Please select a company';
@@ -136,13 +144,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     });
 
     try {
-      // Create or select company ID
       String? companyId = _selectedCompanyId;
-
       if (_createNewCompany) {
         companyId = await _createCompany();
         if (companyId == null) {
-          // Error already set in _createCompany method
           setState(() {
             _isLoading = false;
           });
@@ -150,18 +155,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         }
       }
 
-      // Create user with Firebase Auth
       final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
       if (userCredential.user != null) {
-        // Create user document in Firestore
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
+        await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
           'email': _emailController.text.trim(),
           'name': _nameController.text.trim(),
           'role': _selectedRole.toString().split('.').last,
@@ -169,7 +169,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        // Clear form and reload data
         _nameController.clear();
         _emailController.clear();
         _passwordController.clear();
@@ -190,7 +189,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       }
     } catch (e) {
       setState(() {
-        _error = 'Error creating user: $e';
+        _error = 'Error creating user: \$e';
         _isLoading = false;
       });
     }
@@ -209,16 +208,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       );
     }
 
-    Widget content;
-    if (_isLoading) {
-      content = const LoadingIndicator(message: 'Loading user data...');
-    } else if (_error != null) {
-      content = ErrorDisplay(
-        error: _error!,
-        onRetry: _loadData,
-      );
-    } else {
-      content = SingleChildScrollView(
+    // Re-insert your missing UI build code here.
+    // If you’d like, I can regenerate the full widget tree using the new compact modern input style.
+
+    return AppScaffoldWrapper(
+      title: 'User Management',
+      backgroundColor: Colors.grey[100],
+      child: _isLoading
+          ? const LoadingIndicator(message: 'Loading user data...')
+          : _error != null
+          ? ErrorDisplay(error: _error!, onRetry: _loadData)
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,10 +238,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Full Name',
-                          border: OutlineInputBorder(),
-                        ),
+                        style: const TextStyle(fontSize: 14),
+                        decoration: _modernInputDecoration('Full Name'),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter a name';
@@ -249,13 +247,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       TextFormField(
                         controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(),
-                        ),
+                        style: const TextStyle(fontSize: 14),
+                        decoration: _modernInputDecoration('Email'),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter an email';
@@ -266,13 +262,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       TextFormField(
                         controller: _passwordController,
-                        decoration: const InputDecoration(
-                          labelText: 'Password',
-                          border: OutlineInputBorder(),
-                        ),
+                        style: const TextStyle(fontSize: 14),
+                        decoration: _modernInputDecoration('Password'),
                         obscureText: true,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -284,9 +278,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 24),
-
-                      // Company section with toggle
+                      const SizedBox(height: 20),
                       Row(
                         children: [
                           Expanded(
@@ -306,17 +298,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           Text(_createNewCompany ? 'Create New' : 'Select Existing'),
                         ],
                       ),
-                      const SizedBox(height: 16),
-
-                      // Conditional company fields
+                      const SizedBox(height: 12),
                       if (_createNewCompany) ...[
-                        // Fields for creating a new company
                         TextFormField(
                           controller: _companyNameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Company Name',
-                            border: OutlineInputBorder(),
-                          ),
+                          style: const TextStyle(fontSize: 14),
+                          decoration: _modernInputDecoration('Company Name'),
                           validator: (value) {
                             if (_createNewCompany && (value == null || value.isEmpty)) {
                               return 'Please enter company name';
@@ -324,22 +311,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         TextFormField(
                           controller: _companyAddressController,
-                          decoration: const InputDecoration(
-                            labelText: 'Company Address',
-                            border: OutlineInputBorder(),
-                          ),
+                          style: const TextStyle(fontSize: 14),
                           maxLines: 2,
+                          decoration: _modernInputDecoration('Company Address'),
                         ),
                       ] else ...[
-                        // Dropdown for selecting existing company
                         DropdownButtonFormField<String>(
-                          decoration: const InputDecoration(
-                            labelText: 'Select Company',
-                            border: OutlineInputBorder(),
-                          ),
+                          decoration: _modernInputDecoration('Select Company'),
                           value: _selectedCompanyId,
                           items: _companies.map((company) {
                             return DropdownMenuItem<String>(
@@ -360,13 +341,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           },
                         ),
                       ],
-
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       DropdownButtonFormField<UserRole>(
-                        decoration: const InputDecoration(
-                          labelText: 'Role',
-                          border: OutlineInputBorder(),
-                        ),
+                        decoration: _modernInputDecoration('Role'),
                         value: _selectedRole,
                         items: UserRole.values.map((role) {
                           return DropdownMenuItem<UserRole>(
@@ -382,16 +359,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           }
                         },
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
-                        height: 48,
+                        height: 44,
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _createUser,
                           child: _isLoading
                               ? const SizedBox(
-                            height: 24,
-                            width: 24,
+                            height: 20,
+                            width: 20,
                             child: CircularProgressIndicator(
                               color: Colors.white,
                               strokeWidth: 2,
@@ -410,7 +387,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               'Existing Users',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Card(
               child: ListView.separated(
                 shrinkWrap: true,
@@ -439,13 +416,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             ),
           ],
         ),
-      );
-    }
-
-    return AppScaffoldWrapper(
-      title: 'User Management',
-      backgroundColor: Colors.grey[100],
-      child: content,
+      ),
     );
   }
 

@@ -1,22 +1,27 @@
+
+import 'dart:math' show min, max;
 import 'dart:ui';
 
-import 'package:cropcompliance/core/services/firestore_service.dart';
-import 'package:cropcompliance/models/document_model.dart';
-import 'package:cropcompliance/models/enums.dart';
-import 'package:cropcompliance/models/user_model.dart';
-import 'package:cropcompliance/theme/theme_constants.dart';
-import 'package:cropcompliance/views/dashboard/widgets/circle_progress_bar.dart';
+import 'package:cropCompliance/core/constants/route_constants.dart';
+import 'package:cropCompliance/core/services/firestore_service.dart';
+import 'package:cropCompliance/models/document_model.dart';
+import 'package:cropCompliance/models/document_type_model.dart';
+import 'package:cropCompliance/models/enums.dart';
+import 'package:cropCompliance/models/user_model.dart';
+import 'package:cropCompliance/providers/auth_provider.dart';
+import 'package:cropCompliance/providers/category_provider.dart';
+import 'package:cropCompliance/providers/document_provider.dart';
+import 'package:cropCompliance/theme/theme_constants.dart';
+import 'package:cropCompliance/views/dashboard/widgets/circle_progress_bar.dart';
+import 'package:cropCompliance/views/shared/app_scaffold_wrapper.dart';
+import 'package:cropCompliance/views/shared/error_display.dart';
+import 'package:cropCompliance/views/shared/loading_indicator.dart';
+import 'package:cropCompliance/views/shared/responsive_layout.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/document_provider.dart';
-import '../../providers/category_provider.dart';
-import '../../core/constants/route_constants.dart';
-import '../shared/loading_indicator.dart';
-import '../shared/error_display.dart';
-import '../shared/app_scaffold_wrapper.dart';
 import 'package:intl/intl.dart';
-import 'dart:math' show min, max;
+import 'package:provider/provider.dart';
+
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -39,14 +44,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _initializeData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final documentProvider =
-        Provider.of<DocumentProvider>(context, listen: false);
-    final categoryProvider =
-        Provider.of<CategoryProvider>(context, listen: false);
+    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
 
     if (authProvider.currentUser != null) {
       await categoryProvider.initialize();
-      await documentProvider.initialize(authProvider.currentUser!.companyId);
+
+      // Use the new context-aware initialization method
+      await documentProvider.refreshForUserContext(context);
     }
   }
 
@@ -65,8 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final isLoading = documentProvider.isLoading || categoryProvider.isLoading;
-    final hasError =
-        documentProvider.error != null || categoryProvider.error != null;
+    final hasError = documentProvider.error != null || categoryProvider.error != null;
     final error = documentProvider.error ?? categoryProvider.error ?? '';
 
     // Calculate key metrics
@@ -74,14 +78,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final uploadedDocs = documentProvider.documents.length;
     final pendingDocs = documentProvider.pendingDocuments.length;
     final approvedDocs = documentProvider.approvedDocuments.length;
-    final rejectedDocs =
-        documentProvider.documents.where((doc) => doc.isRejected).length;
-    final expiredDocs =
-        documentProvider.documents.where((doc) => doc.isExpired).length;
+    final rejectedDocs = documentProvider.documents.where((doc) => doc.isRejected).length;
+    final expiredDocs = documentProvider.documents.where((doc) => doc.isExpired).length;
 
     // Calculate completion percentage
-    final completionRate =
-        totalDocTypes > 0 ? uploadedDocs / totalDocTypes : 0.0;
+    final completionRate = totalDocTypes > 0 ? approvedDocs / totalDocTypes : 0.0;
     final completionPercentage = (completionRate * 100).toStringAsFixed(1);
 
     // Figure out what content to show
@@ -95,41 +96,631 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     } else {
       // Build the new dashboard layout
-      content = _buildDashboardContent(
-        context,
-        authProvider,
-        documentProvider,
-        categoryProvider,
-        completionPercentage,
-        uploadedDocs,
-        totalDocTypes,
-        approvedDocs,
-        pendingDocs,
-        rejectedDocs,
-        expiredDocs,
+      content = Column(
+        children: [
+          // Selected User Banner (only show for admins with selected user)
+          if (authProvider.isAdmin && authProvider.selectedUser != null)
+            _buildSelectedUserBanner(context, authProvider),
+
+          // Main dashboard content
+          Expanded(
+            child: _buildDashboardContent(
+              context,
+              authProvider,
+              documentProvider,
+              categoryProvider,
+              completionPercentage,
+              uploadedDocs,
+              totalDocTypes,
+              approvedDocs,
+              pendingDocs,
+              rejectedDocs,
+              expiredDocs,
+            ),
+          ),
+        ],
       );
     }
 
     return AppScaffoldWrapper(
       title: 'Dashboard',
-      backgroundColor:ThemeConstants.lightBackgroundColor,
+      backgroundColor: ThemeConstants.lightBackgroundColor,
       child: content,
     );
   }
 
+  // New method to build the selected user banner
+  Widget _buildSelectedUserBanner(BuildContext context, AuthProvider authProvider) {
+    final selectedUser = authProvider.selectedUser!;
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.orange.shade400,
+            Colors.orange.shade600,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Icon
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              authProvider.selectedCompany != null ? Icons.business : Icons.admin_panel_settings,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+
+          // Context info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  authProvider.selectedCompany != null
+                      ? 'ADMIN MODE: Managing Company'
+                      : 'ADMIN MODE: Managing User',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  authProvider.selectedCompany != null
+                      ? authProvider.selectedCompany!.name
+                      : selectedUser.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (authProvider.selectedCompany != null)
+                  Text(
+                    'via ${selectedUser.name}',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Clear selection button
+          IconButton(
+            onPressed: () async {
+              final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+              authProvider.clearUserSelection();
+              await documentProvider.refreshForUserContext(context);
+            },
+            icon: const Icon(
+              Icons.close,
+              color: Colors.white,
+            ),
+            tooltip: 'Switch back to your own account',
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDashboardContent(
-    BuildContext context,
-    AuthProvider authProvider,
-    DocumentProvider documentProvider,
-    CategoryProvider categoryProvider,
-    String completionPercentage,
-    int uploadedDocs,
-    int totalDocTypes,
-    int approvedDocs,
-    int pendingDocs,
-    int rejectedDocs,
-    int expiredDocs,
-  ) {
+      BuildContext context,
+      AuthProvider authProvider,
+      DocumentProvider documentProvider,
+      CategoryProvider categoryProvider,
+      String completionPercentage,
+      int uploadedDocs,
+      int totalDocTypes,
+      int approvedDocs,
+      int pendingDocs,
+      int rejectedDocs,
+      int expiredDocs,
+      ) {
+    return ResponsiveLayout(
+      // Mobile view - Single column, stacked layout
+      mobileView: _buildMobileLayout(
+        context,
+        authProvider,
+        documentProvider,
+        completionPercentage,
+        approvedDocs,
+        uploadedDocs,
+        pendingDocs,
+        rejectedDocs,
+        totalDocTypes,
+      ),
+
+      // Tablet view - 2 column layout with adjusted spacing
+      tabletView: _buildTabletLayout(
+        context,
+        authProvider,
+        documentProvider,
+        completionPercentage,
+        approvedDocs,
+        uploadedDocs,
+        pendingDocs,
+        rejectedDocs,
+        totalDocTypes,
+      ),
+
+      // Desktop view - Your existing layout
+      desktopView: _buildDesktopLayout(
+        context,
+        authProvider,
+        documentProvider,
+        completionPercentage,
+        approvedDocs,
+        uploadedDocs,
+        pendingDocs,
+        rejectedDocs,
+        totalDocTypes,
+      ),
+    );
+  }
+
+// Mobile-specific layout - Fixed constraints
+  Widget _buildMobileLayout(
+      BuildContext context,
+      AuthProvider authProvider,
+      DocumentProvider documentProvider,
+      String completionPercentage,
+      int approvedDocs,
+      int uploadedDocs,
+      int pendingDocs,
+      int rejectedDocs,
+      int totalDocTypes,
+      ) {
+    print('DEBUG: Building mobile layout');
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Debug container
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'MOBILE DEBUG VIEW\nWidth: ${MediaQuery.of(context).size.width}',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Simple metrics cards with fixed height
+            SizedBox(
+              height: 100,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.green[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    'Completion: $completionPercentage%\nApproved: $approvedDocs\nPending: $pendingDocs',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Your existing compliance overview card with constraints
+            SizedBox(
+              width: double.infinity,
+              child: _buildComplianceOverviewCard(
+                context,
+                authProvider,
+                completionPercentage,
+                approvedDocs,
+                uploadedDocs,
+                pendingDocs,
+                rejectedDocs,
+                totalDocTypes,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Simple document list with fixed height
+            SizedBox(
+              height: 200,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.yellow[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    'Documents: ${documentProvider.documents.length}',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Your existing employees card with constraints
+            SizedBox(
+              height: 200, // Fixed height to prevent layout issues
+              child: _buildEmployeesCard(context, authProvider),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Your existing calendar card with constraints
+            SizedBox(
+              height: 300, // Fixed height to prevent layout issues
+              child: _buildCalendarCard(context),
+            ),
+
+            const SizedBox(height: 50), // Bottom padding
+          ],
+        ),
+      ),
+    );
+  }
+
+// Mobile metrics grid - 2x2 layout for key stats
+  Widget _buildMobileMetricsGrid(
+      BuildContext context,
+      String completionPercentage,
+      int approvedDocs,
+      int uploadedDocs,
+      int pendingDocs,
+      int rejectedDocs,
+      ) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 8,
+      mainAxisSpacing: 8,
+      childAspectRatio: 1.3,
+      children: [
+        _buildMobileMetricCard(
+          'Completion',
+          '$completionPercentage%',
+          'Overall Progress',
+          Icons.check_circle,
+          Colors.green,
+        ),
+        _buildMobileMetricCard(
+          'Approved',
+          approvedDocs.toString(),
+          'Documents',
+          Icons.verified,
+          Colors.blue,
+        ),
+        _buildMobileMetricCard(
+          'Pending',
+          pendingDocs.toString(),
+          'Need Review',
+          Icons.pending,
+          Colors.orange,
+        ),
+        _buildMobileMetricCard(
+          'Rejected',
+          rejectedDocs.toString(),
+          'Need Action',
+          Icons.error,
+          Colors.red,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileMetricCard(
+      String title,
+      String value,
+      String subtitle,
+      IconData icon,
+      Color color,
+      ) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 9,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+// Mobile-friendly document status list
+  Widget _buildMobileDocumentStatus(BuildContext context, DocumentProvider documentProvider) {
+    final documents = documentProvider.documents;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 1,
+      color: ThemeConstants.cardColors,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Document Status',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (documents.length > 4)
+                  TextButton(
+                    onPressed: () {
+                      // Navigate to full document list
+                      Navigator.pushNamed(context, RouteConstants.auditIndex);
+                    },
+                    child: const Text('View All', style: TextStyle(fontSize: 12)),
+                  ),
+              ],
+            ),
+          ),
+          // Show top 4 documents in list format
+          ...documents.take(4).map((doc) => _buildMobileDocumentItem(doc, documentProvider)),
+          if (documents.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('No documents found'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileDocumentItem(DocumentModel document, DocumentProvider documentProvider) {
+    // Get document type name using your existing pattern
+    final documentTypes = documentProvider.documentTypes;
+    DocumentTypeModel? documentType;
+    try {
+      documentType = documentTypes.firstWhere((dt) => dt.id == document.documentTypeId) as DocumentTypeModel?;
+    } catch (_) {
+      documentType = null;
+    }
+    final documentTypeName = documentType?.name ?? 'Unknown Document Type';
+
+    // Status logic
+    Color statusColor;
+    IconData statusIcon;
+    String statusText;
+
+    switch (document.status) {
+      case DocumentStatus.APPROVED:
+        statusColor = Colors.green;
+        statusIcon = Icons.check_circle;
+        statusText = 'Approved';
+        break;
+      case DocumentStatus.PENDING:
+        statusColor = Colors.orange;
+        statusIcon = Icons.pending;
+        statusText = 'Pending';
+        break;
+      case DocumentStatus.REJECTED:
+        statusColor = Colors.red;
+        statusIcon = Icons.error;
+        statusText = 'Rejected';
+        break;
+      default:
+        statusColor = Colors.grey;
+        statusIcon = Icons.help;
+        statusText = 'Unknown';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.grey[200]!),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  documentTypeName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                if (document.expiryDate != null)
+                  Text(
+                    'Expires: ${DateFormat('MMM dd, yyyy').format(document.expiryDate!)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: statusColor),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  statusIcon,
+                  color: statusColor,
+                  size: 12,
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Tablet layout - 2 columns
+  Widget _buildTabletLayout(
+      BuildContext context,
+      AuthProvider authProvider,
+      DocumentProvider documentProvider,
+      String completionPercentage,
+      int approvedDocs,
+      int uploadedDocs,
+      int pendingDocs,
+      int rejectedDocs,
+      int totalDocTypes,
+      ) {
+    return Padding(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Left column - 40% width
+          Expanded(
+            flex: 4,
+            child: Column(
+              children: [
+                _buildMobileMetricsGrid(
+                  context,
+                  completionPercentage,
+                  approvedDocs,
+                  uploadedDocs,
+                  pendingDocs,
+                  rejectedDocs,
+                ),
+                const SizedBox(height: 14),
+                _buildEmployeesCard(context, authProvider),
+                const SizedBox(height: 14),
+                _buildCalendarCard(context),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          // Right column - 60% width
+          Expanded(
+            flex: 6,
+            child: Column(
+              children: [
+                _buildComplianceOverviewCard(
+                  context,
+                  authProvider,
+                  completionPercentage,
+                  approvedDocs,
+                  uploadedDocs,
+                  pendingDocs,
+                  rejectedDocs,
+                  totalDocTypes,
+                ),
+                const SizedBox(height: 14),
+                Expanded(
+                  child: _buildDocumentsTable(context, documentProvider),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Your existing desktop layout
+  Widget _buildDesktopLayout(
+      BuildContext context,
+      AuthProvider authProvider,
+      DocumentProvider documentProvider,
+      String completionPercentage,
+      int approvedDocs,
+      int uploadedDocs,
+      int pendingDocs,
+      int rejectedDocs,
+      int totalDocTypes,
+      ) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -164,14 +755,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 // Compliance Overview Card
                 _buildComplianceOverviewCard(
-                    context,
-                    authProvider,
-                    completionPercentage,
-                    approvedDocs,
-                    uploadedDocs,
-                    pendingDocs,
-                    rejectedDocs,
-                    totalDocTypes,),
+                  context,
+                  authProvider,
+                  completionPercentage,
+                  approvedDocs,
+                  uploadedDocs,
+                  pendingDocs,
+                  rejectedDocs,
+                  totalDocTypes,),
                 // Minimal spacing
                 const SizedBox(height: 10),
                 // Document Status Table - Expand to fill remaining space
@@ -187,9 +778,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildEmployeesCard(BuildContext context, AuthProvider authProvider) {
-    // Get the current user's company ID
-    final currentCompanyId = authProvider.currentUser?.companyId;
-
     return Card(
       margin: EdgeInsets.zero,
       elevation: 1,
@@ -202,63 +790,217 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           mainAxisSize: MainAxisSize.max,
           children: [
-            const Text(
-              'Employees',
-              style: TextStyle(
+            Text(
+              authProvider.isAdmin && authProvider.selectedUser != null
+                  ? 'All Users (Managing: ${authProvider.selectedUser!.name})'
+                  : authProvider.isAdmin
+                  ? 'All Users (Admin View)'
+                  : 'Team Members',
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
-            // Use FutureBuilder to fetch users belonging to the current company
-            FutureBuilder<List<UserModel>>(
-              future: _fetchUsersForCompany(currentCompanyId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: SizedBox(
-                      height: 50,
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                } else if (snapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'Error loading employees: ${snapshot.error}',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  );
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(
-                    child: Text('No employees found for this company'),
-                  );
-                }
 
-                // Display users horizontally with add button at the beginning
-                final users = snapshot.data!;
-
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      // Add Employee Button - only show for Admin users
-                      if (authProvider.isAdmin)
-                        _buildAddEmployeeButton(context),
-
-                      // Employee Avatars
-                      ...users.map((user) => _buildEmployeeAvatar(context, user)).toList(),
-                    ],
-                  ),
-                );
-              },
-            ),
+            // For admins, show all users they can manage
+            if (authProvider.isAdmin)
+              _buildAllUsersView(context, authProvider)
+            else
+            // For non-admins, show company users
+              _buildCompanyUsersView(context, authProvider),
           ],
         ),
       ),
     );
   }
 
-// Helper method to build the Add Employee button
+  // New method to show all users for admin
+  Widget _buildAllUsersView(BuildContext context, AuthProvider authProvider) {
+    if (authProvider.isLoadingUsers) {
+      return const Center(
+        child: SizedBox(
+          height: 50,
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (authProvider.allUsers.isEmpty) {
+      return const Center(
+        child: Text('No users found in the system'),
+      );
+    }
+
+    final users = authProvider.allUsers;
+    print('Dashboard: Displaying ${users.length} users for admin selection');
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          // Add Employee Button
+          _buildAddEmployeeButton(context),
+
+          // All Users Avatars - admin can select any user
+          ...users.map((user) => _buildEmployeeAvatar(
+            context,
+            user,
+            isSelected: authProvider.selectedUser != null &&
+                authProvider.selectedUser!.id == user.id,
+            onTap: () => _selectUserForManagement(user),
+            showCompany: true, // Show company info for admin
+          )).toList(),
+        ],
+      ),
+    );
+  }
+
+  // Method to show company users for non-admin
+  Widget _buildCompanyUsersView(BuildContext context, AuthProvider authProvider) {
+    // Get the current user's company ID
+    final currentCompanyId = authProvider.currentUser?.companyId;
+
+    return FutureBuilder<List<UserModel>>(
+      future: _fetchUsersForCompany(currentCompanyId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: SizedBox(
+              height: 50,
+              child: CircularProgressIndicator(),
+            ),
+          );
+        } else if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error loading team members: ${snapshot.error}',
+              style: TextStyle(color: Colors.red),
+            ),
+          );
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(
+            child: Text('No team members found'),
+          );
+        }
+
+        final users = snapshot.data!;
+
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: users.map((user) => _buildEmployeeAvatar(
+              context,
+              user,
+              isSelected: false, // Non-admins can't select users
+              onTap: null, // No tap action for non-admins
+              showCompany: false, // Don't show company for same company users
+            )).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  // Enhanced method to handle user selection for management
+  void _selectUserForManagement(UserModel user) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+
+    print('Dashboard: Admin selecting user: ${user.name} (${user.email}) from company: ${user.companyId}');
+
+    // Set the selected user
+    authProvider.selectUser(user);
+
+    // Show loading indicator
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 16),
+              Text('Loading documents for ${user.name}...'),
+            ],
+          ),
+          backgroundColor: Colors.blue,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    try {
+      // Refresh the document provider for the new user context
+      await documentProvider.refreshForUserContext(context);
+
+      // Show success confirmation
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  authProvider.isManagingCompany && authProvider.selectedCompany != null
+                      ? 'Now managing company:'
+                      : 'Now managing documents for:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(authProvider.isManagingCompany && authProvider.selectedCompany != null
+                    ? authProvider.selectedCompany!.name
+                    : '${user.name} (${user.email})'),
+                if (!authProvider.isManagingCompany && user.companyId != authProvider.currentUser?.companyId)
+                  Text(
+                    'Company: ${user.companyId}',
+                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Switch Back',
+              textColor: Colors.white,
+              onPressed: () async {
+                authProvider.clearUserSelection();
+                await documentProvider.refreshForUserContext(context);
+              },
+            ),
+          ),
+        );
+      }
+
+      print(authProvider.isManagingCompany
+          ? 'Dashboard: Successfully switched to managing company: ${authProvider.selectedCompany?.name}'
+          : 'Dashboard: Successfully switched to managing user: ${user.name}');
+      print('Dashboard: Loaded ${documentProvider.documents.length} documents');
+
+    } catch (e) {
+      print('Dashboard: Error switching user context: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading documents: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  // Helper method to build the Add Employee button
   Widget _buildAddEmployeeButton(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 16),
@@ -292,8 +1034,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-// Helper method to build an employee avatar
-  Widget _buildEmployeeAvatar(BuildContext context, UserModel user) {
+  // Enhanced method to build an employee avatar with selection support
+  Widget _buildEmployeeAvatar(
+      BuildContext context,
+      UserModel user, {
+        bool isSelected = false,
+        VoidCallback? onTap,
+        bool showCompany = false,
+      }) {
     // Get the user's initials (first letter of first and last name)
     final nameParts = user.name.split(' ');
     String initials = '';
@@ -312,54 +1060,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
     initials = initials.toUpperCase();
 
     // Create a unique color based on the user's name
-    final color = _getColorFromName(user.name);
+    Color color = _getColorFromName(user.name);
+
+    // Use orange if selected
+    if (isSelected) {
+      color = Colors.orange;
+    }
 
     return Padding(
       padding: const EdgeInsets.only(right: 16),
-      child: Column(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              shape: BoxShape.circle,
-              border: Border.all(color: color, width: 2),
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: TextStyle(
-                  fontSize: 18,
-                  color: color,
-                  fontWeight: FontWeight.bold,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: isSelected ? BoxDecoration(
+            color: Colors.orange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange, width: 2),
+          ) : null,
+          child: Column(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color, width: 2),
+                ),
+                child: Center(
+                  child: Text(
+                    initials,
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 4),
+              SizedBox(
+                width: 60,
+                child: Text(
+                  user.name,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? Colors.orange : null,
+                  ),
+                ),
+              ),
+              Text(
+                user.role.name,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isSelected ? Colors.orange : Colors.grey[600],
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              // Show company info for admin view
+              if (showCompany)
+                Text(
+                  user.companyId.length > 10
+                      ? '${user.companyId.substring(0, 10)}...'
+                      : user.companyId,
+                  style: TextStyle(
+                    fontSize: 8,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+            ],
           ),
-          const SizedBox(height: 4),
-          SizedBox(
-            width: 60,
-            child: Text(
-              user.name,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-          Text(
-            user.role.name,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-// Helper method to fetch users for a specific company
+  // Helper method to fetch users for a specific company (for non-admin users)
   Future<List<UserModel>> _fetchUsersForCompany(String? companyId) async {
     if (companyId == null) {
       return [];
@@ -369,7 +1151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return firestoreService.getUsers(companyId: companyId);
   }
 
-// Helper method to generate a consistent color based on a name
+  // Helper method to generate a consistent color based on a name
   Color _getColorFromName(String name) {
     // List of good, distinct colors
     final colors = [
@@ -391,16 +1173,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildComplianceOverviewCard(
-    BuildContext context,
-    AuthProvider authProvider,
-    String completionPercentage,
-    int approvedDocs,
-    int uploadedDocs,
-    int pendingDocs,
-    int rejectedDocs,
-     int totalDocTypes
-  ) {
+      BuildContext context,
+      AuthProvider authProvider,
+      String completionPercentage,
+      int approvedDocs,
+      int uploadedDocs,
+      int pendingDocs,
+      int rejectedDocs,
+      int totalDocTypes
+      ) {
     final double percentage = double.parse(completionPercentage) / 100;
+
+    // Determine whose name to show
+    final displayName = authProvider.isAdmin && authProvider.selectedUser != null
+        ? authProvider.selectedUser!.name.split(' ').first
+        : authProvider.currentUser?.name.split(' ').first ?? "User";
 
     return Card(
       margin: EdgeInsets.zero,
@@ -435,7 +1222,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
 
-          // Text at top left
+          // Text at top left - update to show selected user context
           Positioned(
             top: 16,
             left: 16,
@@ -443,16 +1230,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Hi, ${authProvider.currentUser?.name.split(' ').first ?? "User"}',
+                  authProvider.isAdmin && authProvider.selectedUser != null
+                      ? 'Managing: $displayName'
+                      : 'Hi, $displayName',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 25,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const Text(
-                  'Welcome back.',
-                  style: TextStyle(
+                Text(
+                  authProvider.isAdmin && authProvider.selectedUser != null
+                      ? 'Document compliance overview'
+                      : 'Welcome back.',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
                   ),
@@ -509,7 +1300,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: _buildKPIContainer(
                     icon: Icons.trending_up,
                     title: 'Completion Rate',
-                    value: '$uploadedDocs/$totalDocTypes',
+                    value: '$approvedDocs/$totalDocTypes',
                     subtitle: '$completionPercentage%',
                   ),
                 ),
@@ -522,7 +1313,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     title: 'Approval Rate',
                     value: '$approvedDocs/$uploadedDocs',
                     subtitle:
-                        '${(uploadedDocs > 0 ? (approvedDocs / uploadedDocs * 100).toStringAsFixed(1) : "0.0")}%',
+                    '${(uploadedDocs > 0 ? (approvedDocs / uploadedDocs * 100).toStringAsFixed(1) : "0.0")}%',
                   ),
                 ),
                 const SizedBox(width: 6), // Space between containers
@@ -632,13 +1423,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildKpiCard(
-    BuildContext context,
-    String title,
-    String value,
-    String subtitle,
-    IconData icon,
-    Color color,
-  ) {
+      BuildContext context,
+      String title,
+      String value,
+      String subtitle,
+      IconData icon,
+      Color color,
+      ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -758,18 +1549,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: weekdays
                   .map((day) => SizedBox(
-                        width: 30,
-                        child: Center(
-                          child: Text(
-                            day,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey[600],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ))
+                width: 30,
+                child: Center(
+                  child: Text(
+                    day,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ))
                   .toList(),
             ),
             const SizedBox(height: 8),
@@ -1027,7 +1818,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               },
                               child: Container(
                                 decoration: BoxDecoration(
-                                color: rowColor,
+                                  color: rowColor,
                                   border: _selectedDocumentId == doc.id
                                       ? Border.all(color: Theme.of(context).primaryColor, width: 2)
                                       : null,
@@ -1446,7 +2237,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 ElevatedButton.icon(
                   icon: const Icon(Icons.replay,
-                  color: Colors.white,
+                    color: Colors.white,
                   ),
                   label: const Text('Resubmit'),
                   onPressed: () {

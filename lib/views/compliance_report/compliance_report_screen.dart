@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/document_provider.dart';
 import '../../providers/category_provider.dart';
+import '../../models/enums.dart';
 import '../shared/loading_indicator.dart';
 import '../shared/error_display.dart';
 import '../shared/app_scaffold_wrapper.dart';
-import 'widgets/report_summary.dart';
 import 'widgets/document_status_table.dart';
 
 class ComplianceReportScreen extends StatefulWidget {
@@ -32,7 +33,9 @@ class _ComplianceReportScreenState extends State<ComplianceReportScreen> {
 
     if (authProvider.currentUser != null) {
       await categoryProvider.initialize();
-      await documentProvider.initialize(authProvider.currentUser!.companyId);
+
+      // Use the company-aware method instead of the old initialize method
+      await documentProvider.refreshForUserContext(context);
     }
   }
 
@@ -63,94 +66,100 @@ class _ComplianceReportScreenState extends State<ComplianceReportScreen> {
         onRetry: _initializeData,
       );
     } else {
-      // Determine the appropriate view based on screen size
-      final screenWidth = MediaQuery.of(context).size.width;
-      if (screenWidth >= 1200) {
-        content = _buildDesktopView(context);
-      } else if (screenWidth >= 600) {
-        content = _buildTabletView(context);
-      } else {
-        content = _buildMobileView(context);
-      }
+      content = _buildReportView(context);
     }
 
     return AppScaffoldWrapper(
       title: 'Compliance Report',
       backgroundColor: Colors.grey[100],
       child: content,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Generate and export report
-          _exportReport();
-        },
-        tooltip: 'Export Report',
-        child: const Icon(Icons.file_download),
-      ),
     );
   }
 
-  Widget _buildMobileView(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const ReportSummary(),
-          const SizedBox(height: 24),
-          Text(
-            'Document Status by Category',
-            style: Theme.of(context).textTheme.headlineSmall,
+  Widget _buildReportView(BuildContext context) {
+    final documentProvider = Provider.of<DocumentProvider>(context);
+    final categoryProvider = Provider.of<CategoryProvider>(context);
+
+    // Calculate metrics
+    final totalDocTypes = documentProvider.documentTypes.length;
+    final approvedDocs = documentProvider.documents.where((doc) => doc.status == DocumentStatus.APPROVED).length;
+    final pendingDocs = documentProvider.documents.where((doc) => doc.status == DocumentStatus.PENDING).length;
+    final rejectedDocs = documentProvider.documents.where((doc) => doc.status == DocumentStatus.REJECTED).length;
+
+    final completionRate = totalDocTypes > 0 ? (approvedDocs / totalDocTypes * 100) : 0.0;
+
+    return Column(
+      children: [
+        // Compact header with metrics
+        Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200),
           ),
-          const SizedBox(height: 16),
-          const DocumentStatusTable(),
-        ],
-      ),
-    );
-  }
+          child: Column(
+            children: [
+              // Title row
+              Row(
+                children: [
+                  Icon(Icons.analytics_outlined, size: 16, color: const Color(0xFF43A047)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Compliance Report',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  const Spacer(),
+                  Text(
+                    DateFormat('MMM d, y').format(DateTime.now()),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
 
-  Widget _buildTabletView(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const ReportSummary(),
-          const SizedBox(height: 24),
-          Text(
-            'Document Status by Category',
-            style: Theme.of(context).textTheme.headlineSmall,
+              // Compact metrics row
+              Row(
+                children: [
+                  _buildCompactMetric('${completionRate.toInt()}%', 'Complete', const Color(0xFF43A047)),
+                  _buildCompactMetric('$approvedDocs', 'Approved', Colors.green.shade600),
+                  _buildCompactMetric('$pendingDocs', 'Pending', Colors.blue.shade600),
+                  _buildCompactMetric('$rejectedDocs', 'Rejected', Colors.orange.shade600),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          const DocumentStatusTable(),
-        ],
-      ),
+        ),
+
+        // Document list takes remaining space
+        Expanded(
+          child: const DocumentStatusTable(),
+        ),
+      ],
     );
   }
 
-  Widget _buildDesktopView(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+  Widget _buildCompactMetric(String value, String label, Color color) {
+    return Expanded(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const ReportSummary(),
-          const SizedBox(height: 32),
           Text(
-            'Document Status by Category',
-            style: Theme.of(context).textTheme.headlineSmall,
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
-          const SizedBox(height: 16),
-          const DocumentStatusTable(),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[600],
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  void _exportReport() {
-    // In a real app, this would generate a PDF or Excel report
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Report export functionality will be implemented in a future update'),
       ),
     );
   }

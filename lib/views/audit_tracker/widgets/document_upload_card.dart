@@ -1,13 +1,15 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+
+import 'package:cropCompliance/core/constants/route_constants.dart';
+import 'package:cropCompliance/models/document_type_model.dart';
+import 'package:cropCompliance/providers/auth_provider.dart';
+import 'package:cropCompliance/providers/document_provider.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../providers/document_provider.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../core/constants/route_constants.dart';
-import '../../../models/document_type_model.dart';
 
 class DocumentUploadCard extends StatefulWidget {
   final String categoryId;
@@ -29,6 +31,14 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
   // Changed to store information about each file
   List<FileUploadItem> _uploadItems = [];
   bool _isUploading = false;
+  final TextEditingController _specificationController =
+      TextEditingController(); // NEW FIELD
+
+  @override
+  void dispose() {
+    _specificationController.dispose(); // NEW DISPOSAL
+    super.dispose();
+  }
 
   // Helper method to show toasts/snackbars
   void _showToast(String message, {bool isError = false}) {
@@ -71,7 +81,10 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
             return FileUploadItem(
               file: tempFile,
               bytes: file.bytes!, // Store bytes for web uploads
-              expiryDate: widget.documentType.hasExpiryDate ? null : DateTime.now().add(const Duration(days: 365)), // Default expiry date if needed
+              expiryDate: widget.documentType.hasExpiryDate
+                  ? null
+                  : DateTime.now().add(const Duration(
+                      days: 365)), // Default expiry date if needed
             );
           }).toList();
 
@@ -81,17 +94,21 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
 
           print("DEBUG: Web files selected: ${newItems.length}");
           for (var item in newItems) {
-            print("DEBUG: Web file: ${item.file.path} with ${item.bytes!.length} bytes");
+            print(
+                "DEBUG: Web file: ${item.file.path} with ${item.bytes!.length} bytes");
           }
         } else {
           // For mobile/desktop
           final newItems = result.files
               .where((file) => file.path != null)
               .map((file) => FileUploadItem(
-            file: File(file.path!),
-            bytes: null, // No bytes needed for mobile/desktop
-            expiryDate: widget.documentType.hasExpiryDate ? null : DateTime.now().add(const Duration(days: 365)), // Default expiry date if needed
-          ))
+                    file: File(file.path!),
+                    bytes: null, // No bytes needed for mobile/desktop
+                    expiryDate: widget.documentType.hasExpiryDate
+                        ? null
+                        : DateTime.now().add(const Duration(
+                            days: 365)), // Default expiry date if needed
+                  ))
               .toList();
 
           setState(() {
@@ -110,9 +127,10 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
   Future<void> _selectExpiryDate(int index) async {
     final date = await showDatePicker(
       context: context,
-      initialDate: _uploadItems[index].expiryDate ?? DateTime.now().add(const Duration(days: 365)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
+      initialDate: _uploadItems[index].expiryDate ?? DateTime.now(),
+      firstDate: DateTime(1900), // Allow dates as far back as 1900
+      lastDate: DateTime.now().add(const Duration(
+          days: 3650)), // Allow dates up to 10 years in the future
     );
 
     if (date != null) {
@@ -121,9 +139,11 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
       });
 
       // DEBUG: Print the selected date
-      print("DEBUG: Selected expiry date for item $index: ${_uploadItems[index].expiryDate}");
+      print(
+          "DEBUG: Selected expiry date for item $index: ${_uploadItems[index].expiryDate}");
       // Convert to Timestamp format for verification
-      print("DEBUG: As milliseconds since epoch: ${_uploadItems[index].expiryDate?.millisecondsSinceEpoch}");
+      print(
+          "DEBUG: As milliseconds since epoch: ${_uploadItems[index].expiryDate?.millisecondsSinceEpoch}");
     }
   }
 
@@ -164,6 +184,9 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
   Future<void> _uploadDocuments() async {
     print("DEBUG: _uploadDocuments called");
     print("DEBUG: existingDocumentId: ${widget.existingDocumentId}");
+    print(
+        "DEBUG: specification: ${_specificationController.text}"); // NEW DEBUG LINE
+
     if (_uploadItems.isEmpty) {
       _showToast('Please select files to upload', isError: true);
       return;
@@ -171,15 +194,18 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
 
     // Check if any document with expiry date required is missing the date
     if (widget.documentType.hasExpiryDate) {
-      final missingExpiryDates = _uploadItems.where((item) => item.expiryDate == null).isNotEmpty;
+      final missingExpiryDates =
+          _uploadItems.where((item) => item.expiryDate == null).isNotEmpty;
       if (missingExpiryDates) {
-        _showToast('Please select an expiry date for all documents', isError: true);
+        _showToast('Please select an expiry date for all documents',
+            isError: true);
         return;
       }
     }
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+    final documentProvider =
+        Provider.of<DocumentProvider>(context, listen: false);
 
     setState(() {
       _isUploading = true;
@@ -187,6 +213,11 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
 
     try {
       if (authProvider.currentUser != null) {
+        // Get specification value (null if empty)
+        final specification = _specificationController.text.trim().isEmpty
+            ? null
+            : _specificationController.text.trim();
+
         // Determine if this is a new document or an update
         if (widget.existingDocumentId != null) {
           // Update existing document (resubmission)
@@ -213,7 +244,11 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
             documentId: widget.existingDocumentId!,
             files: filesToUpload,
             user: authProvider.currentUser!,
-            expiryDate: widget.documentType.hasExpiryDate ? _uploadItems.first.expiryDate : null,
+            expiryDate: widget.documentType.hasExpiryDate
+                ? _uploadItems.first.expiryDate
+                : null,
+            specification:
+                specification, // NEW FIELD - you'll need to add this to updateDocumentFiles method
           );
 
           if (document != null && mounted) {
@@ -242,28 +277,37 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                   'bytes': item.bytes,
                 };
 
-                print("DEBUG: Uploading web file: ${item.file.path} with expiry date: ${item.expiryDate}");
+                print(
+                    "DEBUG: Uploading web file: ${item.file.path} with expiry date: ${item.expiryDate}");
 
                 final document = await documentProvider.createDocument(
                   user: authProvider.currentUser!,
                   categoryId: widget.categoryId,
                   documentTypeId: widget.documentType.id,
-                  files: [webFile], // Single file with its own expiry date
-                  expiryDate: item.expiryDate, // Individual expiry date for this file
+                  files: [webFile],
+                  // Single file with its own expiry date
+                  expiryDate: item.expiryDate,
+                  // Individual expiry date for this file
+                  specification: specification, // NEW FIELD
                 );
 
                 if (document != null) {
                   print("DEBUG: Document created with ID: ${document.id}");
                   print("DEBUG: Document expiryDate: ${document.expiryDate}");
+                  print(
+                      "DEBUG: Document specification: ${document.specification}"); // NEW DEBUG LINE
                   successCount++;
 
                   // Show individual success toast
                   if (mounted) {
-                    _showToast("Successfully uploaded: $filename", isError: false);
+                    _showToast("Successfully uploaded: $filename",
+                        isError: false);
                   }
 
                   // Handle signature requirement for the last document
-                  if (mounted && item == _uploadItems.last && widget.documentType.requiresSignature) {
+                  if (mounted &&
+                      item == _uploadItems.last &&
+                      widget.documentType.requiresSignature) {
                     Navigator.of(context).pushNamed(
                       RouteConstants.documentDetail,
                       arguments: {'documentId': document.id},
@@ -279,28 +323,37 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                 }
               } else {
                 // For mobile/desktop
-                print("DEBUG: Uploading file: ${item.file.path} with expiry date: ${item.expiryDate}");
+                print(
+                    "DEBUG: Uploading file: ${item.file.path} with expiry date: ${item.expiryDate}");
 
                 final document = await documentProvider.createDocument(
                   user: authProvider.currentUser!,
                   categoryId: widget.categoryId,
                   documentTypeId: widget.documentType.id,
-                  files: [item.file], // Single file with its own expiry date
-                  expiryDate: item.expiryDate, // Individual expiry date for this file
+                  files: [item.file],
+                  // Single file with its own expiry date
+                  expiryDate: item.expiryDate,
+                  // Individual expiry date for this file
+                  specification: specification, // NEW FIELD
                 );
 
                 if (document != null) {
                   print("DEBUG: Document created with ID: ${document.id}");
                   print("DEBUG: Document expiryDate: ${document.expiryDate}");
+                  print(
+                      "DEBUG: Document specification: ${document.specification}"); // NEW DEBUG LINE
                   successCount++;
 
                   // Show individual success toast
                   if (mounted) {
-                    _showToast("Successfully uploaded: $filename", isError: false);
+                    _showToast("Successfully uploaded: $filename",
+                        isError: false);
                   }
 
                   // Handle signature requirement for the last document
-                  if (mounted && item == _uploadItems.last && widget.documentType.requiresSignature) {
+                  if (mounted &&
+                      item == _uploadItems.last &&
+                      widget.documentType.requiresSignature) {
                     Navigator.of(context).pushNamed(
                       RouteConstants.documentDetail,
                       arguments: {'documentId': document.id},
@@ -330,11 +383,13 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
           // After all uploads complete, show summary toast and possibly pop the screen
           if (mounted) {
             if (successCount > 0 && failCount == 0) {
-              _showToast("All documents uploaded successfully!", isError: false);
+              _showToast("All documents uploaded successfully!",
+                  isError: false);
               // Only pop if all uploads were successful
               Navigator.of(context).pop();
             } else if (successCount > 0 && failCount > 0) {
-              _showToast("$successCount uploaded, $failCount failed", isError: true);
+              _showToast("$successCount uploaded, $failCount failed",
+                  isError: true);
               // If mixed results and all successful ones don't need signatures, pop
               if (!widget.documentType.requiresSignature) {
                 Navigator.of(context).pop();
@@ -385,8 +440,8 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                   child: Text(
                     widget.documentType.name,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
               ],
@@ -398,14 +453,48 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                   ? 'Upload documents and set expiry dates for each'
                   : 'Upload documents for this category',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey.shade700,
-              ),
+                    color: Colors.grey.shade700,
+                  ),
             ),
 
             const Divider(height: 24),
 
+            // NEW SPECIFICATION FIELD
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Specification',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _specificationController,
+                  decoration: InputDecoration(
+                    hintText: 'Enter document specification (optional)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+            const Divider(height: 24),
+
             // Upload section
-            if (_uploadItems.isEmpty) ... [
+            if (_uploadItems.isEmpty) ...[
               GestureDetector(
                 onTap: _pickFiles,
                 child: Container(
@@ -429,7 +518,8 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          color:
+                              Theme.of(context).primaryColor.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -459,7 +549,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                   ),
                 ),
               ),
-            ] else ... [
+            ] else ...[
               // Document list section
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -478,7 +568,8 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('Add More'),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -489,7 +580,6 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
               ),
 
               // Document cards in a wrap layout (responsive to screen width)
-              // Document cards in a wrap layout (responsive to screen width)
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -499,19 +589,20 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
 
                   return Container(
                     width: 140, // Fixed width for consistency
-                    // Remove fixed height to let content determine size
                     child: Card(
                       elevation: 1,
                       clipBehavior: Clip.antiAlias, // Ensures clean edges
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                        side: item.expiryDate == null && widget.documentType.hasExpiryDate
+                        side: item.expiryDate == null &&
+                                widget.documentType.hasExpiryDate
                             ? const BorderSide(color: Colors.red, width: 1)
                             : BorderSide.none,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min, // Important: Use minimum space needed
+                        mainAxisSize: MainAxisSize.min,
+                        // Important: Use minimum space needed
                         children: [
                           // File header with icon and remove button
                           Container(
@@ -519,7 +610,8 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                               color: _getFileColor(filename),
                             ),
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 6),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -578,16 +670,16 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                               ),
                             ),
 
-                          // Remove the Spacer widget that was forcing expansion
-
                           // Expiry date section
                           if (widget.documentType.hasExpiryDate)
                             Padding(
                               padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                               child: GestureDetector(
-                                onTap: () => _selectExpiryDate(_uploadItems.indexOf(item)),
+                                onTap: () => _selectExpiryDate(
+                                    _uploadItems.indexOf(item)),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: item.expiryDate != null
                                         ? Colors.green.shade50
@@ -601,10 +693,12 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                                     ),
                                   ),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           const Text(
                                             'Expires',
@@ -615,19 +709,19 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                                           ),
                                           item.expiryDate != null
                                               ? Text(
-                                            '${item.expiryDate!.day}/${item.expiryDate!.month}/${item.expiryDate!.year}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                            ),
-                                          )
+                                                  '${item.expiryDate!.day}/${item.expiryDate!.month}/${item.expiryDate!.year}',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 13,
+                                                  ),
+                                                )
                                               : const Text(
-                                            'Set date',
-                                            style: TextStyle(
-                                              color: Colors.red,
-                                              fontSize: 13,
-                                            ),
-                                          ),
+                                                  'Set date',
+                                                  style: TextStyle(
+                                                    color: Colors.red,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
                                         ],
                                       ),
                                       const Icon(
@@ -663,40 +757,40 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                 ),
                 child: _isUploading
                     ? Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(_uploadItems.length > 1
-                        ? "Uploading Documents..."
-                        : "Uploading Document..."),
-                  ],
-                )
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(_uploadItems.length > 1
+                              ? "Uploading Documents..."
+                              : "Uploading Document..."),
+                        ],
+                      )
                     : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.cloud_upload),
-                    const SizedBox(width: 8),
-                    Text(
-                      _uploadItems.isNotEmpty
-                          ? (_uploadItems.length > 1
-                          ? "Upload ${_uploadItems.length} Documents"
-                          : "Upload Document")
-                          : "Select and Upload Documents",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.cloud_upload),
+                          const SizedBox(width: 8),
+                          Text(
+                            _uploadItems.isNotEmpty
+                                ? (_uploadItems.length > 1
+                                    ? "Upload ${_uploadItems.length} Documents"
+                                    : "Upload Document")
+                                : "Select and Upload Documents",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],

@@ -5,11 +5,13 @@ import '../../theme/theme_constants.dart';
 class StatusBadge extends StatelessWidget {
   final DocumentStatus status;
   final bool isExpired;
+  final bool isExpiringSoon; // Add this new parameter
 
   const StatusBadge({
     Key? key,
     required this.status,
     this.isExpired = false,
+    this.isExpiringSoon = false, // Add this new parameter
   }) : super(key: key);
 
   @override
@@ -22,6 +24,11 @@ class StatusBadge extends StatelessWidget {
       color = ThemeConstants.expiredColor;
       label = 'Expired';
       icon = Icons.warning;
+    } else if (isExpiringSoon && status == DocumentStatus.APPROVED) {
+      // For approved documents that are expiring soon
+      color = Colors.deepOrange; // More orange color
+      label = 'Expires Soon';
+      icon = Icons.schedule;
     } else {
       switch (status) {
         case DocumentStatus.PENDING:

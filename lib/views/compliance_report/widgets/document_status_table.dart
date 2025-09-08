@@ -1,12 +1,12 @@
-import 'package:cropcompliance/models/document_type_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../../providers/document_provider.dart';
 import '../../../providers/category_provider.dart';
 import '../../../models/category_model.dart';
+import '../../../models/document_type_model.dart';
 import '../../../models/document_model.dart';
 import '../../../models/enums.dart';
-import '../../shared/status_badge.dart';
 
 class DocumentStatusTable extends StatelessWidget {
   const DocumentStatusTable({Key? key}) : super(key: key);
@@ -15,230 +15,222 @@ class DocumentStatusTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final categoryProvider = Provider.of<CategoryProvider>(context);
     final documentProvider = Provider.of<DocumentProvider>(context);
-
     final categories = categoryProvider.categories;
 
     if (categories.isEmpty) {
-      return const Center(
-        child: Text('No categories found'),
-      );
+      return const Center(child: Text('No documents found'));
     }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final category in categories) ...[
-              _buildCategorySection(context, category, documentProvider),
-              if (category != categories.last)
-                const Divider(height: 32),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      itemCount: categories.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, categoryIndex) {
+        final category = categories[categoryIndex];
+        final docTypes = categoryProvider.getDocumentTypes(category.id);
 
-  Widget _buildCategorySection(
-      BuildContext context,
-      CategoryModel category,
-      DocumentProvider documentProvider,
-      ) {
-    final documents = documentProvider.getDocumentsByCategory(category.id);
-    final totalDocuments = documents.length;
-
-    // Calculate counts
-    int approvedCount = 0;
-    int pendingCount = 0;
-    int rejectedCount = 0;
-    int expiredCount = 0;
-    int notApplicableCount = 0;
-
-    for (var doc in documents) {
-      if (doc.isNotApplicable) {
-        notApplicableCount++;
-      } else if (doc.isExpired) {
-        expiredCount++;
-      } else if (doc.status == DocumentStatus.APPROVED) {
-        approvedCount++;
-      } else if (doc.status == DocumentStatus.PENDING) {
-        pendingCount++;
-      } else if (doc.status == DocumentStatus.REJECTED) {
-        rejectedCount++;
-      }
-    }
-
-    // Calculate compliance percentage
-    double compliancePercentage = 0;
-    if (totalDocuments > 0) {
-      compliancePercentage = ((approvedCount + notApplicableCount) / totalDocuments) * 100;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          category.name,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          category.description,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              flex: 3,
-              child: LinearProgressIndicator(
-                value: compliancePercentage / 100,
-                minHeight: 10,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  _getColorForPercentage(compliancePercentage / 100),
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Category header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF43A047).withOpacity(0.05),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(8),
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(5),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              flex: 1,
-              child: Text(
-                '${compliancePercentage.toStringAsFixed(0)}% Compliant',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
+                child: Row(
+                  children: [
+                    Icon(
+                      _getCategoryIcon(category.name),
+                      size: 16,
+                      color: const Color(0xFF43A047),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      category.name,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2E7D32),
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF43A047).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${docTypes.length}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF2E7D32),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 20,
-            headingRowColor: MaterialStateProperty.all(
-              Theme.of(context).primaryColor.withOpacity(0.1),
-            ),
-            columns: const [
-              DataColumn(label: Text('Document Type')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Last Updated')),
-              DataColumn(label: Text('Expiry Date')),
-              DataColumn(label: Text('Signatures')),
-              DataColumn(label: Text('Comments')),
+
+              // Document types under this category
+              ...docTypes.asMap().entries.map((entry) {
+                final index = entry.key;
+                final docType = entry.value;
+                final documents = documentProvider.getDocumentsByType(docType.id);
+                final document = documents.isNotEmpty ? documents.first : null;
+                final isLast = index == docTypes.length - 1;
+
+                return _buildDocumentRow(context, docType, document as DocumentModel?, isLast);
+              }).toList(),
             ],
-            rows: documents.map((document) {
-              return _buildDocumentRow(context, document, documentProvider);
-            }).toList(),
           ),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 16,
-          runSpacing: 8,
-          children: [
-            _buildStatusCount('Approved', approvedCount, Colors.green),
-            _buildStatusCount('Pending', pendingCount, Colors.orange),
-            _buildStatusCount('Rejected', rejectedCount, Colors.red),
-            _buildStatusCount('Expired', expiredCount, Colors.red.shade700),
-            _buildStatusCount('Not Applicable', notApplicableCount, Colors.grey),
-          ],
-        ),
-      ],
+        );
+      },
     );
   }
 
-  DataRow _buildDocumentRow(
+  Widget _buildDocumentRow(
       BuildContext context,
-      DocumentModel document,
-      DocumentProvider documentProvider,
+      DocumentTypeModel docType,
+      DocumentModel? document,
+      bool isLastInCategory,
       ) {
-    // Get document type name
-    final documentTypes = documentProvider.documentTypes;
-    DocumentTypeModel? documentType;
-    try {
-      documentType = documentTypes.firstWhere((dt) => dt.id == document.documentTypeId) as DocumentTypeModel?;
-    } catch (_) {
-      documentType = null;
-    }
+    final status = _getDocumentStatus(document);
 
-    final documentTypeName = documentType?.name ?? 'Unknown Document Type';
-
-    return DataRow(
-      cells: [
-        DataCell(Text(documentTypeName)),
-        DataCell(
-          document.isNotApplicable
-              ? const Text('Not Applicable')
-              : StatusBadge(
-            status: document.status,
-            isExpired: document.isExpired,
-          ),
-        ),
-        DataCell(Text(
-          _formatDate(document.updatedAt),
-        )),
-        DataCell(Text(
-          document.expiryDate != null
-              ? _formatDate(document.expiryDate!)
-              : 'N/A',
-        )),
-        DataCell(Text(
-          '${document.signatures.length}/${documentType?.signatureCount ?? 0}',
-        )),
-        DataCell(Text(
-          '${document.comments.length}',
-        )),
-      ],
-    );
-  }
-
-  Widget _buildStatusCount(String label, int count, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border(
+          bottom: isLastInCategory
+              ? BorderSide.none
+              : BorderSide(color: Colors.grey.shade100),
+        ),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
+          // Status dot
           Container(
-            width: 8,
-            height: 8,
+            width: 7,
+            height: 7,
             decoration: BoxDecoration(
+              color: status['color'],
               shape: BoxShape.circle,
-              color: color,
             ),
           ),
-          const SizedBox(width: 6),
-          Text(
-            '$label: $count',
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
+          const SizedBox(width: 14),
+
+          // Document name
+          Expanded(
+            child: Text(
+              docType.name,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF374151),
+              ),
             ),
           ),
+
+          // Status badge - compact
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: status['color'].withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              status['label'],
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: status['color'],
+              ),
+            ),
+          ),
+
+          // Date (if available)
+          if (document != null) ...[
+            const SizedBox(width: 10),
+            Text(
+              DateFormat('MMM d').format(document.updatedAt),
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  Map<String, dynamic> _getDocumentStatus(DocumentModel? document) {
+    if (document == null) {
+      return {
+        'label': 'Not Uploaded',
+        'color': Colors.grey.shade400,
+      };
+    }
+
+    if (document.isNotApplicable) {
+      return {
+        'label': 'N/A',
+        'color': Colors.grey.shade400,
+      };
+    }
+
+    if (document.isExpired) {
+      return {
+        'label': 'Expired',
+        'color': Colors.red.shade300,
+      };
+    }
+
+    switch (document.status) {
+      case DocumentStatus.APPROVED:
+        return {
+          'label': 'Approved',
+          'color': const Color(0xFF43A047),
+        };
+      case DocumentStatus.PENDING:
+        return {
+          'label': 'Pending',
+          'color': Colors.orange.shade500,
+        };
+      case DocumentStatus.REJECTED:
+        return {
+          'label': 'Rejected',
+          'color': Colors.red.shade300,
+        };
+    }
   }
 
-  Color _getColorForPercentage(double percentage) {
-    if (percentage < 0.3) return Colors.red;
-    if (percentage < 0.7) return Colors.orange;
-    return Colors.green;
+  IconData _getCategoryIcon(String categoryName) {
+    final name = categoryName.toLowerCase();
+    if (name.contains('business')) return Icons.business;
+    if (name.contains('management')) return Icons.settings;
+    if (name.contains('employment')) return Icons.people;
+    if (name.contains('child')) return Icons.child_care;
+    if (name.contains('forced')) return Icons.security;
+    if (name.contains('wages')) return Icons.payments;
+    if (name.contains('association')) return Icons.groups;
+    if (name.contains('training')) return Icons.school;
+    if (name.contains('health')) return Icons.health_and_safety;
+    if (name.contains('chemical')) return Icons.science;
+    if (name.contains('service')) return Icons.handyman;
+    if (name.contains('environmental')) return Icons.eco;
+    return Icons.folder;
   }
 }

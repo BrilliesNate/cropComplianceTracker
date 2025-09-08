@@ -1,5 +1,5 @@
-import 'package:cropcompliance/models/category_model.dart';
-import 'package:cropcompliance/models/document_type_model.dart';
+import 'package:cropCompliance/models/category_model.dart';
+import 'package:cropCompliance/models/document_type_model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../models/document_model.dart';

@@ -1,20 +1,23 @@
-import 'package:cropcompliance/models/enums.dart';
-import 'package:cropcompliance/theme/theme_constants.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/document_provider.dart';
-import '../../providers/category_provider.dart';
-import '../../models/category_model.dart';
-import '../../models/document_type_model.dart';
-import '../../models/document_model.dart';
-import '../../core/constants/route_constants.dart';
-import '../shared/loading_indicator.dart';
-import '../shared/error_display.dart';
-import '../shared/status_badge.dart';
-import '../shared/app_scaffold_wrapper.dart';
+
 import 'dart:developer' as developer;
+
+import 'package:cropCompliance/core/constants/route_constants.dart';
+import 'package:cropCompliance/models/category_model.dart';
+import 'package:cropCompliance/models/document_model.dart';
+import 'package:cropCompliance/models/document_type_model.dart';
+import 'package:cropCompliance/models/enums.dart';
+import 'package:cropCompliance/providers/auth_provider.dart';
+import 'package:cropCompliance/providers/category_provider.dart';
+import 'package:cropCompliance/providers/document_provider.dart';
+import 'package:cropCompliance/theme/theme_constants.dart';
+import 'package:cropCompliance/views/shared/app_scaffold_wrapper.dart';
+import 'package:cropCompliance/views/shared/error_display.dart';
+import 'package:cropCompliance/views/shared/loading_indicator.dart';
+import 'package:cropCompliance/views/shared/status_badge.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class AuditTrackerScreen extends StatefulWidget {
   const AuditTrackerScreen({Key? key}) : super(key: key);
@@ -54,25 +57,21 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     if (authProvider.currentUser != null) {
       developer.log('AuditTrackerScreen - User is logged in, initializing data');
 
-      _stopwatch.reset();
-      _stopwatch.start();
       developer.log('AuditTrackerScreen - Starting category initialization');
       await categoryProvider.initialize();
       developer.log('AuditTrackerScreen - Category initialization completed: ${_stopwatch.elapsedMilliseconds}ms');
 
-      _stopwatch.reset();
-      _stopwatch.start();
-      developer.log('AuditTrackerScreen - Starting document initialization with companyId: ${authProvider.currentUser!.companyId}');
-      await documentProvider.initialize(authProvider.currentUser!.companyId);
+      // Use the company-aware method instead of the old initialize method
+      developer.log('AuditTrackerScreen - Starting document initialization with company context');
+      await documentProvider.refreshForUserContext(context);
       developer.log('AuditTrackerScreen - Document initialization completed: ${_stopwatch.elapsedMilliseconds}ms');
+
       developer.log('AuditTrackerScreen - Document count: ${documentProvider.documents.length}');
       developer.log('AuditTrackerScreen - Document types count: ${documentProvider.documentTypes.length}');
-    } else {
-      developer.log('AuditTrackerScreen - No user logged in, skipping data initialization');
     }
 
-    _stopwatch.stop();
     developer.log('AuditTrackerScreen - _initializeData completed: ${_stopwatch.elapsedMilliseconds}ms');
+    _stopwatch.stop();
   }
 
   @override
@@ -480,14 +479,30 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     final currentUserRole = authProvider.currentUser?.role;
     final isAdmin = currentUserRole == UserRole.ADMIN;
 
+    // Helper method to check if document is expiring soon (within 30 days)
+    bool isExpiringSoon(DocumentModel doc) {
+      if (doc.expiryDate == null) return false;
+
+      final now = DateTime.now();
+      final thirtyDaysFromNow = now.add(const Duration(days: 30));
+
+      return doc.expiryDate!.isBefore(thirtyDaysFromNow) || doc.expiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
+    }
+
     // Filter documents based on the _showApprovedDocuments toggle
     final documents = _showApprovedDocuments
-        ? documentProvider.documents
-        .where((doc) => doc.status == DocumentStatus.APPROVED)
-        .toList()
-        : documentProvider.documents
-        .where((doc) => doc.status != DocumentStatus.APPROVED)
-        .toList();
+        ? documentProvider.documents.where((doc) {
+      // For "Approved Documents" filter: only show approved documents that are NOT expired and NOT expiring soon
+      return doc.status == DocumentStatus.APPROVED &&
+          !doc.isExpired &&
+          !isExpiringSoon(doc);
+    }).toList()
+        : documentProvider.documents.where((doc) {
+      // For "Action Items" filter: show all documents that need attention
+      return doc.status != DocumentStatus.APPROVED ||  // Not approved documents
+          doc.isExpired ||                           // OR expired documents (even if approved)
+          isExpiringSoon(doc);                       // OR documents expiring within 30 days (even if approved)
+    }).toList();
 
     developer.log('AuditTrackerScreen - Filtered ${documents.length} documents to display');
 
@@ -495,8 +510,8 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       developer.log('AuditTrackerScreen - No documents to display in this filter');
       return Center(
         child: Text(_showApprovedDocuments
-            ? 'No approved documents'
-            : 'No pending or rejected documents'),
+            ? 'No approved documents that are current and not expiring soon'
+            : 'No action items found'),
       );
     }
 
@@ -523,7 +538,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
               ),
               const SizedBox(width: 8),
               ChoiceChip(
-                label: const Text('Approved Documents'),
+                label: const Text('Approved & Current'),
                 selected: _showApprovedDocuments,
                 onSelected: (selected) {
                   if (selected) {
@@ -610,9 +625,33 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     return result;
   }
 
-  // Mobile document card with comments
+  // Mobile document card with comments and expiry warnings
   Widget _buildMobileDocumentCard(DocumentModel document, String documentName,
       String categoryName, bool isAdmin) {
+
+    // Helper method to check if document is expiring soon (within 30 days)
+    bool isExpiringSoon(DocumentModel doc) {
+      if (doc.expiryDate == null) return false;
+
+      final now = DateTime.now();
+      final thirtyDaysFromNow = now.add(const Duration(days: 30));
+
+      return doc.expiryDate!.isBefore(thirtyDaysFromNow) || doc.expiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
+    }
+
+    // Helper method to get days until expiry
+    int? getDaysUntilExpiry(DocumentModel doc) {
+      if (doc.expiryDate == null) return null;
+
+      final now = DateTime.now();
+      final difference = doc.expiryDate!.difference(now).inDays;
+
+      return difference;
+    }
+
+    final daysUntilExpiry = getDaysUntilExpiry(document);
+    final isExpiringSoonFlag = isExpiringSoon(document);
+
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -651,6 +690,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                   : StatusBadge(
                 status: document.status,
                 isExpired: document.isExpired,
+                isExpiringSoon: isExpiringSoonFlag,
               ),
             ],
           ),
@@ -680,15 +720,129 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Expiry date
-          if (document.expiryDate != null)
-            Text(
-              'Expires: ${DateFormat('MMM d, y').format(document.expiryDate!)}',
-              style: TextStyle(
-                fontSize: 13,
-                color: document.isExpired ? Colors.red : Colors.grey.shade700,
+          // Expiry date with enhanced warnings
+          if (document.expiryDate != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: document.isExpired
+                    ? Colors.red.shade50
+                    : isExpiringSoonFlag
+                    ? Colors.orange.shade50
+                    : Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: document.isExpired
+                      ? Colors.red.shade300
+                      : isExpiringSoonFlag
+                      ? Colors.orange.shade300
+                      : Colors.grey.shade300,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    document.isExpired
+                        ? Icons.error
+                        : isExpiringSoonFlag
+                        ? Icons.warning
+                        : Icons.schedule,
+                    size: 14,
+                    color: document.isExpired
+                        ? Colors.red
+                        : isExpiringSoonFlag
+                        ? Colors.orange
+                        : Colors.grey.shade600,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          document.isExpired
+                              ? 'EXPIRED'
+                              : isExpiringSoonFlag
+                              ? 'EXPIRES SOON'
+                              : 'Expires',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: document.isExpired
+                                ? Colors.red
+                                : isExpiringSoonFlag
+                                ? Colors.orange
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                        Text(
+                          DateFormat('MMM d, y').format(document.expiryDate!),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: document.isExpired
+                                ? Colors.red
+                                : isExpiringSoonFlag
+                                ? Colors.orange
+                                : Colors.grey.shade700,
+                          ),
+                        ),
+                        if (daysUntilExpiry != null && !document.isExpired)
+                          Text(
+                            daysUntilExpiry > 0
+                                ? '$daysUntilExpiry days left'
+                                : 'Expires today',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isExpiringSoonFlag
+                                  ? Colors.orange.shade700
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
+            const SizedBox(height: 8),
+          ],
+
+          // Show renewal/update prompt for expired or expiring soon approved documents
+          if ((document.isExpired || isExpiringSoonFlag) && document.status == DocumentStatus.APPROVED) ...[
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: document.isExpired ? Colors.red.shade50 : Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: document.isExpired ? Colors.red.shade200 : Colors.orange.shade200,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    document.isExpired ? Icons.error : Icons.warning,
+                    size: 16,
+                    color: document.isExpired ? Colors.red : Colors.orange,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      document.isExpired
+                          ? 'This document has expired and needs to be renewed'
+                          : 'This document expires soon and may need renewal',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: document.isExpired ? Colors.red.shade700 : Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
 
           // Comments section
           if (document.comments.isNotEmpty) ...[
@@ -747,12 +901,17 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
           const SizedBox(height: 12),
 
-          // Add resubmit button for rejected documents
-          if (document.status == DocumentStatus.REJECTED) ...[
+          // Action buttons
+          if (document.status == DocumentStatus.REJECTED ||
+              (document.status == DocumentStatus.APPROVED && (document.isExpired || isExpiringSoonFlag))) ...[
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.refresh, color: Colors.white, size: 16),
+                icon: Icon(
+                  document.status == DocumentStatus.REJECTED ? Icons.refresh : Icons.update,
+                  color: Colors.white,
+                  size: 16,
+                ),
                 label: const Text('Resubmit'),
                 onPressed: () {
                   // Navigate to document upload/form screen with existing document ID
@@ -777,7 +936,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
             const SizedBox(height: 8),
           ],
 
-          // Update button for admin
+          // Admin view button
           if (isAdmin)
             SizedBox(
               width: double.infinity,
@@ -803,9 +962,22 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     );
   }
 
-  // Desktop document card with comments
+// Desktop document card with comments - simplified
   Widget _buildDesktopDocumentCard(DocumentModel document, String documentName,
       String categoryName, bool isAdmin) {
+
+    // Helper method to check if document is expiring soon (within 30 days)
+    bool isExpiringSoon(DocumentModel doc) {
+      if (doc.expiryDate == null) return false;
+
+      final now = DateTime.now();
+      final thirtyDaysFromNow = now.add(const Duration(days: 30));
+
+      return doc.expiryDate!.isBefore(thirtyDaysFromNow) || doc.expiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
+    }
+
+    final isExpiringSoonFlag = isExpiringSoon(document);
+
     return Column(
       children: [
         // Card header
@@ -838,8 +1010,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                       : 'No Expiry Date',
                   style: TextStyle(
                     fontSize: 13,
-                    color:
-                    document.isExpired ? Colors.red : Colors.grey.shade700,
+                    color: document.isExpired ? Colors.red : Colors.grey.shade700,
                   ),
                 ),
               ),
@@ -864,6 +1035,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                   : StatusBadge(
                 status: document.status,
                 isExpired: document.isExpired,
+                isExpiringSoon: isExpiringSoonFlag,
               ),
             ],
           ),
@@ -1181,6 +1353,8 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     return result;
   }
 
+
+
   Widget _buildMobileDocumentTypeItem(
       BuildContext context,
       DocumentTypeModel documentType,
@@ -1203,24 +1377,57 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
           ),
           const SizedBox(height: 8),
 
+          // Show existing documents count if any
+          if (hasDocument) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Text(
+                '${existingDocuments.length} document${existingDocuments.length > 1 ? 's' : ''} uploaded',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.blue.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+
           Row(
             children: [
               _buildStatusChip(documentStatus),
               const Spacer(),
-              if (!hasDocument ||
-                  (hasDocument && existingDocuments.first.isRejected))
+
+              // Always show upload/add button (unless document type doesn't allow multiple and has approved document)
+              if (_shouldShowUploadButton(documentType, existingDocuments))
                 OutlinedButton(
-                  onPressed: () =>
-                      _navigateToDocumentUpload(context, documentType),
+                  onPressed: () => _navigateToDocumentUpload(context, documentType),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Theme.of(context).primaryColor,
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                     visualDensity: VisualDensity.compact,
                   ),
-                  child: Text(documentType.isUploadable ? 'Upload' : 'Fill Form'),
+                  child: Text(_getUploadButtonText(documentType, hasDocument)),
                 ),
-              // ... rest of the code ...
+
+              const SizedBox(width: 8),
+
+              // View button if documents exist
+              if (hasDocument)
+                IconButton(
+                  icon: const Icon(Icons.visibility, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'View Documents',
+                  onPressed: () {
+                    _showDocumentsList(context, documentType, existingDocuments);
+                  },
+                ),
             ],
           ),
         ],
@@ -1237,31 +1444,230 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     return ListTile(
       contentPadding: const EdgeInsets.only(left: 24, right: 16),
       title: Text(documentType.name),
-      subtitle: Text(
-        _getDocumentTypeDescription(documentType),
-        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _getDocumentTypeDescription(documentType),
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          // Show existing documents count if any
+          if (hasDocument) ...[
+            const SizedBox(height: 4),
+            Text(
+              '${existingDocuments.length} document${existingDocuments.length > 1 ? 's' : ''} uploaded',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.blue.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ],
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildStatusChip(documentStatus),
           const SizedBox(width: 8),
-          if (!hasDocument ||
-              (hasDocument && existingDocuments.first.isRejected))
+
+          // Always show upload/add button (unless document type doesn't allow multiple and has approved document)
+          if (_shouldShowUploadButton(documentType, existingDocuments))
             OutlinedButton(
               onPressed: () => _navigateToDocumentUpload(context, documentType),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Theme.of(context).primaryColor,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                 visualDensity: VisualDensity.compact,
               ),
-              child: Text(documentType.isUploadable ? 'Upload' : 'Fill Form'),
+              child: Text(_getUploadButtonText(documentType, hasDocument)),
             ),
-          // ... rest of the code ...
+
+          const SizedBox(width: 8),
+
+          // View button if documents exist
+          if (hasDocument)
+            IconButton(
+              icon: const Icon(Icons.visibility),
+              tooltip: 'View Documents',
+              onPressed: () {
+                _showDocumentsList(context, documentType, existingDocuments);
+              },
+            ),
         ],
       ),
     );
+  }
+
+  // Helper method to show documents list
+  void _showDocumentsList(BuildContext context, DocumentTypeModel documentType, List<DocumentModel> documents) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          minChildSize: 0.3,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          documentType.name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${documents.length} document${documents.length > 1 ? 's' : ''} uploaded',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Documents list
+                  Expanded(
+                    child: ListView.separated(
+                      controller: scrollController,
+                      itemCount: documents.length,
+                      separatorBuilder: (_, __) => const Divider(),
+                      itemBuilder: (context, index) {
+                        final document = documents[index];
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: _getStatusColor(document.status).withOpacity(0.1),
+                            child: Icon(
+                              _getStatusIcon(document.status),
+                              color: _getStatusColor(document.status),
+                              size: 20,
+                            ),
+                          ),
+                          title: Text(
+                            document.specification?.isNotEmpty == true
+                                ? document.specification!
+                                : 'No specification',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Uploaded: ${DateFormat('MMM d, y').format(document.createdAt)}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              if (document.expiryDate != null)
+                                Text(
+                                  'Expires: ${DateFormat('MMM d, y').format(document.expiryDate!)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: document.isExpired ? Colors.red : null,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildStatusChip(document.status.name),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.open_in_new, size: 18),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  Navigator.of(context).pushNamed(
+                                    RouteConstants.documentDetail,
+                                    arguments: {'documentId': document.id},
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            Navigator.of(context).pushNamed(
+                              RouteConstants.documentDetail,
+                              arguments: {'documentId': document.id},
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Add more button at bottom
+                  if (documentType.allowMultipleDocuments) ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.add),
+                        label: Text(documentType.isUploadable ? 'Add Another Document' : 'Add Another Form'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _navigateToDocumentUpload(context, documentType);
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Helper method to determine if upload button should be shown
+  bool _shouldShowUploadButton(DocumentTypeModel documentType, List<DocumentModel> existingDocuments) {
+    // If no documents exist, always show upload button
+    if (existingDocuments.isEmpty) {
+      return true;
+    }
+
+    // If document type allows multiple documents, always show add button
+    if (documentType.allowMultipleDocuments) {
+      return true;
+    }
+
+    // If document type doesn't allow multiple documents, only show if:
+    // - No approved documents exist (can replace rejected/pending)
+    // - Or all existing documents are rejected (can retry)
+    final hasApprovedDocument = existingDocuments.any((doc) => doc.status == DocumentStatus.APPROVED);
+    final allRejected = existingDocuments.every((doc) => doc.status == DocumentStatus.REJECTED);
+
+    return !hasApprovedDocument || allRejected;
+  }
+
+  // Helper method to get the appropriate button text
+  String _getUploadButtonText(DocumentTypeModel documentType, bool hasDocument) {
+    if (!hasDocument) {
+      return documentType.isUploadable ? 'Upload' : 'Fill Form';
+    }
+
+    if (documentType.allowMultipleDocuments) {
+      return documentType.isUploadable ? 'Add More' : 'Add Form';
+    } else {
+      return documentType.isUploadable ? 'Replace' : 'Update Form';
+    }
   }
 
   Widget _buildStatusChip(String status) {
@@ -1333,6 +1739,33 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
     return properties.join(' • ');
   }
+// Helper methods for the documents list
+  Color _getStatusColor(DocumentStatus status) {
+    switch (status) {
+      case DocumentStatus.APPROVED:
+        return Colors.green;
+      case DocumentStatus.PENDING:
+        return Colors.orange;
+      case DocumentStatus.REJECTED:
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon(DocumentStatus status) {
+    switch (status) {
+      case DocumentStatus.APPROVED:
+        return Icons.check_circle;
+      case DocumentStatus.PENDING:
+        return Icons.hourglass_empty;
+      case DocumentStatus.REJECTED:
+        return Icons.cancel;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
 
   void _navigateToDocumentUpload(
       BuildContext context, DocumentTypeModel documentType) {

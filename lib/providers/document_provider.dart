@@ -1,16 +1,17 @@
 import 'dart:io';
-import 'package:cropcompliance/providers/auth_provider.dart';
+
+import 'package:cropCompliance/core/services/document_service.dart';
+import 'package:cropCompliance/core/services/firestore_service.dart';
+import 'package:cropCompliance/core/services/storage_service.dart';
+import 'package:cropCompliance/models/category_model.dart';
+import 'package:cropCompliance/models/document_model.dart';
+import 'package:cropCompliance/models/document_type_model.dart';
+import 'package:cropCompliance/models/enums.dart';
+import 'package:cropCompliance/models/user_model.dart';
+import 'package:cropCompliance/providers/auth_provider.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/document_model.dart';
-import '../models/document_type_model.dart';
-import '../models/category_model.dart';
-import '../models/user_model.dart';
-import '../models/enums.dart';
-import '../core/services/firestore_service.dart';
-import '../core/services/storage_service.dart';
-import '../core/services/document_service.dart';
 
 class DocumentProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
@@ -29,6 +30,10 @@ class DocumentProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  // Context tracking for user selection
+  String? _currentContextUserId;
+  String? _currentContextCompanyId;
+
   DocumentProvider() {
     _documentService = DocumentService(
       firestoreService: _firestoreService,
@@ -42,6 +47,10 @@ class DocumentProvider with ChangeNotifier {
   List<DocumentTypeModel> get documentTypes => _documentTypes;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  // Context getters
+  String? get currentContextUserId => _currentContextUserId;
+  String? get currentContextCompanyId => _currentContextCompanyId;
 
   // Filtered document getters - unchanged
   List<DocumentModel> getDocumentsByCategory(String categoryId) {
@@ -68,126 +77,235 @@ class DocumentProvider with ChangeNotifier {
     return _documents.where((doc) => doc.isExpired).toList();
   }
 
-  // Initialize data - same method signature
-  Future<void> initialize(String companyId) async {
+  // FIXED: Updated initialize method to work with user selection context
+  Future<void> initializeWithContext(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    if (authProvider.currentUser == null) {
+      _error = 'No authenticated user';
+      notifyListeners();
+      return;
+    }
+
+    // Determine which user's documents to load
+    UserModel targetUser;
+    if (authProvider.hasSelectedUser && authProvider.selectedUser != null) {
+      targetUser = authProvider.selectedUser!;
+      print('DocumentProvider: Loading documents for SELECTED user: ${targetUser.name} (${targetUser.email})');
+    } else {
+      targetUser = authProvider.currentUser!;
+      print('DocumentProvider: Loading documents for CURRENT user: ${targetUser.name} (${targetUser.email})');
+    }
+
+    final targetUserId = targetUser.id;
+    final targetCompanyId = targetUser.companyId;
+
+    print('DocumentProvider: Target user ID: $targetUserId, Company ID: $targetCompanyId');
+
+    // IMPORTANT: Always reload if user context changes OR if we don't have the right context
+    final needsReload = _currentContextUserId != targetUserId ||
+        _currentContextCompanyId != targetCompanyId ||
+        _documents.isEmpty;
+
+    if (needsReload) {
+      print('DocumentProvider: Context changed or no data, reloading...');
+      print('DocumentProvider: Previous context - User: $_currentContextUserId, Company: $_currentContextCompanyId');
+      print('DocumentProvider: New context - User: $targetUserId, Company: $targetCompanyId');
+
+      // Clear previous data before loading new context
+      _clearData();
+
+      await initialize(targetCompanyId, userId: targetUserId);
+
+      _currentContextUserId = targetUserId;
+      _currentContextCompanyId = targetCompanyId;
+
+      print('DocumentProvider: Context updated successfully. Loaded ${_documents.length} documents.');
+    } else {
+      print('DocumentProvider: Context unchanged, using existing data (${_documents.length} documents)');
+    }
+  }
+
+  // Helper method to clear data when switching contexts
+  void _clearData() {
+    _documents = [];
+    _documentsMap = {};
+    // Keep categories and document types as they are global
+  }
+
+  // Enhanced initialize method with optional userId filter
+  Future<void> initialize(String companyId, {String? userId}) async {
     _setLoading(true);
 
     try {
+      print('DocumentProvider: Initializing with companyId: $companyId, userId: $userId');
+
       // Modified implementation to batch notifications
-      await _batchFetchAllData(companyId);
+      await _batchFetchAllData(companyId, userId: userId);
+
+      print('DocumentProvider: Initialization completed successfully');
     } catch (e) {
       _error = 'Failed to initialize data: $e';
+      print('DocumentProvider initialize error: $e');
+      notifyListeners();
     } finally {
       _setLoading(false);
     }
   }
 
+  // ENHANCED: Method to refresh data when user selection changes
+  Future<void> refreshForUserContext(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    if (authProvider.currentUser == null) return;
+
+    // COMPANY CONTEXT: If admin selected a company, load ALL documents for that company
+    if (authProvider.isManagingCompany && authProvider.selectedCompany != null) {
+      final targetCompanyId = authProvider.selectedCompany!.id;
+
+      print('DocumentProvider: Loading ALL documents for company: ${authProvider.selectedCompany!.name}');
+
+      // Check if we need to reload
+      final needsReload = _currentContextUserId != null || // Was previously user-specific
+          _currentContextCompanyId != targetCompanyId ||
+          _documents.isEmpty;
+
+      if (needsReload) {
+        print('DocumentProvider: Company context changed, reloading...');
+
+        // Clear previous data
+        _clearData();
+
+        // Load all company documents (no userId filter)
+        await initialize(targetCompanyId); // No userId parameter = all company documents
+
+        _currentContextUserId = null; // No specific user
+        _currentContextCompanyId = targetCompanyId;
+
+        print('DocumentProvider: Loaded ${_documents.length} documents for company ${authProvider.selectedCompany!.name}');
+      } else {
+        print('DocumentProvider: Company context unchanged, using existing data (${_documents.length} documents)');
+      }
+      return;
+    }
+
+    // USER CONTEXT: Load documents for specific user (existing behavior)
+    UserModel targetUser;
+    if (authProvider.hasSelectedUser && authProvider.selectedUser != null) {
+      targetUser = authProvider.selectedUser!;
+      print('DocumentProvider: Loading documents for SELECTED user: ${targetUser.name} (${targetUser.email})');
+    } else {
+      targetUser = authProvider.currentUser!;
+      print('DocumentProvider: Loading documents for CURRENT user: ${targetUser.name} (${targetUser.email})');
+    }
+
+    final targetUserId = targetUser.id;
+    final targetCompanyId = targetUser.companyId;
+
+    print('DocumentProvider: Target user ID: $targetUserId, Company ID: $targetCompanyId');
+
+    // Check if we need to reload
+    final needsReload = _currentContextUserId != targetUserId ||
+        _currentContextCompanyId != targetCompanyId ||
+        _documents.isEmpty;
+
+    if (needsReload) {
+      print('DocumentProvider: User context changed, reloading...');
+
+      // Clear previous data before loading new context
+      _clearData();
+
+      await initialize(targetCompanyId, userId: targetUserId);
+
+      _currentContextUserId = targetUserId;
+      _currentContextCompanyId = targetCompanyId;
+
+      print('DocumentProvider: Context updated successfully. Loaded ${_documents.length} documents.');
+    } else {
+      print('DocumentProvider: User context unchanged, using existing data (${_documents.length} documents)');
+    }
+  }
+
+  // Update document files (if this method exists in your DocumentProvider)
   Future<DocumentModel?> updateDocumentFiles({
     required String documentId,
     required List<dynamic> files,
-    required UserModel user, // Pass the user directly
+    required UserModel user,
     DateTime? expiryDate,
+    String? specification, // NEW PARAMETER
   }) async {
     _setLoading(true);
 
     try {
-      // Get the existing document
-      final document = await _firestoreService.getDocument(documentId);
-      if (document == null) {
-        _error = 'Document not found';
-        return null;
-      }
-
-      // Upload new files
-      List<String> fileUrls = [];
-      for (var file in files) {
-        String? fileUrl;
-
-        if (kIsWeb) {
-          // Handle web file upload
-          if (file is Map<String, dynamic> && file.containsKey('bytes')) {
-            fileUrl = await _storageService.uploadFile(
-              file,
-              user.companyId,
-              documentId,
-              file['name'] ?? 'file.pdf',
-            );
-          }
-        } else {
-          // Handle mobile/desktop file upload
-          if (file is File) {
-            final fileName = file.path.split('/').last;
-            fileUrl = await _storageService.uploadFile(
-              file,
-              user.companyId,
-              documentId,
-              fileName,
-            );
-          }
-        }
-
-        if (fileUrl != null) {
-          fileUrls.add(fileUrl);
-        }
-      }
-
-      // Update the document
-      final updatedDocument = document.copyWith(
-        fileUrls: fileUrls,
-        status: DocumentStatus.PENDING,
-        updatedAt: DateTime.now(),
-        expiryDate: expiryDate ?? document.expiryDate,
+      final document = await _documentService.updateDocumentFiles(
+        documentId: documentId,
+        files: files,
+        user: user,
+        expiryDate: expiryDate,
+        specification: specification, // NEW PARAMETER PASSED TO SERVICE
       );
 
-      final success = await _firestoreService.updateDocument(updatedDocument);
-
-      if (success) {
-        // Add comment about resubmission
-        await _documentService.addComment(
-          documentId,
-          "Document resubmitted with updated files.",
-          user,
-        );
-
-        // Update local document list
+      if (document != null) {
+        // Update the document in our local list
         final index = _documents.indexWhere((doc) => doc.id == documentId);
         if (index >= 0) {
-          _documents[index] = updatedDocument;
+          _documents[index] = document;
         }
-
+        _documentsMap[documentId] = document; // Update lookup map
         notifyListeners();
-        return updatedDocument;
-      } else {
-        _error = 'Failed to update document';
-        return null;
       }
+
+      return document;
     } catch (e) {
-      _error = 'Error updating document: $e';
+      _error = 'Failed to update document files: $e';
       return null;
     } finally {
       _setLoading(false);
     }
   }
 
-  // New helper method for batch fetching
-  Future<void> _batchFetchAllData(String companyId) async {
+  // FIXED: New helper method for batch fetching with better user filtering
+  Future<void> _batchFetchAllData(String companyId, {String? userId}) async {
     try {
+      print('DocumentProvider: Batch fetching data for companyId: $companyId, userId: $userId');
+
       // Fetch categories and all document types without multiple notifications
       await _batchFetchCategories();
 
-      // Fetch documents (this will reset _documents)
-      final documents = await _firestoreService.getDocuments(
-        companyId: companyId,
-      );
+      // IMPORTANT: Fetch documents with proper filtering
+      List<DocumentModel> documents;
+
+      if (userId != null) {
+        print('DocumentProvider: Fetching documents for specific user: $userId');
+        // Fetch documents for specific user - this will get documents where userId matches
+        documents = await _firestoreService.getDocuments(
+          userId: userId, // This is the key - filter by userId, not companyId
+        );
+      } else {
+        print('DocumentProvider: Fetching documents for entire company: $companyId');
+        // Fetch documents for entire company
+        documents = await _firestoreService.getDocuments(
+          companyId: companyId,
+        );
+      }
+
       _documents = documents;
 
       // Build lookup maps for faster access
       _buildLookupMaps();
 
+      print('DocumentProvider: Loaded ${_documents.length} documents for ${userId != null ? 'user $userId' : 'company $companyId'}');
+
+      // Debug: Print document details
+      for (var doc in _documents) {
+        print('Document: ${doc.id} - User: ${doc.userId} - Company: ${doc.companyId}');
+      }
+
       // Only notify once after all data is loaded
       notifyListeners();
     } catch (e) {
       _error = 'Failed to fetch data: $e';
+      print('DocumentProvider _batchFetchAllData error: $e');
       notifyListeners();
     }
   }
@@ -239,6 +357,12 @@ class DocumentProvider with ChangeNotifier {
     _documentsMap = {for (var doc in _documents) doc.id: doc};
   }
 
+  // Enhanced method to get effective user for operations
+  UserModel? _getEffectiveUser(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    return authProvider.effectiveUser;
+  }
+
   // Original methods kept for backward compatibility but optimized
 
   // Fetch categories - kept but optimized
@@ -280,14 +404,15 @@ class DocumentProvider with ChangeNotifier {
     }
   }
 
-  // Fetch documents - unchanged signature but optimized
-  Future<void> fetchDocuments({String? companyId, String? categoryId}) async {
+  // Enhanced fetch documents with user context support
+  Future<void> fetchDocuments({String? companyId, String? categoryId, String? userId}) async {
     _setLoading(true);
 
     try {
       final documents = await _firestoreService.getDocuments(
         companyId: companyId,
         categoryId: categoryId,
+        userId: userId, // Add user filter support
       );
 
       if (categoryId != null) {
@@ -331,8 +456,6 @@ class DocumentProvider with ChangeNotifier {
     }
   }
 
-  // Rest of the methods are unchanged
-
   // Create document
   Future<DocumentModel?> createDocument({
     required UserModel? user,
@@ -342,6 +465,7 @@ class DocumentProvider with ChangeNotifier {
     Map<String, dynamic>? formData,
     DateTime? expiryDate,
     bool isNotApplicable = false,
+    String? specification, // NEW FIELD
   }) async {
     _setLoading(true);
 
@@ -354,6 +478,7 @@ class DocumentProvider with ChangeNotifier {
         formData: formData,
         expiryDate: expiryDate,
         isNotApplicable: isNotApplicable,
+        specification: specification, // NEW FIELD
       );
 
       if (document != null) {
@@ -369,6 +494,34 @@ class DocumentProvider with ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+  }
+
+  // Enhanced create document with context
+  Future<DocumentModel?> createDocumentWithContext({
+    required BuildContext context,
+    required String categoryId,
+    required String documentTypeId,
+    required List<dynamic> files,
+    Map<String, dynamic>? formData,
+    DateTime? expiryDate,
+    bool isNotApplicable = false,
+  }) async {
+    final effectiveUser = _getEffectiveUser(context);
+
+    if (effectiveUser == null) {
+      _error = 'No effective user found';
+      return null;
+    }
+
+    return await createDocument(
+      user: effectiveUser,
+      categoryId: categoryId,
+      documentTypeId: documentTypeId,
+      files: files,
+      formData: formData,
+      expiryDate: expiryDate,
+      isNotApplicable: isNotApplicable,
+    );
   }
 
   // Update document status
@@ -499,6 +652,15 @@ class DocumentProvider with ChangeNotifier {
   // Clear error
   void clearError() {
     _error = null;
+    notifyListeners();
+  }
+
+  // Clear context when needed (e.g., user logs out)
+  void clearContext() {
+    _currentContextUserId = null;
+    _currentContextCompanyId = null;
+    _documents = [];
+    _documentsMap = {};
     notifyListeners();
   }
 

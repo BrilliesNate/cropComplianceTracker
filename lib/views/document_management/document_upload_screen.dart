@@ -1,11 +1,14 @@
+
+
+import 'package:cropCompliance/models/document_type_model.dart';
+import 'package:cropCompliance/providers/category_provider.dart';
+import 'package:cropCompliance/views/audit_tracker/widgets/document_upload_card.dart';
+import 'package:cropCompliance/views/shared/custom_app_bar.dart';
+import 'package:cropCompliance/views/shared/error_display.dart';
+import 'package:cropCompliance/views/shared/loading_indicator.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/category_provider.dart';
-import '../../models/document_type_model.dart';
-import '../shared/custom_app_bar.dart';
-import '../shared/loading_indicator.dart';
-import '../shared/error_display.dart';
-import '../audit_tracker/widgets/document_upload_card.dart';
 
 class DocumentUploadScreen extends StatefulWidget {
   final String categoryId;

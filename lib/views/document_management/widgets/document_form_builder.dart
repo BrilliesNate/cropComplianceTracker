@@ -1,4 +1,4 @@
-import 'package:cropcompliance/models/document_type_model.dart';
+import 'package:cropCompliance/models/document_type_model.dart';
 import 'package:flutter/material.dart';
 
 class DocumentFormBuilder extends StatefulWidget {

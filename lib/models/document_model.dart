@@ -18,6 +18,7 @@ class DocumentModel {
   final bool isNotApplicable;
   final List<SignatureModel> signatures;
   final List<CommentModel> comments;
+  final String? specification; // NEW FIELD
 
   DocumentModel({
     required this.id,
@@ -34,6 +35,7 @@ class DocumentModel {
     required this.isNotApplicable,
     required this.signatures,
     required this.comments,
+    this.specification, // NEW FIELD
   });
 
   Map<String, dynamic> toMap() {
@@ -49,6 +51,7 @@ class DocumentModel {
       'updatedAt': Timestamp.fromDate(updatedAt),
       'expiryDate': expiryDate != null ? Timestamp.fromDate(expiryDate!) : null,
       'isNotApplicable': isNotApplicable,
+      'specification': specification, // NEW FIELD
     };
   }
 
@@ -73,6 +76,7 @@ class DocumentModel {
       isNotApplicable: map['isNotApplicable'] ?? false,
       signatures: signatures,
       comments: comments,
+      specification: map['specification'], // NEW FIELD
     );
   }
 
@@ -91,6 +95,7 @@ class DocumentModel {
     bool? isNotApplicable,
     List<SignatureModel>? signatures,
     List<CommentModel>? comments,
+    String? specification, // NEW FIELD
   }) {
     return DocumentModel(
       id: id ?? this.id,
@@ -107,6 +112,7 @@ class DocumentModel {
       isNotApplicable: isNotApplicable ?? this.isNotApplicable,
       signatures: signatures ?? this.signatures,
       comments: comments ?? this.comments,
+      specification: specification ?? this.specification, // NEW FIELD
     );
   }
 
