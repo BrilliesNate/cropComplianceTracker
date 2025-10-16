@@ -23,6 +23,83 @@ class DocumentService {
         _storageService = storageService;
 
   // Enhanced createDocument method with admin context support
+
+
+  // Add this method to your DocumentService class in document_service.dart
+
+// Delete document with admin support
+  Future<bool> deleteDocument({
+    required String documentId,
+    required UserModel user, // Admin performing the deletion
+    String? reason, // Optional reason for deletion
+  }) async {
+    try {
+      print("DEBUG: deleteDocument called for document: $documentId");
+      print("DEBUG: Deleting user: ${user.name} (${user.email})");
+      print("DEBUG: Deletion reason: ${reason ?? 'No reason provided'}");
+
+      // Get the existing document first
+      final document = await _firestoreService.getDocument(documentId);
+      if (document == null) {
+        print("DEBUG: Document not found: $documentId");
+        return false;
+      }
+
+      print("DEBUG: Found document: ${document.id}");
+      print("DEBUG: Document has ${document.fileUrls.length} files to delete");
+
+      // Step 1: Delete all associated files from Storage
+      for (String fileUrl in document.fileUrls) {
+        try {
+          print("DEBUG: Deleting file: $fileUrl");
+          final deleteResult = await _storageService.deleteFile(fileUrl);
+          if (deleteResult) {
+            print("DEBUG: Successfully deleted file: $fileUrl");
+          } else {
+            print("DEBUG: Failed to delete file: $fileUrl");
+          }
+        } catch (e) {
+          print("DEBUG: Error deleting file $fileUrl: $e");
+          // Continue with other files even if one fails
+        }
+      }
+
+      // Step 2: Delete the document from Firestore
+      print("DEBUG: Deleting document from Firestore");
+      final deleteResult = await _firestoreService.deleteDocument(documentId);
+
+      if (deleteResult) {
+        print("DEBUG: Document successfully deleted from Firestore");
+
+        // Step 3: Add a deletion record/comment for audit trail (optional)
+        // You could create a separate "deleted_documents" collection to track deletions
+        try {
+          await _firestoreService.addDeletionRecord({
+            'originalDocumentId': documentId,
+            'deletedBy': user.id,
+            'deletedByName': user.name,
+            'deletionDate': DateTime.now(),
+            'reason': reason ?? 'No reason provided',
+            'originalDocument': document.toMap(),
+          });
+          print("DEBUG: Deletion record added for audit trail");
+        } catch (e) {
+          print("DEBUG: Failed to add deletion record (non-critical): $e");
+          // This is non-critical, document is still deleted
+        }
+
+        return true;
+      } else {
+        print("DEBUG: Failed to delete document from Firestore");
+        return false;
+      }
+    } catch (e) {
+      print('ERROR deleting document: $e');
+      print('ERROR trace: ${e.toString()}');
+      return false;
+    }
+  }
+
   Future<DocumentModel?> createDocument({
     required UserModel user, // This is the target user (could be selected by admin)
     required String categoryId,

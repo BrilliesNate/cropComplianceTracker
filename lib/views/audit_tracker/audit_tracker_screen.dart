@@ -128,18 +128,36 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       developer.log('AuditTrackerScreen - build: Toggle buttons built: ${_stopwatch.elapsedMilliseconds}ms');
 
       developer.log('AuditTrackerScreen - build: Preparing main content view (documents or audit list)');
-      final mainContent = _showDocuments
-          ? _buildDocumentsView(documentProvider, categoryProvider)
-          : _buildAuditListView(documentProvider, categoryProvider);
-      developer.log('AuditTrackerScreen - build: Main content built: ${_stopwatch.elapsedMilliseconds}ms');
 
-      content = Column(
-        children: [
-          kpiSection,
-          toggleButtons,
-          Expanded(child: mainContent),
-        ],
-      );
+      // Check if mobile before building content
+      final isMobile = MediaQuery.of(context).size.width < 600;
+
+      if (isMobile) {
+        // MOBILE: Everything in one scrollable list
+        content = ListView(
+          children: [
+            kpiSection,
+            toggleButtons,
+            _showDocuments
+                ? _buildDocumentsViewMobile(documentProvider, categoryProvider)
+                : _buildAuditListViewMobile(documentProvider, categoryProvider),
+          ],
+        );
+      } else {
+        // DESKTOP: Fixed KPI and toggle, scrollable content
+        final mainContent = _showDocuments
+            ? _buildDocumentsView(documentProvider, categoryProvider)
+            : _buildAuditListView(documentProvider, categoryProvider);
+
+        content = Column(
+          children: [
+            kpiSection,
+            toggleButtons,
+            Expanded(child: mainContent),
+          ],
+        );
+      }
+
       developer.log('AuditTrackerScreen - build: Content column assembled: ${_stopwatch.elapsedMilliseconds}ms');
     }
 
@@ -184,10 +202,10 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     }
 
     // Check if we're on a small screen
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     final result = Container(
-      padding: const EdgeInsets.all(16),
+      padding: isMobile ? const EdgeInsets.all(8) : const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -202,15 +220,18 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Audit Compliance Overview',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+          // Remove title on mobile
+          if (!isMobile)
+            const Text(
+              'Audit Compliance Overview',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          isSmallScreen
+          if (!isMobile) const SizedBox(height: 16),
+
+          isMobile
               ? Column(
             children: [
               Row(
@@ -224,7 +245,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                       Icons.insert_chart,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: _buildKPICard(
                       'Approval',
@@ -236,28 +257,24 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Row(
                 children: [
                   Expanded(
                     child: _buildKPICard(
                       'Pending',
                       '$pendingDocuments',
-                      pendingDocuments > 0
-                          ? "Action needed"
-                          : "All clear",
+                      pendingDocuments > 0 ? "Action needed" : "All clear",
                       Colors.orange,
                       Icons.hourglass_empty,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: _buildKPICard(
                       'Rejected',
                       '$rejectedDocuments',
-                      rejectedDocuments > 0
-                          ? "Fix required"
-                          : "All clear",
+                      rejectedDocuments > 0 ? "Fix required" : "All clear",
                       Colors.red,
                       Icons.error_outline,
                     ),
@@ -318,21 +335,145 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
     return result;
   }
+  Widget _buildDocumentsViewMobile(DocumentProvider documentProvider, CategoryProvider categoryProvider) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isAdmin = authProvider.currentUser?.role == UserRole.ADMIN;
 
-  // KPI Card Widget
+    bool isExpiringSoon(DocumentModel doc) {
+      if (doc.expiryDate == null) return false;
+      final now = DateTime.now();
+      final thirtyDaysFromNow = now.add(const Duration(days: 30));
+      return doc.expiryDate!.isBefore(thirtyDaysFromNow) || doc.expiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
+    }
+
+    final documents = _showApprovedDocuments
+        ? documentProvider.documents.where((doc) => doc.status == DocumentStatus.APPROVED && !doc.isExpired && !isExpiringSoon(doc)).toList()
+        : documentProvider.documents.where((doc) => doc.status != DocumentStatus.APPROVED || doc.isExpired || isExpiringSoon(doc)).toList();
+
+    if (documents.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(_showApprovedDocuments ? 'No approved documents' : 'No action items found'),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // Filter toggle
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              const Text('Filter: '),
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: const Text('Action Items'),
+                selected: !_showApprovedDocuments,
+                onSelected: (selected) {
+                  if (selected) setState(() => _showApprovedDocuments = false);
+                },
+              ),
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: const Text('Approved & Current'),
+                selected: _showApprovedDocuments,
+                onSelected: (selected) {
+                  if (selected) setState(() => _showApprovedDocuments = true);
+                },
+              ),
+            ],
+          ),
+        ),
+
+        // Document list with shrinkWrap
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          itemCount: documents.length,
+          itemBuilder: (context, index) {
+            final document = documents[index];
+
+            // Find document type
+            DocumentTypeModel? documentType;
+            try {
+              documentType = documentProvider.documentTypes.firstWhere((dt) => dt.id == document.documentTypeId) as DocumentTypeModel?;
+            } catch (_) {
+              documentType = null;
+            }
+
+            // Find category
+            CategoryModel category;
+            try {
+              category = categoryProvider.categories.firstWhere((c) => c.id == document.categoryId);
+            } catch (_) {
+              category = CategoryModel(id: document.categoryId, name: 'Unknown Category', description: '', order: 0);
+            }
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: _buildMobileDocumentCard(document, documentType?.name ?? 'Unknown', category.name, isAdmin),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+// MOBILE VERSION - Uses shrinkWrap
+  Widget _buildAuditListViewMobile(DocumentProvider documentProvider, CategoryProvider categoryProvider) {
+    final categories = categoryProvider.categories;
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        if (!_expandedCategories.containsKey(category.id)) {
+          _expandedCategories[category.id] = false;
+        }
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Column(
+            children: [
+              ListTile(
+                leading: Icon(_getCategoryIcon(category.name), color: Theme.of(context).primaryColor),
+                title: Text(category.name, style: const TextStyle(fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
+                trailing: IconButton(
+                  icon: Icon(_expandedCategories[category.id]! ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down),
+                  onPressed: () => setState(() => _expandedCategories[category.id] = !_expandedCategories[category.id]!),
+                ),
+                onTap: () => setState(() => _expandedCategories[category.id] = !_expandedCategories[category.id]!),
+              ),
+              if (_expandedCategories[category.id]!) ...[
+                const Divider(height: 1),
+                _buildDocumentTypesList(category.id, documentProvider, true),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildKPICard(
       String title, String value, String subtitle, Color color, IconData icon) {
     // Check if we're on a small screen
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: isMobile ? const EdgeInsets.all(6) : const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color.withOpacity(0.2)),
       ),
-      child: isSmallScreen
+      child: isMobile
           ? Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -341,33 +482,37 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
               Icon(
                 icon,
                 color: color,
-                size: 18,
+                size: 14,
               ),
-              const SizedBox(width: 6),
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                  fontSize: 13,
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    fontSize: 10,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
             ),
           ),
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 9,
               color: Colors.grey.shade700,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       )
@@ -412,6 +557,8 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       ),
     );
   }
+
+
 
   Widget _buildViewToggleButtons() {
     return Container(
@@ -957,9 +1104,123 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                 ),
               ),
             ),
+
+          const SizedBox(height: 8),
+
+          // Delete button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.delete, size: 16),
+              label: const Text('Delete'),
+              onPressed: () => _showDeleteConfirmation(context, document),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                visualDensity: VisualDensity.compact,
+                textStyle: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ),
+
         ],
       ),
     );
+  }
+
+
+  Future<void> _showDeleteConfirmation(BuildContext context, DocumentModel document) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Document'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Are you sure you want to delete this document?'),
+            const SizedBox(height: 16),
+            const Text(
+              'This action cannot be undone. The document and all its files will be permanently deleted.',
+              style: TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      await _deleteDocument(document);
+    }
+  }
+
+  Future<void> _deleteDocument(DocumentModel document) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Deleting document...'),
+            ],
+          ),
+        ),
+      );
+
+      final success = await documentProvider.deleteDocument(
+        documentId: document.id,
+        user: authProvider.currentUser!,
+        reason: 'Deleted by admin ${authProvider.currentUser!.name}',
+      );
+
+      // Hide loading
+      Navigator.of(context).pop();
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Document deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to delete document'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Hide loading if still showing
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting document: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
 // Desktop document card with comments - simplified
@@ -1109,6 +1370,20 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                     textStyle: const TextStyle(fontSize: 13),
                   ),
                 ),
+
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.delete, size: 16),
+                label: const Text('Delete'),
+                onPressed: () => _showDeleteConfirmation(context, document),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  visualDensity: VisualDensity.compact,
+                  textStyle: const TextStyle(fontSize: 13),
+                ),
+              ),
             ],
           ),
         ),

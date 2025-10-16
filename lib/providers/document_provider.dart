@@ -265,6 +265,43 @@ class DocumentProvider with ChangeNotifier {
   }
 
   // FIXED: New helper method for batch fetching with better user filtering
+  // In your document_provider.dart, replace the _batchFetchAllData method with this:
+
+  // Add this method to your DocumentProvider class in document_provider.dart
+
+// Delete document
+  Future<bool> deleteDocument({
+    required String documentId,
+    required UserModel user,
+    String? reason,
+  }) async {
+    _setLoading(true);
+
+    try {
+      final result = await _documentService.deleteDocument(
+        documentId: documentId,
+        user: user,
+        reason: reason,
+      );
+
+      if (result) {
+        // Remove document from local lists
+        _documents.removeWhere((doc) => doc.id == documentId);
+        _documentsMap.remove(documentId);
+        notifyListeners();
+
+        print("DEBUG: Document removed from local cache");
+      }
+
+      return result;
+    } catch (e) {
+      _error = 'Failed to delete document: $e';
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<void> _batchFetchAllData(String companyId, {String? userId}) async {
     try {
       print('DocumentProvider: Batch fetching data for companyId: $companyId, userId: $userId');
@@ -272,41 +309,24 @@ class DocumentProvider with ChangeNotifier {
       // Fetch categories and all document types without multiple notifications
       await _batchFetchCategories();
 
-      // IMPORTANT: Fetch documents with proper filtering
+      // FIXED: Always fetch ALL documents for the company, regardless of userId
       List<DocumentModel> documents;
 
-      if (userId != null) {
-        print('DocumentProvider: Fetching documents for specific user: $userId');
-        // Fetch documents for specific user - this will get documents where userId matches
-        documents = await _firestoreService.getDocuments(
-          userId: userId, // This is the key - filter by userId, not companyId
-        );
-      } else {
-        print('DocumentProvider: Fetching documents for entire company: $companyId');
-        // Fetch documents for entire company
-        documents = await _firestoreService.getDocuments(
-          companyId: companyId,
-        );
-      }
+      print('DocumentProvider: Fetching ALL documents for company: $companyId');
+      // Always fetch documents for entire company - users should see all company documents
+      documents = await _firestoreService.getDocuments(
+        companyId: companyId, // Always use companyId, never filter by userId
+      );
 
       _documents = documents;
 
       // Build lookup maps for faster access
       _buildLookupMaps();
 
-      print('DocumentProvider: Loaded ${_documents.length} documents for ${userId != null ? 'user $userId' : 'company $companyId'}');
-
-      // Debug: Print document details
-      for (var doc in _documents) {
-        print('Document: ${doc.id} - User: ${doc.userId} - Company: ${doc.companyId}');
-      }
-
-      // Only notify once after all data is loaded
-      notifyListeners();
+      print('DocumentProvider: Loaded ${_documents.length} documents for company $companyId');
     } catch (e) {
+      print('DocumentProvider: Error in _batchFetchAllData: $e');
       _error = 'Failed to fetch data: $e';
-      print('DocumentProvider _batchFetchAllData error: $e');
-      notifyListeners();
     }
   }
 

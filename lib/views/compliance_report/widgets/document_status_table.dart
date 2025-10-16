@@ -16,6 +16,7 @@ class DocumentStatusTable extends StatelessWidget {
     final categoryProvider = Provider.of<CategoryProvider>(context);
     final documentProvider = Provider.of<DocumentProvider>(context);
     final categories = categoryProvider.categories;
+    final isMobile = MediaQuery.of(context).size.width < 650;
 
     if (categories.isEmpty) {
       return const Center(child: Text('No documents found'));
@@ -56,15 +57,16 @@ class DocumentStatusTable extends StatelessWidget {
                       color: const Color(0xFF43A047),
                     ),
                     const SizedBox(width: 10),
-                    Text(
-                      category.name,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2E7D32),
+                    Expanded(
+                      child: Text(
+                        category.name,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2E7D32),
+                        ),
                       ),
                     ),
-                    const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
@@ -92,7 +94,9 @@ class DocumentStatusTable extends StatelessWidget {
                 final document = documents.isNotEmpty ? documents.first : null;
                 final isLast = index == docTypes.length - 1;
 
-                return _buildDocumentRow(context, docType, document as DocumentModel?, isLast);
+                return isMobile
+                    ? _buildDocumentCardMobile(context, docType, document as DocumentModel?, isLast)
+                    : _buildDocumentRowDesktop(context, docType, document as DocumentModel?, isLast);
               }).toList(),
             ],
           ),
@@ -101,7 +105,8 @@ class DocumentStatusTable extends StatelessWidget {
     );
   }
 
-  Widget _buildDocumentRow(
+  // DESKTOP VERSION - Keep existing horizontal layout
+  Widget _buildDocumentRowDesktop(
       BuildContext context,
       DocumentTypeModel docType,
       DocumentModel? document,
@@ -169,6 +174,133 @@ class DocumentStatusTable extends StatelessWidget {
                 fontSize: 10,
                 color: Colors.grey.shade500,
               ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // MOBILE VERSION - New card-style vertical layout
+  Widget _buildDocumentCardMobile(
+      BuildContext context,
+      DocumentTypeModel docType,
+      DocumentModel? document,
+      bool isLastInCategory,
+      ) {
+    final status = _getDocumentStatus(document);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: isLastInCategory
+              ? BorderSide.none
+              : BorderSide(color: Colors.grey.shade100),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Document name with status dot
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                margin: const EdgeInsets.only(top: 6),
+                decoration: BoxDecoration(
+                  color: status['color'],
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  docType.name,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Status badge
+          Row(
+            children: [
+              const Text(
+                'Status: ',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: status['color'].withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status['label'],
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: status['color'],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Date (if available)
+          if (document != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  size: 12,
+                  color: Colors.grey.shade500,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Updated: ${DateFormat('MMM d, yyyy').format(document.updatedAt)}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          // Expiry date if available
+          if (document?.expiryDate != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(
+                  document!.isExpired ? Icons.error_outline : Icons.event_available,
+                  size: 12,
+                  color: document.isExpired ? Colors.red.shade400 : Colors.grey.shade500,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Expires: ${DateFormat('MMM d, yyyy').format(document.expiryDate!)}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: document.isExpired ? Colors.red.shade600 : Colors.grey.shade600,
+                    fontWeight: document.isExpired ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
             ),
           ],
         ],

@@ -333,6 +333,24 @@ class FirestoreService {
     }
   }
 
+
+  // Add this method to your FirestoreService class in firestore_service.dart
+
+// Add deletion record for audit trail
+  Future<bool> addDeletionRecord(Map<String, dynamic> deletionData) async {
+    try {
+      await _firestore
+          .collection('deleted_documents')
+          .add({
+        ...deletionData,
+        'deletionDate': Timestamp.fromDate(deletionData['deletionDate']),
+      });
+      return true;
+    } catch (e) {
+      print('Error adding deletion record: $e');
+      return false;
+    }
+  }
   Future<FormConfig?> getFormConfig(String documentTypeId) async {
     final stopwatch = Stopwatch()..start();
     developer.log('FirestoreService - Starting getFormConfig: $documentTypeId');

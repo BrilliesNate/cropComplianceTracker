@@ -1,4 +1,3 @@
-
 import 'package:cropCompliance/core/constants/route_constants.dart';
 import 'package:cropCompliance/core/services/firestore_service.dart';
 import 'package:cropCompliance/models/document_type_model.dart';
@@ -107,13 +106,10 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
       body: isLoading
           ? const LoadingIndicator(message: 'Loading documents...')
           : hasError
-          ? ErrorDisplay(
-        error: error,
-        onRetry: _initializeData,
-      )
+          ? ErrorDisplay(error: error, onRetry: _initializeData)
           : Column(
         children: [
-          _buildFilterControls(context),
+          _buildFilterBar(),
           Expanded(
             child: _buildGroupedDocumentTables(documentProvider),
           ),
@@ -122,21 +118,14 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
     );
   }
 
-  Widget _buildFilterControls(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
+  Widget _buildFilterBar() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(12),
-          bottomRight: Radius.circular(12),
-        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
+            color: Colors.grey.shade200,
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -144,90 +133,40 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
       ),
       child: Row(
         children: [
-          // Status dropdown - Hide for auditors since they only see approved documents
-          if (!authProvider.isAuditer)
-            Container(
-              height: 42,
-              width: 180,
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String?>(
-                  value: _statusFilter,
-                  hint: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('All Statuses'),
-                  ),
-                  icon: const Icon(Icons.keyboard_arrow_down),
-                  borderRadius: BorderRadius.circular(8),
-                  isExpanded: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  items: const [
-                    DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text('All Statuses'),
-                    ),
-                    DropdownMenuItem<String?>(
-                      value: 'APPROVED',
-                      child: Text('Approved'),
-                    ),
-                    DropdownMenuItem<String?>(
-                      value: 'PENDING',
-                      child: Text('Pending'),
-                    ),
-                    DropdownMenuItem<String?>(
-                      value: 'REJECTED',
-                      child: Text('Rejected'),
-                    ),
-                    DropdownMenuItem<String?>(
-                      value: 'EXPIRED',
-                      child: Text('Expired'),
-                    ),
-                    DropdownMenuItem<String?>(
-                      value: 'NOT_APPLICABLE',
-                      child: Text('Not Applicable'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _statusFilter = value;
-                    });
-                  },
-                ),
+          // Status Filter Dropdown
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: DropdownButton<String?>(
+              value: _statusFilter,
+              hint: const Text('Filter'),
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('All')),
+                DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
+                DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
+                DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
+                DropdownMenuItem(value: 'EXPIRED', child: Text('Expired')),
+                DropdownMenuItem(value: 'NOT_APPLICABLE', child: Text('N/A')),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _statusFilter = value;
+                });
+              },
+              icon: Icon(Icons.filter_list, size: 16, color: Colors.grey.shade600),
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500,
               ),
             ),
-
-          // Show auditor info instead of status filter
-          if (authProvider.isAuditer)
-            Container(
-              height: 42,
-              margin: const EdgeInsets.only(right: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.shade300),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.verified, color: Colors.green.shade700, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Showing Approved Documents Only',
-                    style: TextStyle(
-                      color: Colors.green.shade700,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          ),
+          const SizedBox(width: 12),
 
           // Search field
           Expanded(
@@ -443,6 +382,9 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
   }
 
   Widget _buildDocumentTable(List<dynamic> documents) {
+    // Check if mobile view
+    final isMobile = MediaQuery.of(context).size.width < 650;
+
     return Card(
       margin: EdgeInsets.zero,
       elevation: 2,
@@ -453,94 +395,50 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
           bottomRight: Radius.circular(12),
         ),
       ),
-      child: Column(
-        children: [
-          // Table header
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            color: Colors.grey.shade50,
-            child: Row(
-              children: [
-                const Expanded(
-                  flex: 3,
-                  child: Text(
-                    'Specification',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                const Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Uploaded By',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                const Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Upload Date',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                const Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Expiry Date',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                const Expanded(
-                  flex: 2,
-                  child: Text(
-                    'Status',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 50), // Actions column
-              ],
-            ),
-          ),
+      child: isMobile
+          ? _buildMobileDocumentList(documents)
+          : _buildDesktopDocumentTable(documents),
+    );
+  }
 
-          // Table body
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: documents.length,
-            separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
-            itemBuilder: (context, index) {
-              final document = documents[index];
+  // MOBILE VERSION - Vertical cards
+  Widget _buildMobileDocumentList(List<dynamic> documents) {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: documents.length,
+      separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+      itemBuilder: (context, index) {
+        final document = documents[index];
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final isAdmin = authProvider.isAdmin;
 
-              return Container(
-                color: index.isEven ? Colors.white : Colors.grey.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Specification
-                      Expanded(
-                        flex: 3,
-                        child: Text(
+        return Container(
+          padding: const EdgeInsets.all(16),
+          color: index.isEven ? Colors.white : Colors.grey.shade50,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Specification
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.description_outlined, size: 16, color: Colors.grey.shade600),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Specification',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
                           document.specification?.isNotEmpty == true
                               ? document.specification!
                               : 'No specification provided',
@@ -553,102 +451,341 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                                 ? FontStyle.normal
                                 : FontStyle.italic,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
 
-                      // Uploaded By
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          _getUserName(document.userId),
-                          style: const TextStyle(fontSize: 13),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-
-                      // Upload Date
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          DateFormat('MMM d, y').format(document.createdAt),
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-
-                      // Expiry Date
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          document.expiryDate != null
-                              ? DateFormat('MMM d, y').format(document.expiryDate!)
-                              : 'No Expiry',
+              // Uploaded By
+              Row(
+                children: [
+                  Icon(Icons.person_outline, size: 16, color: Colors.grey.shade600),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Uploaded By',
                           style: TextStyle(
-                            color: document.isExpired
-                                ? Colors.red
-                                : Colors.grey.shade800,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _getUserName(document.userId),
+                          style: const TextStyle(fontSize: 13, color: Colors.black87),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Upload Date
+              Row(
+                children: [
+                  Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey.shade600),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Upload Date',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          DateFormat('MMM d, yyyy').format(document.createdAt),
+                          style: const TextStyle(fontSize: 13, color: Colors.black87),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Expiry Date
+              Row(
+                children: [
+                  Icon(
+                    document.expiryDate != null && document.isExpired
+                        ? Icons.warning_amber_rounded
+                        : Icons.event_outlined,
+                    size: 16,
+                    color: document.expiryDate != null && document.isExpired
+                        ? Colors.red.shade600
+                        : Colors.grey.shade600,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Expiry Date',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          document.expiryDate != null
+                              ? DateFormat('MMM d, yyyy').format(document.expiryDate!)
+                              : 'No expiry date',
+                          style: TextStyle(
                             fontSize: 13,
+                            color: document.expiryDate != null && document.isExpired
+                                ? Colors.red.shade700
+                                : document.expiryDate != null
+                                ? Colors.black87
+                                : Colors.grey.shade600,
+                            fontWeight: document.expiryDate != null && document.isExpired
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
                         ),
-                      ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
 
-                      // Status - Fixed to not stretch
-                      Expanded(
-                        flex: 2,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: document.isNotApplicable
-                              ? Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              'N/A',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          )
-                              : StatusBadge(
-                            status: document.status,
-                            isExpired: document.isExpired,
-                          ),
-                        ),
-                      ),
+              // Status
+              Row(
+                children: [
+                  const Text(
+                    'Status: ',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  StatusBadge(
+                    status: document.status,
+                    isExpired: document.isExpired,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
 
-                      // Action button
-                      SizedBox(
-                        width: 50,
-                        child: IconButton(
-                          icon: const Icon(Icons.visibility, size: 18),
-                          tooltip: 'View Document',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () {
-                            Navigator.of(context).pushNamed(
-                              RouteConstants.documentDetail,
-                              arguments: {'documentId': document.id},
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+              // Actions
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      RouteConstants.documentDetail,
+                      arguments: {'documentId': document.id},
+                    );
+                  },
+                  icon: const Icon(Icons.visibility_outlined, size: 16),
+                  label: const Text('View Details'),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                 ),
-              );
-            },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  // DESKTOP VERSION - Horizontal table (unchanged)
+  Widget _buildDesktopDocumentTable(List<dynamic> documents) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isAdmin = authProvider.isAdmin;
+
+    return Column(
+      children: [
+        // Table header
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          color: Colors.grey.shade50,
+          child: Row(
+            children: [
+              const Expanded(
+                flex: 3,
+                child: Text(
+                  'Specification',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const Expanded(
+                flex: 2,
+                child: Text(
+                  'Uploaded By',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const Expanded(
+                flex: 2,
+                child: Text(
+                  'Upload Date',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const Expanded(
+                flex: 2,
+                child: Text(
+                  'Expiry Date',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const Expanded(
+                flex: 2,
+                child: Text(
+                  'Status',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 50), // Actions column
+            ],
+          ),
+        ),
+
+        // Table body
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: documents.length,
+          separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+          itemBuilder: (context, index) {
+            final document = documents[index];
+
+            return Container(
+              color: index.isEven ? Colors.white : Colors.grey.shade50,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Specification
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        document.specification?.isNotEmpty == true
+                            ? document.specification!
+                            : 'No specification provided',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: document.specification?.isNotEmpty == true
+                              ? Colors.black87
+                              : Colors.grey.shade600,
+                          fontStyle: document.specification?.isNotEmpty == true
+                              ? FontStyle.normal
+                              : FontStyle.italic,
+                        ),
+                      ),
+                    ),
+
+                    // Uploaded By
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        _getUserName(document.userId),
+                        style: const TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
+                    ),
+
+                    // Upload Date
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        DateFormat('MMM d, yyyy').format(document.createdAt),
+                        style: const TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
+                    ),
+
+                    // Expiry Date
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        document.expiryDate != null
+                            ? DateFormat('MMM d, yyyy').format(document.expiryDate!)
+                            : 'No expiry date',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: document.expiryDate != null && document.isExpired
+                              ? Colors.red.shade700
+                              : document.expiryDate != null
+                              ? Colors.black87
+                              : Colors.grey.shade600,
+                          fontWeight: document.expiryDate != null && document.isExpired
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+
+                    // Status
+                    Expanded(
+                      flex: 2,
+                      child: StatusBadge(
+                        status: document.status,
+                        isExpired: document.isExpired,
+                      ),
+                    ),
+
+                    // Actions
+                    SizedBox(
+                      width: 50,
+                      child: IconButton(
+                        icon: const Icon(Icons.visibility_outlined, size: 18),
+                        onPressed: () {
+                          Navigator.of(context).pushNamed(
+                            RouteConstants.documentDetail,
+                            arguments: {'documentId': document.id},
+                          );
+                        },
+                        tooltip: 'View Details',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }

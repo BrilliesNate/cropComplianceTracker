@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/document_provider.dart';
 import '../../providers/route_provider.dart';
 import '../../core/constants/route_constants.dart';
 import '../../models/user_model.dart';
@@ -137,31 +138,52 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
             },
           ),
           const SizedBox(width: 8),
-          Text(widget.title),
+          Text(
+            widget.title,
+            style: const TextStyle(color: Colors.white),
+          ),
           // Selected user indicator in app bar for mobile/tablet
-          if (authProvider.isAdmin && authProvider.selectedUser != null && (!isLargeScreen)) ...[
-            const SizedBox(width: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade600,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white, width: 1),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.person, color: Colors.white, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Managing: ${authProvider.selectedUser!.name}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+          // Selected user indicator in app bar - SHOW ON ALL SCREENS
+          // Selected user indicator in app bar - SHOW ON ALL SCREENS
+          if (authProvider.isAdmin && authProvider.selectedUser != null) ...[
+            const SizedBox(width: 8),
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade600,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white, width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.person, color: Colors.white, size: 16),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'Managing: ${authProvider.selectedUser!.name}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () async {
+                        authProvider.clearUserSelection();
+                        // Refresh documents for the admin's own account
+                        final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+                        await documentProvider.refreshForUserContext(context);
+                      },
+                      child: const Icon(Icons.close, color: Colors.white, size: 18),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -184,7 +206,6 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
       body: Column(
         children: [
           // Prominent user selection banner for admins
-          if (authProvider.isAdmin) _buildUserSelectionBanner(context, authProvider),
 
           Expanded(
             child: Row(
@@ -552,70 +573,22 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
       child: Column(
         children: [
           // Logo and banner
-          Container(
-            color: Colors.white,
-            child: Column(
-              children: [
-                // Logo
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Image.asset(
-                        'assets/images/logo.png',
-                        width: 32,
-                        height: 32,
-                        errorBuilder: (context, error, stackTrace) => Icon(
-                          Icons.eco,
-                          color: primaryColor,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Crop Compliance',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Banner image
-                ClipRRect(
-                  child: Image.asset(
-                    'assets/images/banner.png',
-                    width: double.infinity,
-                    height: 120,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: double.infinity,
-                      height: 120,
-                      color: primaryColor.withOpacity(0.1),
-                      child: Icon(
-                        Icons.image,
-                        color: primaryColor.withOpacity(0.3),
-                        size: 48,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // User profile
-                _buildUserProfile(context, authProvider, false),
-
-                // User selector for admins in drawer
-                if (authProvider.isAdmin)
-                  // _buildSidebarUserSelector(context, authProvider),
-
-                // Divider
-                const Divider(height: 1),
-              ],
-            ),
+      ClipRRect(
+      child: Image.asset(
+      'assets/images/menuImage.webp',
+        width: double.infinity,
+        height: 120,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          width: double.infinity,
+          height: 120,
+          color: primaryColor.withOpacity(0.1),
+          child: Icon(
+            Icons.image,
+            color: primaryColor.withOpacity(0.3),
+            size: 48,
           ),
+        ),),),
 
           // Menu header
           Padding(
