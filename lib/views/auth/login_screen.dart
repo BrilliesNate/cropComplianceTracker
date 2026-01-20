@@ -18,9 +18,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController(text: "alissa@crop-compliance.com");
   final _passwordController = TextEditingController(text: "804080");
-  // final _emailController = TextEditingController();
-  // final _passwordController = TextEditingController();
-  // final _emailController = "nathanTest2@gmail.com";
+  // final _emailController = TextEditingController(text: "nathan@test4.com");
+  // final _passwordController = TextEditingController(text: "123456");
+  // final _emailController = "nathan@test4.com";
   // final _passwordController = "123456";
   bool _obscurePassword = true;
   bool _rememberMe = true;

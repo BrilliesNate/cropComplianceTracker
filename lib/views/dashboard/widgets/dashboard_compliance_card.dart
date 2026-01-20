@@ -279,7 +279,7 @@ class DashboardComplianceCard extends StatelessWidget {
               height: 180,
               child: CustomPaint(
                 painter: ThickLineSemiCircleGauge(
-                  percentage: percentage * 100,
+                  percentage: percentage,
                   baseColor: Colors.grey.withOpacity(0.5),
                   progressColor: Colors.green,
                   lineCount: 24,

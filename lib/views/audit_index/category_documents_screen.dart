@@ -47,9 +47,27 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
     final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
 
     if (authProvider.currentUser != null) {
-      await documentProvider.initialize(authProvider.currentUser!.companyId);
-      // Load users for the company to get names
-      await _loadUsers(authProvider.currentUser!.companyId);
+      // Use refreshForUserContext to respect company selection context
+      await documentProvider.refreshForUserContext(context);
+
+      // Determine which company to load users for
+      String companyId;
+      if (authProvider.isManagingCompany && authProvider.selectedCompany != null) {
+        // Admin is managing a specific company
+        companyId = authProvider.selectedCompany!.id;
+        print('CategoryDocumentsScreen: Loading users for selected company: ${authProvider.selectedCompany!.name}');
+      } else if (authProvider.hasSelectedUser && authProvider.selectedUser != null) {
+        // Admin has selected a specific user
+        companyId = authProvider.selectedUser!.companyId;
+        print('CategoryDocumentsScreen: Loading users for selected user company: $companyId');
+      } else {
+        // Regular user or admin viewing their own company
+        companyId = authProvider.currentUser!.companyId;
+        print('CategoryDocumentsScreen: Loading users for current user company: $companyId');
+      }
+
+      // Load users for the appropriate company
+      await _loadUsers(companyId);
     }
   }
 

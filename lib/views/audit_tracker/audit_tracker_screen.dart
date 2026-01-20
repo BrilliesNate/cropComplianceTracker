@@ -1,4 +1,3 @@
-
 import 'dart:developer' as developer;
 
 import 'package:cropCompliance/core/constants/route_constants.dart';
@@ -1083,27 +1082,26 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
             const SizedBox(height: 8),
           ],
 
-          // Admin view button
-          if (isAdmin)
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.edit, size: 16),
-                label: const Text('Update'),
-                onPressed: () {
-                  Navigator.of(context).pushNamed(
-                    RouteConstants.documentDetail,
-                    arguments: {'documentId': document.id},
-                  );
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(context).primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  visualDensity: VisualDensity.compact,
-                  textStyle: const TextStyle(fontSize: 13),
-                ),
+          // View/Update document button (available to all users)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.visibility, size: 16),
+              label: const Text('View Details'),
+              onPressed: () {
+                Navigator.of(context).pushNamed(
+                  RouteConstants.documentDetail,
+                  arguments: {'documentId': document.id},
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Theme.of(context).primaryColor,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                visualDensity: VisualDensity.compact,
+                textStyle: const TextStyle(fontSize: 13),
               ),
             ),
+          ),
 
           const SizedBox(height: 8),
 
@@ -1352,24 +1350,24 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                   ),
                 ),
 
-              if (isAdmin)
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.edit, size: 16),
-                  label: const Text('Update'),
-                  onPressed: () {
-                    Navigator.of(context).pushNamed(
-                      RouteConstants.documentDetail,
-                      arguments: {'documentId': document.id},
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Theme.of(context).primaryColor,
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    visualDensity: VisualDensity.compact,
-                    textStyle: const TextStyle(fontSize: 13),
-                  ),
+              // View Details button (available to all users)
+              OutlinedButton.icon(
+                icon: const Icon(Icons.visibility, size: 16),
+                label: const Text('View Details'),
+                onPressed: () {
+                  Navigator.of(context).pushNamed(
+                    RouteConstants.documentDetail,
+                    arguments: {'documentId': document.id},
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).primaryColor,
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  visualDensity: VisualDensity.compact,
+                  textStyle: const TextStyle(fontSize: 13),
                 ),
+              ),
 
               const SizedBox(width: 8),
               OutlinedButton.icon(
@@ -2012,7 +2010,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       properties.add('Can be marked N/A');
     }
 
-    return properties.join(' • ');
+    return properties.join(' â€¢ ');
   }
 // Helper methods for the documents list
   Color _getStatusColor(DocumentStatus status) {

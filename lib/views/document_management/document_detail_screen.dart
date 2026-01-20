@@ -88,8 +88,11 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
           }
 
           if (!_hasLoggedDocumentInfo) {
-            print("Document ID: ${document.id}");
-            print("File URLs: ${document.fileUrls}");
+            print("DEBUG DocumentDetailScreen: Document ID: ${document.id}");
+            print("DEBUG DocumentDetailScreen: File URLs count: ${document.fileUrls.length}");
+            print("DEBUG DocumentDetailScreen: File URLs: ${document.fileUrls}");
+            print("DEBUG DocumentDetailScreen: Status: ${document.status}");
+            print("DEBUG DocumentDetailScreen: isNotApplicable: ${document.isNotApplicable}");
             _hasLoggedDocumentInfo = true;
           }
 
@@ -498,7 +501,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                               ),
                             ),
                             Text(
-                              DateFormat('MMM d, y • h:mm a').format(comment.createdAt),
+                              DateFormat('MMM d, y â€¢ h:mm a').format(comment.createdAt),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,

@@ -457,20 +457,34 @@ class DocumentProvider with ChangeNotifier {
     }
   }
 
-  // Get document by ID - unchanged but optimized with lookup map
+  // Get document by ID - Always fetch fresh to ensure complete data
   Future<DocumentModel?> getDocument(String documentId) async {
-    // Check cache first
-    if (_documentsMap.containsKey(documentId)) {
-      return _documentsMap[documentId];
-    }
-
     try {
+      print('DEBUG DocumentProvider.getDocument: Fetching document $documentId');
+
+      // Always fetch fresh from Firestore to ensure we have complete data including fileUrls
       final document = await _firestoreService.getDocument(documentId);
+
       if (document != null) {
-        _documentsMap[documentId] = document; // Update cache
+        print('DEBUG DocumentProvider.getDocument: Document found');
+        print('DEBUG DocumentProvider.getDocument: fileUrls count: ${document.fileUrls.length}');
+        print('DEBUG DocumentProvider.getDocument: fileUrls: ${document.fileUrls}');
+
+        // Update cache with fresh data
+        _documentsMap[documentId] = document;
+
+        // Also update in the documents list if present
+        final index = _documents.indexWhere((doc) => doc.id == documentId);
+        if (index >= 0) {
+          _documents[index] = document;
+        }
+      } else {
+        print('DEBUG DocumentProvider.getDocument: Document not found in Firestore');
       }
+
       return document;
     } catch (e) {
+      print('DEBUG DocumentProvider.getDocument: Error - $e');
       _error = 'Failed to get document: $e';
       return null;
     }
