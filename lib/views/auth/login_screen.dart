@@ -16,9 +16,11 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: "alissa@crop-compliance.com");
-  final _passwordController = TextEditingController(text: "804080");
-  // final _emailController = TextEditingController(text: "nathan@test4.com");
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  // final _emailController = TextEditingController(text: "alissa@crop-compliance.com");
+  // final _passwordController = TextEditingController(text: "804080");
+  // final _emailController = TextEditingController(text: "nathan@test5.com");
   // final _passwordController = TextEditingController(text: "123456");
   // final _emailController = "nathan@test4.com";
   // final _passwordController = "123456";

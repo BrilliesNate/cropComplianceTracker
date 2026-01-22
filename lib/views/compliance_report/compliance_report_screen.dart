@@ -34,6 +34,11 @@ class _ComplianceReportScreenState extends State<ComplianceReportScreen> {
     if (authProvider.currentUser != null) {
       await categoryProvider.initialize();
 
+      // Set package filter based on company packages
+      if (authProvider.effectiveCompany != null) {
+        categoryProvider.setPackageFilter(authProvider.effectiveCompany!.packages);
+      }
+
       // Use the company-aware method instead of the old initialize method
       await documentProvider.refreshForUserContext(context);
     }
@@ -77,16 +82,29 @@ class _ComplianceReportScreenState extends State<ComplianceReportScreen> {
   }
 
   Widget _buildReportView(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
     final documentProvider = Provider.of<DocumentProvider>(context);
     final categoryProvider = Provider.of<CategoryProvider>(context);
 
-    // Calculate metrics
-    final totalDocTypes = documentProvider.documentTypes.length;
-    final approvedDocs = documentProvider.documents.where((doc) => doc.status == DocumentStatus.APPROVED).length;
-    final pendingDocs = documentProvider.documents.where((doc) => doc.status == DocumentStatus.PENDING).length;
-    final rejectedDocs = documentProvider.documents.where((doc) => doc.status == DocumentStatus.REJECTED).length;
+    // ============================================
+    // UPDATED: Use package-aware filtering for metrics
+    // ============================================
 
-    final completionRate = totalDocTypes > 0 ? (approvedDocs / totalDocTypes * 100) : 0.0;
+    // Get the company's packages
+    final companyPackages = authProvider.effectivePackages;
+
+    // Use the new package-aware method to get compliance stats
+    final complianceStats = documentProvider.getComplianceStatsForPackages(companyPackages);
+
+    final totalDocTypes = complianceStats['totalDocTypes'] as int;
+    final approvedDocs = complianceStats['approvedDocs'] as int;
+    final pendingDocs = complianceStats['pendingDocs'] as int;
+    final rejectedDocs = complianceStats['rejectedDocs'] as int;
+    final completionRate = complianceStats['completionRate'] as double;
+
+    // Debug logging
+    print('ComplianceReportScreen: Company packages: $companyPackages');
+    print('ComplianceReportScreen: Filtered stats - Total: $totalDocTypes, Approved: $approvedDocs, Completion: ${completionRate.toInt()}%');
 
     return Column(
       children: [

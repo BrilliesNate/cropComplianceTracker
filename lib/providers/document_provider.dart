@@ -52,6 +52,127 @@ class DocumentProvider with ChangeNotifier {
   String? get currentContextUserId => _currentContextUserId;
   String? get currentContextCompanyId => _currentContextCompanyId;
 
+  // ============================================
+  // NEW: Package-aware filtering methods
+  // ============================================
+
+  /// Get categories filtered by company packages
+  /// If packages is empty or null, returns all categories
+  List<CategoryModel> getCategoriesForPackages(List<String>? packages) {
+    if (packages == null || packages.isEmpty) {
+      return _categories;
+    }
+    return _categories
+        .where((category) => packages.contains(category.packageId))
+        .toList();
+  }
+
+  /// Get category IDs for the given packages
+  Set<String> getCategoryIdsForPackages(List<String>? packages) {
+    return getCategoriesForPackages(packages).map((c) => c.id).toSet();
+  }
+
+  /// Get document types filtered by company packages
+  /// This filters document types that belong to categories matching the packages
+  List<DocumentTypeModel> getDocumentTypesForPackages(List<String>? packages) {
+    if (packages == null || packages.isEmpty) {
+      return _documentTypes;
+    }
+
+    final validCategoryIds = getCategoryIdsForPackages(packages);
+    return _documentTypes
+        .where((docType) => validCategoryIds.contains(docType.categoryId))
+        .toList();
+  }
+
+  /// Get documents filtered by company packages
+  /// This filters documents that belong to categories matching the packages
+  List<DocumentModel> getDocumentsForPackages(List<String>? packages) {
+    if (packages == null || packages.isEmpty) {
+      return _documents;
+    }
+
+    final validCategoryIds = getCategoryIdsForPackages(packages);
+    return _documents
+        .where((doc) => validCategoryIds.contains(doc.categoryId))
+        .toList();
+  }
+
+  /// Get pending documents filtered by packages
+  List<DocumentModel> getPendingDocumentsForPackages(List<String>? packages) {
+    return getDocumentsForPackages(packages)
+        .where((doc) => doc.status == DocumentStatus.PENDING)
+        .toList();
+  }
+
+  /// Get approved documents filtered by packages
+  List<DocumentModel> getApprovedDocumentsForPackages(List<String>? packages) {
+    return getDocumentsForPackages(packages)
+        .where((doc) => doc.status == DocumentStatus.APPROVED)
+        .toList();
+  }
+
+  /// Get rejected documents filtered by packages
+  List<DocumentModel> getRejectedDocumentsForPackages(List<String>? packages) {
+    return getDocumentsForPackages(packages)
+        .where((doc) => doc.isRejected)
+        .toList();
+  }
+
+  /// Get expired documents filtered by packages
+  List<DocumentModel> getExpiredDocumentsForPackages(List<String>? packages) {
+    return getDocumentsForPackages(packages)
+        .where((doc) => doc.isExpired)
+        .toList();
+  }
+
+  /// Calculate completion percentage based on company packages
+  /// Returns: percentage of approved documents out of total document types for the packages
+  double calculateCompletionPercentageForPackages(List<String>? packages) {
+    final filteredDocTypes = getDocumentTypesForPackages(packages);
+    final filteredApprovedDocs = getApprovedDocumentsForPackages(packages);
+
+    if (filteredDocTypes.isEmpty) {
+      return 0.0;
+    }
+
+    return (filteredApprovedDocs.length / filteredDocTypes.length) * 100;
+  }
+
+  /// Get compliance stats for a specific package
+  /// Returns a map with all relevant metrics filtered by packages
+  Map<String, dynamic> getComplianceStatsForPackages(List<String>? packages) {
+    final filteredDocTypes = getDocumentTypesForPackages(packages);
+    final filteredDocs = getDocumentsForPackages(packages);
+    final filteredApprovedDocs = getApprovedDocumentsForPackages(packages);
+    final filteredPendingDocs = getPendingDocumentsForPackages(packages);
+    final filteredRejectedDocs = getRejectedDocumentsForPackages(packages);
+
+    final totalDocTypes = filteredDocTypes.length;
+    final uploadedDocs = filteredDocs.length;
+    final approvedDocs = filteredApprovedDocs.length;
+    final pendingDocs = filteredPendingDocs.length;
+    final rejectedDocs = filteredRejectedDocs.length;
+
+    final completionRate = totalDocTypes > 0
+        ? (approvedDocs / totalDocTypes) * 100
+        : 0.0;
+
+    return {
+      'totalDocTypes': totalDocTypes,
+      'uploadedDocs': uploadedDocs,
+      'approvedDocs': approvedDocs,
+      'pendingDocs': pendingDocs,
+      'rejectedDocs': rejectedDocs,
+      'completionRate': completionRate,
+      'completionPercentage': completionRate.toStringAsFixed(1),
+    };
+  }
+
+  // ============================================
+  // END: Package-aware filtering methods
+  // ============================================
+
   // Filtered document getters - unchanged
   List<DocumentModel> getDocumentsByCategory(String categoryId) {
     return _documents.where((doc) => doc.categoryId == categoryId).toList();

@@ -46,6 +46,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (authProvider.currentUser != null) {
       await categoryProvider.initialize();
+
+      // Set package filter based on company packages
+      if (authProvider.effectiveCompany != null) {
+        categoryProvider.setPackageFilter(authProvider.effectiveCompany!.packages);
+      }
+
       await documentProvider.refreshForUserContext(context);
     }
   }
@@ -68,16 +74,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final hasError = documentProvider.error != null || categoryProvider.error != null;
     final error = documentProvider.error ?? categoryProvider.error ?? '';
 
-    // Calculate key metrics
-    final totalDocTypes = documentProvider.documentTypes.length;
-    final uploadedDocs = documentProvider.documents.length;
-    final pendingDocs = documentProvider.pendingDocuments.length;
-    final approvedDocs = documentProvider.approvedDocuments.length;
-    final rejectedDocs = documentProvider.documents.where((doc) => doc.isRejected).length;
+    // ============================================
+    // UPDATED: Use package-aware filtering for metrics
+    // ============================================
 
-    // Calculate completion percentage
-    final completionRate = totalDocTypes > 0 ? approvedDocs / totalDocTypes : 0.0;
-    final completionPercentage = (completionRate * 100).toStringAsFixed(1);
+    // Get the company's packages
+    final companyPackages = authProvider.effectivePackages;
+
+    // Use the new package-aware method to get compliance stats
+    final complianceStats = documentProvider.getComplianceStatsForPackages(companyPackages);
+
+    final totalDocTypes = complianceStats['totalDocTypes'] as int;
+    final uploadedDocs = complianceStats['uploadedDocs'] as int;
+    final approvedDocs = complianceStats['approvedDocs'] as int;
+    final pendingDocs = complianceStats['pendingDocs'] as int;
+    final rejectedDocs = complianceStats['rejectedDocs'] as int;
+    final completionPercentage = complianceStats['completionPercentage'] as String;
+
+    // Debug logging
+    print('DashboardScreen: Company packages: $companyPackages');
+    print('DashboardScreen: Filtered stats - Total: $totalDocTypes, Approved: $approvedDocs, Completion: $completionPercentage%');
 
     // Figure out what content to show
     Widget content;

@@ -73,6 +73,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           name: _companyNameController.text.trim(),
           address: _addressController.text.trim(),
           createdAt: DateTime.now(),
+          packages: ['siza_wieta'],  // ADD THIS LINE
         );
 
         companyId = await _firestoreService.addCompany(company) ?? '';

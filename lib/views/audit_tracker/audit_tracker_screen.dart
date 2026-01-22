@@ -29,6 +29,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
   bool _showDocuments = true; // Toggle between Documents and Audit List views
   Map<String, bool> _expandedCategories = {};
   Stopwatch _stopwatch = Stopwatch();
+  String _selectedPackage = 'siza_wieta'; // NEW: Selected package filter
 
   @override
   void initState() {
@@ -59,6 +60,13 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       developer.log('AuditTrackerScreen - Starting category initialization');
       await categoryProvider.initialize();
       developer.log('AuditTrackerScreen - Category initialization completed: ${_stopwatch.elapsedMilliseconds}ms');
+
+      // NEW: Set initial package filter based on company's available packages
+      final packages = authProvider.effectivePackages;
+      if (packages.isNotEmpty) {
+        _selectedPackage = packages.first;
+        categoryProvider.setPackageFilter([_selectedPackage]);
+      }
 
       // Use the company-aware method instead of the old initialize method
       developer.log('AuditTrackerScreen - Starting document initialization with company context');
@@ -119,7 +127,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       developer.log('AuditTrackerScreen - build: Starting to build content sections');
 
       developer.log('AuditTrackerScreen - build: Building KPI section');
-      final kpiSection = _buildKPISection(documentProvider);
+      final kpiSection = _buildKPISection(documentProvider, authProvider);
       developer.log('AuditTrackerScreen - build: KPI section built: ${_stopwatch.elapsedMilliseconds}ms');
 
       developer.log('AuditTrackerScreen - build: Building toggle buttons');
@@ -131,12 +139,18 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       // Check if mobile before building content
       final isMobile = MediaQuery.of(context).size.width < 600;
 
+      // NEW: Build package toggle (only when Audit Checklist is selected and company has both packages)
+      final packageToggle = (!_showDocuments && authProvider.hasBothPackages)
+          ? _buildPackageToggle(authProvider, categoryProvider)
+          : const SizedBox.shrink();
+
       if (isMobile) {
         // MOBILE: Everything in one scrollable list
         content = ListView(
           children: [
             kpiSection,
             toggleButtons,
+            packageToggle, // NEW
             _showDocuments
                 ? _buildDocumentsViewMobile(documentProvider, categoryProvider)
                 : _buildAuditListViewMobile(documentProvider, categoryProvider),
@@ -152,6 +166,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
           children: [
             kpiSection,
             toggleButtons,
+            packageToggle, // NEW
             Expanded(child: mainContent),
           ],
         );
@@ -170,18 +185,28 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     );
   }
 
-  Widget _buildKPISection(DocumentProvider documentProvider) {
+  Widget _buildKPISection(DocumentProvider documentProvider, AuthProvider authProvider) {
     _stopwatch.reset();
     _stopwatch.start();
     developer.log('AuditTrackerScreen - _buildKPISection started');
 
-    final totalDocuments = documentProvider.documentTypes.length;
-    final uploadedDocuments = documentProvider.documents.length;
-    final approvedDocuments = documentProvider.approvedDocuments.length;
-    final pendingDocuments = documentProvider.pendingDocuments.length;
-    final rejectedDocuments = documentProvider.rejectedDocuments.length;
+    // ============================================
+    // UPDATED: Use package-aware filtering for KPI metrics
+    // ============================================
 
-    developer.log('AuditTrackerScreen - KPI counts - '
+    // Get the company's packages
+    final companyPackages = authProvider.effectivePackages;
+
+    // Use the new package-aware method to get compliance stats
+    final complianceStats = documentProvider.getComplianceStatsForPackages(companyPackages);
+
+    final totalDocuments = complianceStats['totalDocTypes'] as int;
+    final uploadedDocuments = complianceStats['uploadedDocs'] as int;
+    final approvedDocuments = complianceStats['approvedDocs'] as int;
+    final pendingDocuments = complianceStats['pendingDocs'] as int;
+    final rejectedDocuments = complianceStats['rejectedDocs'] as int;
+
+    developer.log('AuditTrackerScreen - KPI counts (filtered by packages: $companyPackages) - '
         'total: $totalDocuments, '
         'uploaded: $uploadedDocuments, '
         'approved: $approvedDocuments, '
@@ -408,7 +433,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
             try {
               category = categoryProvider.categories.firstWhere((c) => c.id == document.categoryId);
             } catch (_) {
-              category = CategoryModel(id: document.categoryId, name: 'Unknown Category', description: '', order: 0);
+              category = CategoryModel(id: document.categoryId, name: 'Unknown Category', description: '', order: 0, packageId: 'siza_wieta');
             }
 
             return Card(
@@ -611,6 +636,83 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     );
   }
 
+  // NEW: Package toggle buttons for switching between SIZA/WIETA and GlobalG.A.P.
+  Widget _buildPackageToggle(AuthProvider authProvider, CategoryProvider categoryProvider) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildPackageButton(
+              packageId: 'siza_wieta',
+              label: 'SIZA/WIETA',
+              icon: Icons.people,
+              isSelected: _selectedPackage == 'siza_wieta',
+              categoryProvider: categoryProvider,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildPackageButton(
+              packageId: 'globalgap',
+              label: 'GlobalG.A.P.',
+              icon: Icons.eco,
+              isSelected: _selectedPackage == 'globalgap',
+              categoryProvider: categoryProvider,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPackageButton({
+    required String packageId,
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required CategoryProvider categoryProvider,
+  }) {
+    return Material(
+      color: isSelected
+          ? Theme.of(context).primaryColor
+          : Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      elevation: isSelected ? 4 : 2,
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedPackage = packageId;
+          });
+          categoryProvider.setPackageFilter([packageId]);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.white : Theme.of(context).primaryColor,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // State variable for showing approved documents
   bool _showApprovedDocuments = false;
 
@@ -736,6 +838,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                   name: 'Unknown Category',
                   description: '',
                   order: 0,
+                  packageId: 'siza_wieta',
                 );
               }
 
@@ -2010,7 +2113,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       properties.add('Can be marked N/A');
     }
 
-    return properties.join(' â€¢ ');
+    return properties.join(' Ã¢â‚¬Â¢ ');
   }
 // Helper methods for the documents list
   Color _getStatusColor(DocumentStatus status) {

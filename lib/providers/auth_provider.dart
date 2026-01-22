@@ -10,17 +10,19 @@ class AuthProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
 
   UserModel? _currentUser;
+  CompanyModel? _currentCompany; // NEW: The logged-in user's company
   bool _isLoading = false;
   String? _error;
 
   // User selection for admins
   UserModel? _selectedUser;
   CompanyModel? _selectedCompany;
-  List<UserModel> _allUsers = []; // Changed from _companyUsers to _allUsers
+  List<UserModel> _allUsers = [];
   bool _isLoadingUsers = false;
 
   // Getters
   UserModel? get currentUser => _currentUser;
+  CompanyModel? get currentCompany => _currentCompany; // NEW
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isAuthenticated => _currentUser != null;
@@ -30,9 +32,9 @@ class AuthProvider with ChangeNotifier {
   bool get isAuditer => _currentUser?.role == UserRole.AUDITER;
   bool get isUser => _currentUser?.role == UserRole.USER;
 
-  // User selection getters - Updated names
+  // User selection getters
   UserModel? get selectedUser => _selectedUser;
-  List<UserModel> get allUsers => _allUsers; // Updated getter name
+  List<UserModel> get allUsers => _allUsers;
   List<UserModel> get companyUsers => _allUsers; // Keep for backward compatibility
   CompanyModel? get selectedCompany => _selectedCompany;
   bool get isManagingCompany => _selectedCompany != null;
@@ -41,6 +43,17 @@ class AuthProvider with ChangeNotifier {
 
   // Get the effective user (selected user for admin operations, or current user)
   UserModel? get effectiveUser => _selectedUser ?? _currentUser;
+
+  // NEW: Get the effective company (selected company for admin, or current user's company)
+  CompanyModel? get effectiveCompany => _selectedCompany ?? _currentCompany;
+
+  // NEW: Get available packages for the effective company
+  List<String> get effectivePackages => effectiveCompany?.packages ?? ['siza_wieta'];
+
+  // NEW: Check if effective company has specific packages
+  bool get hasSizaWieta => effectiveCompany?.hasSizaWieta ?? true;
+  bool get hasGlobalGap => effectiveCompany?.hasGlobalGap ?? false;
+  bool get hasBothPackages => effectiveCompany?.hasBothPackages ?? false;
 
   // Check if admin is acting on behalf of another user
   bool get isActingOnBehalfOfUser => isAdmin && _selectedUser != null && _selectedUser!.id != _currentUser!.id;
@@ -55,9 +68,14 @@ class AuthProvider with ChangeNotifier {
       if (user != null) {
         _currentUser = await _authService.getUserData(user.uid);
 
-        // If admin, load ALL users for selection (not just company users)
+        // NEW: Load the user's company
+        if (_currentUser != null) {
+          await _loadCurrentCompany();
+        }
+
+        // If admin, load ALL users for selection
         if (isAdmin && _currentUser != null) {
-          await loadAllUsers(); // Changed method name
+          await loadAllUsers();
         }
       }
     } catch (e) {
@@ -67,7 +85,19 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Load ALL users from the system for admin selection (not just company users)
+  // NEW: Load the current user's company
+  Future<void> _loadCurrentCompany() async {
+    if (_currentUser == null) return;
+
+    try {
+      _currentCompany = await _firestoreService.getCompany(_currentUser!.companyId);
+      print('AuthProvider: Loaded company ${_currentCompany?.name} with packages: ${_currentCompany?.packages}');
+    } catch (e) {
+      print('AuthProvider: Error loading company: $e');
+    }
+  }
+
+  // Load ALL users from the system for admin selection
   Future<void> loadAllUsers() async {
     if (!isAdmin || _currentUser == null) return;
 
@@ -75,15 +105,11 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Load ALL users, not just from the same company
-      _allUsers = await _firestoreService.getUsers(); // Remove companyId parameter
-
-      // Sort users by name for better UX
+      _allUsers = await _firestoreService.getUsers();
       _allUsers.sort((a, b) => a.name.compareTo(b.name));
 
       print('AuthProvider: Loaded ${_allUsers.length} users for admin selection');
 
-      // Debug: Print user list
       for (var user in _allUsers) {
         print('User: ${user.name} (${user.email}) - Company: ${user.companyId}');
       }
@@ -127,7 +153,7 @@ class AuthProvider with ChangeNotifier {
 
     print('AuthProvider: Clearing user selection');
     _selectedUser = null;
-    _selectedCompany = null; // Also clear company context
+    _selectedCompany = null;
     notifyListeners();
     print('AuthProvider: User and company selection cleared');
   }
@@ -162,13 +188,17 @@ class AuthProvider with ChangeNotifier {
       if (user != null) {
         _currentUser = user;
 
-        // Clear any previous user selection
+        // Clear any previous selections
         _selectedUser = null;
+        _selectedCompany = null;
         _allUsers = [];
+
+        // NEW: Load the user's company
+        await _loadCurrentCompany();
 
         // Load all users if admin
         if (isAdmin) {
-          await loadAllUsers(); // Updated method call
+          await loadAllUsers();
         }
 
         return true;
@@ -205,13 +235,17 @@ class AuthProvider with ChangeNotifier {
       if (user != null) {
         _currentUser = user;
 
-        // Clear any previous user selection
+        // Clear any previous selections
         _selectedUser = null;
+        _selectedCompany = null;
         _allUsers = [];
+
+        // NEW: Load the user's company
+        await _loadCurrentCompany();
 
         // Load all users if admin
         if (isAdmin) {
-          await loadAllUsers(); // Updated method call
+          await loadAllUsers();
         }
 
         return true;
@@ -234,9 +268,11 @@ class AuthProvider with ChangeNotifier {
     try {
       await _authService.logoutUser();
       _currentUser = null;
+      _currentCompany = null; // NEW: Clear company
 
       // Clear user selection data
       _selectedUser = null;
+      _selectedCompany = null;
       _allUsers = [];
     } catch (e) {
       _error = 'Logout failed: $e';

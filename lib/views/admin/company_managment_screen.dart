@@ -1,5 +1,3 @@
-
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cropCompliance/core/constants/route_constants.dart';
 import 'package:cropCompliance/models/company_model.dart';
@@ -89,6 +87,57 @@ class _CompanyManagementScreenState extends State<CompanyManagementScreen> {
       return documentsSnapshot.docs.length;
     } catch (e) {
       return 0;
+    }
+  }
+
+  // NEW: Get pending document count for a company
+  Future<int> _getCompanyPendingDocumentCount(String companyId) async {
+    try {
+      final documentsSnapshot = await FirebaseFirestore.instance
+          .collection('documents')
+          .where('companyId', isEqualTo: companyId)
+          .where('status', isEqualTo: 'PENDING')
+          .get();
+
+      return documentsSnapshot.docs.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  // NEW: Update company packages in Firestore
+  Future<void> _updateCompanyPackages(CompanyModel company, List<String> newPackages) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('companies')
+          .doc(company.id)
+          .update({'packages': newPackages});
+
+      // Update local state
+      setState(() {
+        final index = _companies.indexWhere((c) => c.id == company.id);
+        if (index >= 0) {
+          _companies[index] = company.copyWith(packages: newPackages);
+        }
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Packages updated for ${company.name}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update packages: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -185,6 +234,7 @@ class _CompanyManagementScreenState extends State<CompanyManagementScreen> {
       }
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -350,38 +400,45 @@ class _CompanyManagementScreenState extends State<CompanyManagementScreen> {
 
               const SizedBox(height: 16),
 
+              // NEW: Package switches
+              _buildPackageSwitches(company),
+
+              const SizedBox(height: 12),
+
               // Company stats
               FutureBuilder<List<int>>(
                 future: Future.wait([
                   _getCompanyUserCount(company.id),
                   _getCompanyDocumentCount(company.id),
+                  _getCompanyPendingDocumentCount(company.id),
                 ]),
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
                     final userCount = snapshot.data![0];
                     final documentCount = snapshot.data![1];
+                    final pendingCount = snapshot.data![2];
 
-                    return Row(
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         _buildStatChip(
                           Icons.people,
                           '$userCount Users',
                           Colors.blue,
                         ),
-                        const SizedBox(width: 12),
                         _buildStatChip(
                           Icons.description,
                           '$documentCount Documents',
                           Colors.green,
                         ),
-                        const Spacer(),
-                        Text(
-                          'Created ${_formatDate(company.createdAt)}',
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 12,
+                        // Only show pending if > 0
+                        if (pendingCount > 0)
+                          _buildStatChip(
+                            Icons.pending_actions,
+                            '$pendingCount Pending',
+                            Colors.orange,
                           ),
-                        ),
                       ],
                     );
                   }
@@ -395,8 +452,148 @@ class _CompanyManagementScreenState extends State<CompanyManagementScreen> {
                   );
                 },
               ),
+
+              const SizedBox(height: 8),
+
+              // Created date
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Created ${_formatDate(company.createdAt)}',
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 12,
+                  ),
+                ),
+              ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // NEW: Build package toggle switches
+  Widget _buildPackageSwitches(CompanyModel company) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Audit Packages',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // SIZA/WIETA Switch
+              Expanded(
+                child: _buildPackageSwitch(
+                  company: company,
+                  packageId: 'siza_wieta',
+                  label: 'SIZA/WIETA',
+                  icon: Icons.people,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // GlobalG.A.P. Switch
+              Expanded(
+                child: _buildPackageSwitch(
+                  company: company,
+                  packageId: 'globalgap',
+                  label: 'GlobalG.A.P.',
+                  icon: Icons.eco,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPackageSwitch({
+    required CompanyModel company,
+    required String packageId,
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    final isEnabled = company.packages.contains(packageId);
+
+    return GestureDetector(
+      onTap: () {
+        // Prevent disabling if it's the only package
+        if (isEnabled && company.packages.length == 1) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Company must have at least one package enabled'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+
+        // Toggle the package
+        List<String> newPackages;
+        if (isEnabled) {
+          newPackages = company.packages.where((p) => p != packageId).toList();
+        } else {
+          newPackages = [...company.packages, packageId];
+        }
+
+        _updateCompanyPackages(company, newPackages);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isEnabled ? color.withOpacity(0.1) : Colors.grey[100],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isEnabled ? color : Colors.grey[300]!,
+            width: isEnabled ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
+                  color: isEnabled ? color : Colors.grey,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isEnabled ? FontWeight.bold : FontWeight.normal,
+                    color: isEnabled ? color : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            Icon(
+              isEnabled ? Icons.check_circle : Icons.circle_outlined,
+              size: 20,
+              color: isEnabled ? color : Colors.grey,
+            ),
+          ],
         ),
       ),
     );

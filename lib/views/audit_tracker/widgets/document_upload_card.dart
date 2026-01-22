@@ -217,7 +217,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
           final document = await documentProvider.updateDocumentFiles(
             documentId: widget.existingDocumentId!,
             files: filesToUpload,
-            user: authProvider.currentUser!,
+            user: authProvider.effectiveUser!,
             expiryDate: widget.documentType.hasExpiryDate
                 ? _uploadItems.first.expiryDate
                 : null,
@@ -250,7 +250,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                 print("DEBUG: Uploading web file: ${item.file.path} with expiry date: ${item.expiryDate}");
 
                 final document = await documentProvider.createDocument(
-                  user: authProvider.currentUser!,
+                  user: authProvider.effectiveUser!,
                   categoryId: widget.categoryId,
                   documentTypeId: widget.documentType.id,
                   files: [webFile],
@@ -287,7 +287,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                 print("DEBUG: Uploading file: ${item.file.path} with expiry date: ${item.expiryDate}");
 
                 final document = await documentProvider.createDocument(
-                  user: authProvider.currentUser!,
+                  user: authProvider.effectiveUser!,
                   categoryId: widget.categoryId,
                   documentTypeId: widget.documentType.id,
                   files: [item.file],

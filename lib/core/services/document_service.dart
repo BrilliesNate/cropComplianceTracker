@@ -34,42 +34,23 @@ class DocumentService {
     String? reason, // Optional reason for deletion
   }) async {
     try {
-      print("DEBUG: deleteDocument called for document: $documentId");
-      print("DEBUG: Deleting user: ${user.name} (${user.email})");
-      print("DEBUG: Deletion reason: ${reason ?? 'No reason provided'}");
 
-      // Get the existing document first
       final document = await _firestoreService.getDocument(documentId);
       if (document == null) {
         print("DEBUG: Document not found: $documentId");
         return false;
       }
 
-      print("DEBUG: Found document: ${document.id}");
-      print("DEBUG: Document has ${document.fileUrls.length} files to delete");
 
-      // Step 1: Delete all associated files from Storage
-      for (String fileUrl in document.fileUrls) {
-        try {
-          print("DEBUG: Deleting file: $fileUrl");
-          final deleteResult = await _storageService.deleteFile(fileUrl);
-          if (deleteResult) {
-            print("DEBUG: Successfully deleted file: $fileUrl");
-          } else {
-            print("DEBUG: Failed to delete file: $fileUrl");
-          }
-        } catch (e) {
-          print("DEBUG: Error deleting file $fileUrl: $e");
-          // Continue with other files even if one fails
-        }
-      }
+
+
 
       // Step 2: Delete the document from Firestore
-      print("DEBUG: Deleting document from Firestore");
+
       final deleteResult = await _firestoreService.deleteDocument(documentId);
 
       if (deleteResult) {
-        print("DEBUG: Document successfully deleted from Firestore");
+
 
         // Step 3: Add a deletion record/comment for audit trail (optional)
         // You could create a separate "deleted_documents" collection to track deletions
@@ -82,7 +63,7 @@ class DocumentService {
             'reason': reason ?? 'No reason provided',
             'originalDocument': document.toMap(),
           });
-          print("DEBUG: Deletion record added for audit trail");
+
         } catch (e) {
           print("DEBUG: Failed to add deletion record (non-critical): $e");
           // This is non-critical, document is still deleted
@@ -112,48 +93,23 @@ class DocumentService {
     String? specification, // NEW FIELD
   }) async {
     try {
-      // Debug - Initial info with context
-      print("DEBUG: createDocument called");
-      print("DEBUG: Target user: ${user.name} (${user.email})");
-      if (actingUser != null && actingUser.id != user.id) {
-        print("DEBUG: Acting user (Admin): ${actingUser.name} (${actingUser.email})");
-        print("DEBUG: Admin is creating document for another user");
-      }
-      print("DEBUG: categoryId: $categoryId");
-      print("DEBUG: documentTypeId: $documentTypeId");
-      print("DEBUG: files count: ${files.length}");
-      print("DEBUG: isNotApplicable: $isNotApplicable");
-      print("DEBUG: EXPIRY DATE RECEIVED: $expiryDate");
-      print("DEBUG: SPECIFICATION RECEIVED: $specification"); // NEW DEBUG LINE
 
-      // Platform check
-      if (kIsWeb) {
-        print("DEBUG: Running on web platform");
-      } else {
-        print("DEBUG: Running on non-web platform");
-      }
+
+
 
       // Get document type
       final documentType = await _firestoreService.getDocumentType(documentTypeId);
       if (documentType == null) {
-        print("DEBUG: Document type not found: $documentTypeId");
+
         return null;
       }
 
-      print("DEBUG: Document type found: ${documentType.name}");
-      print("DEBUG: isUploadable: ${documentType.isUploadable}");
+
 
       // Create initial document
       final docId = _uuid.v4();
-      print("DEBUG: Generated document ID: $docId");
 
-      // IMPORTANT: Make sure expiryDate is properly set
-      if (expiryDate != null) {
-        print("DEBUG: Using expiryDate: $expiryDate");
-        print("DEBUG: Timestamp: ${expiryDate.millisecondsSinceEpoch}");
-      } else {
-        print("DEBUG: No expiryDate provided");
-      }
+
 
       // Create the document object with explicit expiryDate and specification
       // Document is created for the target user, not the acting user
@@ -178,7 +134,7 @@ class DocumentService {
       // Upload files if needed
       List<String> fileUrls = [];
       if (!isNotApplicable && documentType.isUploadable && files.isNotEmpty) {
-        print("DEBUG: Beginning file upload process for ${files.length} files");
+
 
         try {
           // Process each file
@@ -189,7 +145,7 @@ class DocumentService {
               // For web platform
               if (file is Map<String, dynamic> && file.containsKey('bytes')) {
                 final fileName = file['name'] ?? 'file_${DateTime.now().millisecondsSinceEpoch}.pdf';
-                print("DEBUG: Uploading web file ${i + 1}/${files.length}: $fileName");
+
 
                 final fileUrl = await _storageService.uploadFile(
                   file,
@@ -199,19 +155,19 @@ class DocumentService {
                 );
 
                 if (fileUrl != null) {
-                  print("DEBUG: File uploaded successfully. URL: $fileUrl");
+
                   fileUrls.add(fileUrl);
                 } else {
-                  print("DEBUG: File upload failed for file $fileName");
+
                 }
               } else {
-                print("DEBUG: Invalid file format for web upload: ${file.runtimeType}");
+
               }
             } else {
               // For mobile/desktop platforms
               if (file is File) {
                 final fileName = file.path.split('/').last;
-                print("DEBUG: Uploading file ${i + 1}/${files.length}: $fileName");
+
 
                 final fileUrl = await _storageService.uploadFile(
                   file,
@@ -221,10 +177,10 @@ class DocumentService {
                 );
 
                 if (fileUrl != null) {
-                  print("DEBUG: File uploaded successfully. URL: $fileUrl");
+
                   fileUrls.add(fileUrl);
                 } else {
-                  print("DEBUG: File upload failed for file $fileName");
+
                 }
               } else {
                 print("DEBUG: Invalid file format for mobile/desktop upload: ${file.runtimeType}");

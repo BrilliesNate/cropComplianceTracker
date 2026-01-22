@@ -17,6 +17,8 @@ class AuditIndexScreen extends StatefulWidget {
 }
 
 class _AuditIndexScreenState extends State<AuditIndexScreen> {
+  String _selectedPackage = 'siza_wieta'; // Default package
+
   @override
   void initState() {
     super.initState();
@@ -33,9 +35,25 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
     if (authProvider.currentUser != null) {
       await categoryProvider.initialize();
 
-      // Use the company-aware method instead of the old initialize method
+      // Set initial package filter based on company's available packages
+      final packages = authProvider.effectivePackages;
+      if (packages.isNotEmpty) {
+        _selectedPackage = packages.first;
+        categoryProvider.setPackageFilter([_selectedPackage]);
+      }
+
       await documentProvider.refreshForUserContext(context);
     }
+  }
+
+  void _onPackageSelected(String packageId) {
+    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+
+    setState(() {
+      _selectedPackage = packageId;
+    });
+
+    categoryProvider.setPackageFilter([packageId]);
   }
 
   @override
@@ -65,13 +83,92 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
         onRetry: _initializeData,
       );
     } else {
-      content = _buildCategoryList(categoryProvider, documentProvider);
+      content = Column(
+        children: [
+          // Package toggle buttons (only show if company has multiple packages)
+          if (authProvider.hasBothPackages)
+            _buildPackageToggle(authProvider),
+
+          // Category list
+          Expanded(
+            child: _buildCategoryList(categoryProvider, documentProvider),
+          ),
+        ],
+      );
     }
 
     return AppScaffoldWrapper(
       title: 'Audit Index',
       backgroundColor: Colors.grey[100],
       child: content,
+    );
+  }
+
+  Widget _buildPackageToggle(AuthProvider authProvider) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildPackageButton(
+              packageId: 'siza_wieta',
+              label: 'SIZA/WIETA',
+              icon: Icons.people,
+              isSelected: _selectedPackage == 'siza_wieta',
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildPackageButton(
+              packageId: 'globalgap',
+              label: 'GlobalG.A.P.',
+              icon: Icons.eco,
+              isSelected: _selectedPackage == 'globalgap',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPackageButton({
+    required String packageId,
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+  }) {
+    return Material(
+      color: isSelected
+          ? Theme.of(context).primaryColor
+          : Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      elevation: isSelected ? 4 : 2,
+      child: InkWell(
+        onTap: () => _onPackageSelected(packageId),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.white : Theme.of(context).primaryColor,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
