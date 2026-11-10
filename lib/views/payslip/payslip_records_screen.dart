@@ -4,6 +4,7 @@ import 'package:cropCompliance/providers/payslip_provider.dart';
 import 'package:cropCompliance/views/payslip/utils/bank_payment_export.dart';
 import 'package:cropCompliance/views/payslip/utils/payslip_bulk_export.dart';
 import 'package:cropCompliance/views/payslip/utils/payslip_pdf_builder.dart';
+import 'package:cropCompliance/views/payslip/widgets/bank_export_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -165,169 +166,37 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
     }
   }
 
-  /// Review dialog → bulk payment CSV for online banking.
+  /// Review dialog → bulk payment file for online banking.
   Future<void> _bankCsv(PayslipProvider prov, List<PayslipModel> items) async {
-    final refCtrl = TextEditingController(
-        text: BankExportTemplate.defaultReferencePrefix);
-    // No bank pre-selected on first use; afterwards the farm's last choice.
-    BankExportTemplate? template = BankExportRegistry.byId(
-        prov.payrollSettings?.bankExportTemplateId);
-    late BankPaymentPlan plan;
-
-    final ok = await showDialog<bool>(
+    final result = await showDialog<BankExportDialogResult>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) {
-          plan = BankPaymentExport.plan(items, prov.employees,
-              template: template);
-          final ctxValues = BankExportContext(
-              payerName: widget.companyName, referencePrefix: refCtrl.text);
-          final sample = plan.ready.isEmpty
-              ? null
-              : (template ?? BankExportRegistry.all.first)
-                  .reference(plan.ready.first.line, ctxValues);
-          final note = template?.userNote;
-          return AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            title: const Text('Bulk Payment File'),
-            content: SizedBox(
-              width: 460,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      plan.ready.isEmpty
-                          ? 'None of the selected employees can be paid — see below.'
-                          : '${plan.ready.length} payment${plan.ready.length == 1 ? '' : 's'} · total ${_currency.format(plan.total)}',
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Upload the file to your online banking as a bulk '
-                      'payment, check the total, then approve once.',
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      initialValue: template?.id,
-                      isExpanded: true,
-                      hint: const Text('Choose your bank'),
-                      decoration: InputDecoration(
-                        labelText: 'Bank the farm pays from',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        isDense: true,
-                      ),
-                      items: BankExportRegistry.all
-                          .map((t) => DropdownMenuItem(
-                              value: t.id, child: Text(t.displayName)))
-                          .toList(),
-                      onChanged: (id) => setLocal(
-                          () => template = BankExportRegistry.byId(id)),
-                    ),
-                    if (note != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6, left: 4),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.info_outline,
-                                size: 14, color: Colors.amber.shade800),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(note,
-                                  style: TextStyle(
-                                      fontSize: 11.5,
-                                      color: Colors.amber.shade900)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: refCtrl,
-                      maxLength: 15,
-                      onChanged: (_) => setLocal(() {}),
-                      decoration: InputDecoration(
-                        labelText: 'Reference',
-                        helperText: sample == null
-                            ? 'Each employee\'s first name is added'
-                            : 'Each employee\'s first name is added — e.g. "$sample"',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        isDense: true,
-                      ),
-                    ),
-                    if (plan.draftCount > 0)
-                      _note(Icons.edit_note, Colors.orange,
-                          '${plan.draftCount} selected payslip${plan.draftCount == 1 ? ' is' : 's are'} still Draft — amounts may change.'),
-                    if (plan.combinedCount > 0)
-                      _note(Icons.merge_type, Colors.blue,
-                          '${plan.combinedCount} employee${plan.combinedCount == 1 ? ' has' : 's have'} more than one payslip selected — their net pay is combined into one payment.'),
-                    if (plan.skipped.isNotEmpty) ...[
-                      _note(Icons.info_outline, Colors.grey,
-                          'Not included (${plan.skipped.length}):'),
-                      ...plan.skipped.map((s) => Padding(
-                            padding: const EdgeInsets.only(left: 30, top: 3),
-                            child: Text('${s.name} — ${s.reason}',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600)),
-                          )),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Cancel')),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(backgroundColor: _green),
-                onPressed: template == null || plan.ready.isEmpty
-                    ? null
-                    : () => Navigator.pop(ctx, true),
-                icon: const Icon(Icons.download, size: 18),
-                label: const Text('Download file'),
-              ),
-            ],
-          );
-        },
+      builder: (_) => BankExportDialog(
+        payslips: items,
+        employees: prov.employees,
+        companyName: widget.companyName,
+        // No bank pre-selected on first use; afterwards the farm's last choice.
+        initialTemplate: BankExportRegistry.byId(
+            prov.payrollSettings?.bankExportTemplateId),
       ),
     );
+    if (result == null || !mounted) return;
 
-    final prefix = refCtrl.text;
-    refCtrl.dispose();
-    final chosen = template;
-    if (ok != true || chosen == null) return;
+    // Drafts the user removed are deselected here too, so the list matches.
+    if (result.removedDraftIds.isNotEmpty) {
+      setState(() => _selected.removeAll(result.removedDraftIds));
+    }
 
     // Remember the bank for this farm (non-fatal if it fails).
-    if (prov.payrollSettings?.bankExportTemplateId != chosen.id) {
-      prov.saveBankExportTemplate(widget.companyId, chosen.id);
+    if (prov.payrollSettings?.bankExportTemplateId != result.template.id) {
+      prov.saveBankExportTemplate(widget.companyId, result.template.id);
     }
 
     await _run(
         'Bank file',
-        () => BankPaymentExport.download(plan, chosen, widget.companyName,
-            referencePrefix: prefix));
+        () => BankPaymentExport.download(
+            result.plan, result.template, widget.companyName,
+            referencePrefix: result.referencePrefix));
   }
-
-  Widget _note(IconData icon, MaterialColor color, String text) => Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 18, color: color.shade700),
-          const SizedBox(width: 10),
-          Expanded(
-              child: Text(text,
-                  style: TextStyle(fontSize: 12.5, color: color.shade900))),
-        ]),
-      );
 
   // ── Build ───────────────────────────────────────────────────────────────────
   @override

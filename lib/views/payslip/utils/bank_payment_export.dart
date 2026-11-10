@@ -91,13 +91,50 @@ class BankPaymentExport {
         amountCents: amountCents,
       );
 
-  /// Downloads [plan] in [template]'s layout.
+  /// One-line reason the Download button is disabled, or null if the file
+  /// can be downloaded. Checked in the order a user would fix things.
+  ///
+  /// Drafts never block silently: while [draftChoice] is
+  /// [DraftChoice.undecided] the user is asked to remove or include them.
+  static String? disabledReason({
+    required int selectedCount,
+    required bool bankChosen,
+    required int draftCount,
+    required DraftChoice draftChoice,
+    required BankPaymentPlan plan,
+  }) {
+    if (selectedCount == 0) return 'No payslips selected.';
+    if (!bankChosen) return 'Choose the bank the farm pays from.';
+    if (draftCount > 0 && draftChoice == DraftChoice.undecided) {
+      return '$draftCount draft payslip${draftCount == 1 ? '' : 's'} '
+          'selected — remove ${draftCount == 1 ? 'it' : 'them'} or include '
+          '${draftCount == 1 ? 'it' : 'them'} anyway.';
+    }
+    if (draftChoice == DraftChoice.remove && selectedCount == draftCount) {
+      return 'All selected payslips are drafts — include them anyway or '
+          'select finalised payslips.';
+    }
+    if (plan.ready.isEmpty) {
+      final noBank =
+          plan.skipped.every((s) => s.reason == 'no banking details');
+      return noBank
+          ? 'None of these employees have banking details — add them via '
+              'Edit employee.'
+          : 'No one can be paid — see "Not included" below.';
+    }
+    return null;
+  }
+
+  /// Downloads [plan] in [template]'s layout. Never writes an empty file.
   static Future<void> download(
     BankPaymentPlan plan,
     BankExportTemplate template,
     String companyName, {
     String referencePrefix = BankExportTemplate.defaultReferencePrefix,
   }) async {
+    if (plan.ready.isEmpty) {
+      throw StateError('No payable employees — nothing to export.');
+    }
     final ctx = BankExportContext(
         payerName: companyName, referencePrefix: referencePrefix);
     final content =
@@ -110,6 +147,9 @@ class BankPaymentExport {
     );
   }
 }
+
+/// What to do with Draft payslips in the current selection.
+enum DraftChoice { undecided, remove, include }
 
 /// One payable line in the bulk payment file.
 class BankPaymentRow {
