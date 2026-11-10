@@ -23,4 +23,12 @@ class RouteConstants {
   static const String formConfigEditor = '/form-config-editor';
   static const String overrid = '/company-overrides';
   static const String companyManagement = '/company-management';
+
+  // Payslip routes
+  static const String payslipManager = '/payslip-manager';
+  static const String payslipForm = '/payslip-form';
+  static const String payslipDetail = '/payslip-detail';
+  static const String payslipBulkGenerate = '/payslip-bulk-generate';
+  static const String leaveManagement = '/leave-management';
+  static const String payslipRecords = '/payslip-records';
 }
