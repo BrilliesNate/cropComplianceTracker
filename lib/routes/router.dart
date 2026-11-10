@@ -1,4 +1,10 @@
 import 'package:cropCompliance/company_document_override_screen.dart';
+import 'package:cropCompliance/views/payslip/payslip_manager_screen.dart';
+import 'package:cropCompliance/views/payslip/payslip_form_screen.dart';
+import 'package:cropCompliance/views/payslip/payslip_detail_screen.dart';
+import 'package:cropCompliance/views/payslip/bulk_payslip_screen.dart';
+import 'package:cropCompliance/views/payslip/leave_management_screen.dart';
+import 'package:cropCompliance/views/payslip/payslip_records_screen.dart';
 import 'package:cropCompliance/views/admin/category_management_screen.dart';
 import 'package:cropCompliance/views/admin/company_managment_screen.dart';
 import 'package:cropCompliance/views/admin/form_config_management_screen.dart';
@@ -84,6 +90,54 @@ class AppRouter {
             documentTypeId: args['documentTypeId'],
           ),
         );
+      case RouteConstants.payslipManager:
+        return MaterialPageRoute(
+            builder: (_) => const PayslipManagerScreen());
+
+      case RouteConstants.payslipForm:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        return MaterialPageRoute(
+          builder: (_) => PayslipFormScreen(
+            payslipId: args['payslipId'],
+            companyId: args['companyId'] ?? '',
+            companyName: args['companyName'] ?? '',
+          ),
+        );
+
+      case RouteConstants.payslipDetail:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) =>
+              PayslipDetailScreen(payslipId: args['payslipId']),
+        );
+
+      case RouteConstants.payslipBulkGenerate:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => BulkPayslipScreen(
+            companyId: args['companyId'] ?? '',
+            companyName: args['companyName'] ?? '',
+          ),
+        );
+
+      case RouteConstants.leaveManagement:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        return MaterialPageRoute(
+          builder: (_) => LeaveManagementScreen(
+            companyId: args['companyId'] ?? '',
+            companyName: args['companyName'] ?? '',
+          ),
+        );
+
+      case RouteConstants.payslipRecords:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        return MaterialPageRoute(
+          builder: (_) => PayslipRecordsScreen(
+            companyId: args['companyId'] ?? '',
+            companyName: args['companyName'] ?? '',
+          ),
+        );
+
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

@@ -74,6 +74,12 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
       'route': RouteConstants.auditIndex,
       'adminOnly': false,
     },
+    {
+      'title': 'Payslip Manager',
+      'icon': Icons.receipt_long_outlined,
+      'route': RouteConstants.payslipManager,
+      'adminOnly': false,
+    },
   ];
 
   // Admin menu items

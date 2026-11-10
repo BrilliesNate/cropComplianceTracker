@@ -1,4 +1,5 @@
 import 'package:cropCompliance/providers/audit_provider.dart';
+import 'package:cropCompliance/providers/payslip_provider.dart';
 import 'package:cropCompliance/providers/category_provider.dart';
 import 'package:cropCompliance/providers/route_provider.dart';
 import 'package:cropCompliance/views/document_management/forms/company_orfanizational_chart.dart';
@@ -28,6 +29,7 @@ void main() async {
       ChangeNotifierProvider(create: (_) => CategoryProvider()),
       ChangeNotifierProvider(create: (_) => AuditProvider()),
       ChangeNotifierProvider(create: (_) => RouteProvider()),
+      ChangeNotifierProvider(create: (_) => PayslipProvider()),
     ],
     child: const AgriComplianceApp(),
   ));
