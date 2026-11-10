@@ -756,7 +756,10 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Remove Employee'),
-        content: Text('Remove ${row.employee.name}? Payslips are kept.'),
+        content: Text(
+            'Remove ${row.employee.name}? Their payslips are kept. If you '
+            'add them again later, use the same ID number so old payslips '
+            'link back to them (e.g. for bank payments).'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancel')),

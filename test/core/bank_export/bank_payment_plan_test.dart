@@ -105,11 +105,12 @@ void main() {
     final plan = BankPaymentExport.plan(sel, noBank);
     expect(plan.ready, isEmpty);
     expect(plan.skipped.single.reason, 'no banking details');
-    expect(_reason(sel, noBank),
-        startsWith('None of these employees have banking details'));
+    expect(plan.skipped.single.kind, SkipKind.noBankingDetails);
+    expect(plan.skipped.single.employee?.id, 'e1');
+    expect(_reason(sel, noBank), startsWith('Nobody has banking details'));
   });
 
-  test('mixed exclusions point to the Not included list', () {
+  test('mixed exclusions point to the list of fixes', () {
     final mixed = [
       _emp('e1', 'Willem Botha', bank: false),
       _emp('e2', 'Jan Smit'),
@@ -118,6 +119,76 @@ void main() {
       _slip('p1', 'e1', 'Willem Botha'),
       _slip('p2', 'e2', 'Jan Smit', hours: 0), // R 0 net pay
     ];
-    expect(_reason(sel, mixed), 'No one can be paid — see "Not included" below.');
+    final plan = BankPaymentExport.plan(sel, mixed);
+    expect(plan.skipped.map((s) => s.kind).toSet(),
+        {SkipKind.noBankingDetails, SkipKind.nonPositivePay});
+    expect(_reason(sel, mixed), startsWith('Nobody can be paid yet'));
+  });
+
+  group('payslips whose employee record was removed', () {
+    // Payslip points at "old-id" (deleted); the person was re-added as e9.
+    PayslipModel orphan({String idNo = '9001015009087', String name = 'Piet Venter'}) =>
+        PayslipModel(
+          id: 'p9',
+          companyId: 'c1',
+          companyName: 'Test Farm',
+          employeeId: 'old-id',
+          employeeName: name,
+          employeeIdNumber: idNo,
+          uifRegNumber: '',
+          payPeriodStart: _now,
+          payPeriodEnd: _now.add(const Duration(days: 29)),
+          payDate: _now,
+          normalHours: 100,
+          overtimeHours: 0,
+          doubleTimeHours: 0,
+          publicHolidayHours: 0,
+          normalRate: 30,
+          overtimeRate: 45,
+          doubleTimeRate: 60,
+          additionalDeductions: const [],
+          status: PayslipStatus.finalised,
+          createdAt: _now,
+          updatedAt: _now,
+        );
+
+    EmployeeModel readded({String idNo = '9001015009087', String id = 'e9'}) =>
+        EmployeeModel(
+          id: id,
+          companyId: 'c1',
+          name: 'Piet Venter',
+          idNumber: idNo,
+          normalHourlyRate: 30,
+          accountNumber: '1234567890',
+          branchCode: '470010',
+          createdAt: _now,
+          updatedAt: _now,
+        );
+
+    test('matched by ID number, paid, and offered as a relink', () {
+      final plan = BankPaymentExport.plan([orphan()], [readded()]);
+      expect(plan.ready.single.employee.id, 'e9');
+      expect(plan.relinks['p9']?.id, 'e9');
+    });
+
+    test('matched by exact name when there is no ID number', () {
+      final plan = BankPaymentExport.plan(
+          [orphan(idNo: '')], [readded(idNo: '')]);
+      expect(plan.ready.single.employee.id, 'e9');
+    });
+
+    test('never guesses between two people with the same name', () {
+      final plan = BankPaymentExport.plan([orphan(idNo: '')],
+          [readded(idNo: '', id: 'a'), readded(idNo: '', id: 'b')]);
+      expect(plan.ready, isEmpty);
+      expect(plan.skipped.single.kind, SkipKind.missingEmployee);
+      expect(plan.skipped.single.payslips.single.id, 'p9');
+    });
+
+    test('truly missing → missingEmployee with a fix-oriented reason', () {
+      final plan = BankPaymentExport.plan([orphan()], emps);
+      expect(plan.skipped.single.kind, SkipKind.missingEmployee);
+      expect(_reason([orphan()], emps), contains('aren\'t linked'));
+    });
   });
 }

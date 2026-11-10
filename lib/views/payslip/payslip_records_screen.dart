@@ -171,8 +171,8 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
     final result = await showDialog<BankExportDialogResult>(
       context: context,
       builder: (_) => BankExportDialog(
-        payslips: items,
-        employees: prov.employees,
+        payslipIds: items.map((p) => p.id).toSet(),
+        companyId: widget.companyId,
         companyName: widget.companyName,
         // No bank pre-selected on first use; afterwards the farm's last choice.
         initialTemplate: BankExportRegistry.byId(

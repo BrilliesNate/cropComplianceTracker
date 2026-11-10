@@ -138,9 +138,16 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
       id: _existingPayslip?.id ?? '',
       companyId: widget.companyId,
       companyName: widget.companyName,
-      employeeId: _selectedEmployee?.id ?? '',
-      employeeName: _selectedEmployee?.name ?? '',
-      employeeIdNumber: _selectedEmployee?.idNumber ?? '',
+      // When editing a payslip whose employee isn't in the list (e.g. the
+      // record was removed), keep its existing link and snapshot instead of
+      // blanking them — a blank employeeId orphans the payslip for good.
+      employeeId:
+          _selectedEmployee?.id ?? _existingPayslip?.employeeId ?? '',
+      employeeName:
+          _selectedEmployee?.name ?? _existingPayslip?.employeeName ?? '',
+      employeeIdNumber: _selectedEmployee?.idNumber ??
+          _existingPayslip?.employeeIdNumber ??
+          '',
       uifRegNumber: '', // UIF reg is company-level, set via payrollSettings
       payPeriodStart: _periodStart,
       payPeriodEnd: _periodEnd,

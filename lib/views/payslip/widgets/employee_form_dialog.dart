@@ -7,11 +7,19 @@ class EmployeeFormDialog extends StatefulWidget {
   final EmployeeModel? employee;
   final Future<void> Function(EmployeeModel) onSave;
 
+  /// Overrides the "Add Employee" / "Edit Employee" heading.
+  final String? title;
+
+  /// Shows the banking section at the top (opened from the bank export).
+  final bool bankingFirst;
+
   const EmployeeFormDialog({
     Key? key,
     required this.companyId,
     required this.onSave,
     this.employee,
+    this.title,
+    this.bankingFirst = false,
   }) : super(key: key);
 
   @override
@@ -83,7 +91,12 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      // The failing field may be scrolled out of view — say so.
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Please complete the highlighted fields.')));
+      return;
+    }
     setState(() => _saving = true);
 
     final e = widget.employee;
@@ -135,12 +148,15 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                   children: [
                     Icon(Icons.person_add_outlined, color: primaryColor),
                     const SizedBox(width: 10),
-                    Text(
-                      _isEdit ? 'Edit Employee' : 'Add Employee',
+                    Expanded(
+                     child: Text(
+                      widget.title ??
+                          (_isEdit ? 'Edit Employee' : 'Add Employee'),
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.bold),
+                     ),
                     ),
-                    const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.pop(context),
@@ -154,6 +170,16 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (widget.bankingFirst) ...[
+                          _bankingSection(),
+                          const SizedBox(height: 22),
+                          Text('Employee details',
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey.shade800)),
+                          const SizedBox(height: 12),
+                        ],
                         _field(
                           controller: _name,
                           label: 'Full Name',
@@ -257,8 +283,10 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                           const SizedBox(height: 6),
                           _buildLeaveEligibilityHint(),
                         ],
-                        const SizedBox(height: 22),
-                        _bankingSection(),
+                        if (!widget.bankingFirst) ...[
+                          const SizedBox(height: 22),
+                          _bankingSection(),
+                        ],
                       ],
                     ),
                   ),

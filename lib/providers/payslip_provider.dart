@@ -201,12 +201,20 @@ class PayslipProvider with ChangeNotifier {
 
   // ── Employee CRUD ─────────────────────────────────────────────────────────
 
-  Future<bool> saveEmployee(EmployeeModel employee) async {
+  Future<bool> saveEmployee(EmployeeModel employee) async =>
+      await upsertEmployee(employee) != null;
+
+  /// Creates or updates an employee and returns the saved record.
+  ///
+  /// An employee with an id that isn't in the list (e.g. re-creating a
+  /// removed record under its original id so its old payslips link up
+  /// again) is added, not silently dropped.
+  Future<EmployeeModel?> upsertEmployee(EmployeeModel employee) async {
     try {
-      final isNew = employee.id.isEmpty;
-      final id = isNew ? _uuid.v4() : employee.id;
+      final id = employee.id.isEmpty ? _uuid.v4() : employee.id;
+      final idx = _employees.indexWhere((e) => e.id == id);
       final data = employee.copyWith().toMap();
-      if (isNew) {
+      if (idx == -1) {
         data['createdAt'] = Timestamp.fromDate(DateTime.now());
       }
       data['updatedAt'] = Timestamp.fromDate(DateTime.now());
@@ -214,12 +222,42 @@ class PayslipProvider with ChangeNotifier {
       await _db.collection('employees').doc(id).set(data, SetOptions(merge: true));
 
       final saved = EmployeeModel.fromMap(data, id);
-      if (isNew) {
+      if (idx == -1) {
         _employees.add(saved);
         _employees.sort((a, b) => a.name.compareTo(b.name));
       } else {
-        final idx = _employees.indexWhere((e) => e.id == id);
-        if (idx != -1) _employees[idx] = saved;
+        _employees[idx] = saved;
+      }
+      notifyListeners();
+      return saved;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  /// Points [payslipIds] at [employeeId] — repairs payslips whose employee
+  /// record was removed or never linked. Only the link changes; the
+  /// payslip's name/amount snapshot is kept as issued.
+  Future<bool> relinkPayslips(
+      Iterable<String> payslipIds, String employeeId) async {
+    try {
+      final ids = payslipIds.toSet();
+      final batch = _db.batch();
+      for (final id in ids) {
+        batch.update(_db.collection('payslips').doc(id), {
+          'employeeId': employeeId,
+          'updatedAt': Timestamp.fromDate(DateTime.now()),
+        });
+      }
+      await batch.commit();
+      for (var i = 0; i < _payslips.length; i++) {
+        final p = _payslips[i];
+        if (ids.contains(p.id)) {
+          final map = p.toMap()..['employeeId'] = employeeId;
+          _payslips[i] = PayslipModel.fromMap(map, p.id);
+        }
       }
       notifyListeners();
       return true;
