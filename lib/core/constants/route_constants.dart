@@ -31,4 +31,5 @@ class RouteConstants {
   static const String payslipBulkGenerate = '/payslip-bulk-generate';
   static const String leaveManagement = '/leave-management';
   static const String payslipRecords = '/payslip-records';
+  static const String timesheet = '/timesheet';
 }

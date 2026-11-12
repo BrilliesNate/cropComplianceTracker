@@ -5,6 +5,7 @@ import 'package:cropCompliance/views/payslip/payslip_detail_screen.dart';
 import 'package:cropCompliance/views/payslip/bulk_payslip_screen.dart';
 import 'package:cropCompliance/views/payslip/leave_management_screen.dart';
 import 'package:cropCompliance/views/payslip/payslip_records_screen.dart';
+import 'package:cropCompliance/views/payslip/timesheet/timesheet_screen.dart';
 import 'package:cropCompliance/views/admin/category_management_screen.dart';
 import 'package:cropCompliance/views/admin/company_managment_screen.dart';
 import 'package:cropCompliance/views/admin/form_config_management_screen.dart';
@@ -133,6 +134,16 @@ class AppRouter {
         final args = settings.arguments as Map<String, dynamic>? ?? {};
         return MaterialPageRoute(
           builder: (_) => PayslipRecordsScreen(
+            companyId: args['companyId'] ?? '',
+            companyName: args['companyName'] ?? '',
+          ),
+        );
+
+      case RouteConstants.timesheet:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => TimesheetScreen(
             companyId: args['companyId'] ?? '',
             companyName: args['companyName'] ?? '',
           ),

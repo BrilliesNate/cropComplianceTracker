@@ -9,6 +9,8 @@ import 'package:cropCompliance/providers/payslip_provider.dart';
 import 'package:cropCompliance/views/payslip/utils/payslip_pdf_builder.dart';
 import 'package:cropCompliance/views/payslip/widgets/employee_form_dialog.dart';
 import 'package:cropCompliance/views/shared/app_scaffold_wrapper.dart';
+import 'package:cropCompliance/views/payslip/utils/leave_check.dart';
+import 'package:cropCompliance/views/payslip/widgets/leave_shortfall_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -571,6 +573,12 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       return;
     }
 
+    // Leave check: if anyone has more SL / HL / FL entered than they have
+    // left, say so and let the user choose (pay available / take off /
+    // override & pay) instead of silently paying leave they haven't got.
+    if (!await _resolveLeaveShortfalls(toSave, prov)) return;
+    if (!mounted) return;
+
     final uif = _uifCtrl.text.trim();
     final addr = _addressCtrl.text.trim();
     final settingsChanged =
@@ -680,6 +688,77 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
         duration: const Duration(seconds: 4),
       ));
     }
+  }
+
+  /// Compares leave entered on [rows] with each employee's balance. If any
+  /// exceed it, asks what to do and applies the choices to the rows. Returns
+  /// false if the user went back to edit.
+  Future<bool> _resolveLeaveShortfalls(
+      List<_EmployeeRow> rows, PayslipProvider prov) async {
+    final shortfalls = <LeaveShortfall>[];
+    final rowsFor = <LeaveShortfall, _EmployeeRow>{};
+
+    for (final row in rows) {
+      final id = row.employee.id;
+      // Re-saving an existing payslip: its leave is already counted as taken,
+      // so add it back to get what's available for this payslip.
+      final list = _getEmployeePayslips(row, prov);
+      final existing =
+          row.navIndex < list.length ? list[row.navIndex] : null;
+      final available = {
+        LeaveType.sick: prov.sickLeaveBalance(id) +
+            (existing?.sickLeaveHours ?? 0),
+        LeaveType.holiday: prov.holidayLeaveBalance(id) +
+            (existing?.holidayLeaveHours ?? 0),
+        LeaveType.family: prov.familyLeaveBalance(id) +
+            (existing?.familyLeaveHours ?? 0),
+      };
+      final notes = <LeaveType, String>{
+        if (row.employee.employmentStartDate == null)
+          LeaveType.family:
+              'Family leave starts once an employment start date is set — add it via Edit employee if it should apply.',
+      };
+      final found = findLeaveShortfalls(
+        employeeId: id,
+        employeeName: row.employee.name,
+        requested: {
+          LeaveType.sick: double.tryParse(row.sickCtrl.text) ?? 0,
+          LeaveType.holiday: double.tryParse(row.holidayCtrl.text) ?? 0,
+          LeaveType.family: double.tryParse(row.familyCtrl.text) ?? 0,
+        },
+        available: available,
+        notes: notes,
+      );
+      for (final s in found) {
+        shortfalls.add(s);
+        rowsFor[s] = row;
+      }
+    }
+    if (shortfalls.isEmpty) return true;
+
+    final choices = await LeaveShortfallDialog.show(context, shortfalls);
+    if (choices == null) return false;
+
+    String fmt(double v) => v <= 0 ? '' : v.toStringAsFixed(2);
+    setState(() {
+      for (var i = 0; i < shortfalls.length; i++) {
+        final s = shortfalls[i];
+        final row = rowsFor[s]!;
+        final hours = s.hoursFor(choices[i]);
+        switch (s.type) {
+          case LeaveType.sick:
+            row.sickCtrl.text = fmt(hours);
+            break;
+          case LeaveType.holiday:
+            row.holidayCtrl.text = fmt(hours);
+            break;
+          case LeaveType.family:
+            row.familyCtrl.text = fmt(hours);
+            break;
+        }
+      }
+    });
+    return true;
   }
 
   // ── Delete payslip ─────────────────────────────────────────────────────────
@@ -1593,6 +1672,18 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       child: Row(children: [
         SizedBox(width: 260, child: _searchBox()),
         const Spacer(),
+        Badge(
+          label: const Text('NEW'),
+          backgroundColor: Colors.green.shade700,
+          child: _barBtn(Icons.grid_on_outlined, 'Timesheet',
+              onTap: () => Navigator.of(context).pushNamed(
+                  RouteConstants.timesheet,
+                  arguments: {
+                    'companyId': _selectedCompany?.id ?? '',
+                    'companyName': _selectedCompany?.name ?? ''
+                  })),
+        ),
+        const SizedBox(width: 12),
         _barBtn(Icons.person_add_outlined, 'Add Employee',
             onTap: _showEmployeeDialog),
         const SizedBox(width: 8),
