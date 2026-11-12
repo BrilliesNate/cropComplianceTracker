@@ -1671,70 +1671,78 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       ),
       child: Row(children: [
         SizedBox(width: 260, child: _searchBox()),
-        const Spacer(),
-        Badge(
-          label: const Text('NEW'),
-          backgroundColor: Colors.green.shade700,
-          child: _barBtn(Icons.grid_on_outlined, 'Timesheet',
-              onTap: () => Navigator.of(context).pushNamed(
-                  RouteConstants.timesheet,
-                  arguments: {
-                    'companyId': _selectedCompany?.id ?? '',
-                    'companyName': _selectedCompany?.name ?? ''
-                  })),
-        ),
-        const SizedBox(width: 12),
-        _barBtn(Icons.person_add_outlined, 'Add Employee',
-            onTap: _showEmployeeDialog),
-        const SizedBox(width: 8),
-        _barBtn(Icons.event_note_outlined, 'Leave Records',
-            onTap: () => Navigator.of(context).pushNamed(
-                RouteConstants.leaveManagement,
-                arguments: {
-                  'companyId': _selectedCompany?.id ?? '',
-                  'companyName': _selectedCompany?.name ?? ''
-                })),
-        const SizedBox(width: 8),
-        _barBtn(Icons.receipt_long_outlined, 'Payslip Records',
-            onTap: () => Navigator.of(context).pushNamed(
-                RouteConstants.payslipRecords,
-                arguments: {
-                  'companyId': _selectedCompany?.id ?? '',
-                  'companyName': _selectedCompany?.name ?? ''
-                })),
-        const SizedBox(width: 8),
-        _barBtn(Icons.summarize_outlined, 'UIF Summary',
-            onTap: _showUifSummary),
-        if (hasAny) ...[
-          const SizedBox(width: 8),
-          _barBtn(Icons.download_outlined, 'Download',
-              onTap: () => _downloadAll(prov)),
-        ],
-        const SizedBox(width: 8),
-        FilledButton.icon(
-          onPressed: (_generating || total == 0) ? null : _saveAll,
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.green.shade700,
-            disabledBackgroundColor: Colors.grey.shade300,
-            minimumSize: const Size(0, 36),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8)),
+        const SizedBox(width: 16),
+        // Buttons wrap onto a second line on narrower screens instead of
+        // overflowing or overlapping each other.
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+              _barBtn(Icons.grid_on_outlined, 'Timesheet',
+                  tag: 'NEW',
+                  onTap: () => Navigator.of(context).pushNamed(
+                      RouteConstants.timesheet,
+                      arguments: {
+                        'companyId': _selectedCompany?.id ?? '',
+                        'companyName': _selectedCompany?.name ?? ''
+                      })),
+              _barBtn(Icons.person_add_outlined, 'Add Employee',
+                  onTap: _showEmployeeDialog),
+              _barBtn(Icons.event_note_outlined, 'Leave Records',
+                  onTap: () => Navigator.of(context).pushNamed(
+                      RouteConstants.leaveManagement,
+                      arguments: {
+                        'companyId': _selectedCompany?.id ?? '',
+                        'companyName': _selectedCompany?.name ?? ''
+                      })),
+              _barBtn(Icons.receipt_long_outlined, 'Payslip Records',
+                  onTap: () => Navigator.of(context).pushNamed(
+                      RouteConstants.payslipRecords,
+                      arguments: {
+                        'companyId': _selectedCompany?.id ?? '',
+                        'companyName': _selectedCompany?.name ?? ''
+                      })),
+              _barBtn(Icons.summarize_outlined, 'UIF Summary',
+                  onTap: _showUifSummary),
+              if (hasAny) ...[
+                  _barBtn(Icons.download_outlined, 'Download',
+                    onTap: () => _downloadAll(prov)),
+              ],
+              FilledButton.icon(
+                onPressed: (_generating || total == 0) ? null : _saveAll,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.green.shade700,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  minimumSize: const Size(0, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: _generating
+                    ? const SizedBox(
+                        width: 14, height: 14,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
+                    : const Icon(Icons.save_outlined, size: 18, color: Colors.white),
+                label: Text(label,
+                    style: const TextStyle(fontSize: 13, color: Colors.white)),
+              ),
+              ],
+            ),
           ),
-          icon: _generating
-              ? const SizedBox(
-                  width: 14, height: 14,
-                  child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2))
-              : const Icon(Icons.save_outlined, size: 18, color: Colors.white),
-          label: Text(label,
-              style: const TextStyle(fontSize: 13, color: Colors.white)),
         ),
       ]),
     );
   }
 
-  Widget _barBtn(IconData icon, String label, {required VoidCallback onTap}) {
+  /// [tag] shows a small pill (e.g. "NEW") inside the button, after the label.
+  Widget _barBtn(IconData icon, String label,
+      {required VoidCallback onTap, String? tag}) {
     return OutlinedButton.icon(
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
@@ -1744,8 +1752,28 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
         side: BorderSide(color: Colors.grey.shade300),
       ),
       icon: Icon(icon, size: 16, color: Colors.black87),
-      label: Text(label,
-          style: const TextStyle(fontSize: 13, color: Colors.black87)),
+      label: tag == null
+          ? Text(label,
+              style: const TextStyle(fontSize: 13, color: Colors.black87))
+          : Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(label,
+                  style: const TextStyle(fontSize: 13, color: Colors.black87)),
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade700,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(tag,
+                    style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 0.3)),
+              ),
+            ]),
     );
   }
 
