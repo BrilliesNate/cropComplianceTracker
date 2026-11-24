@@ -2,6 +2,8 @@
 /// user is told — and asked what to do — before paying leave someone hasn't got.
 library;
 
+import 'package:cropCompliance/providers/locale_provider.dart';
+
 enum LeaveType { sick, holiday, family }
 
 extension LeaveTypeX on LeaveType {
@@ -19,11 +21,11 @@ extension LeaveTypeX on LeaveType {
   String get label {
     switch (this) {
       case LeaveType.sick:
-        return 'sick leave';
+        return LocaleProvider.instance.l10n.leaveSick;
       case LeaveType.holiday:
-        return 'annual (holiday) leave';
+        return LocaleProvider.instance.l10n.leaveAnnual;
       case LeaveType.family:
-        return 'family responsibility leave';
+        return LocaleProvider.instance.l10n.leaveFamily;
     }
   }
 }

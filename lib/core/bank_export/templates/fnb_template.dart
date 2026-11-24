@@ -18,13 +18,13 @@ class FnbTemplate extends BankExportTemplate {
 
   @override
   List<String> get headerRow => const [
-        'RECIPIENT NAME',
-        'RECIPIENT ACCOUNT',
-        'RECIPIENT ACCOUNT TYPE',
-        'BRANCHCODE',
-        'AMOUNT',
-        'OWN REFERENCE',
-        'RECIPIENT REFERENCE',
+        'RECIPIENT NAME', // l10n-ignore: bank file format
+        'RECIPIENT ACCOUNT', // l10n-ignore: bank file format
+        'RECIPIENT ACCOUNT TYPE', // l10n-ignore: bank file format
+        'BRANCHCODE', // l10n-ignore: bank file format
+        'AMOUNT', // l10n-ignore: bank file format
+        'OWN REFERENCE', // l10n-ignore: bank file format
+        'RECIPIENT REFERENCE', // l10n-ignore: bank file format
       ];
 
   @override
@@ -35,7 +35,7 @@ class FnbTemplate extends BankExportTemplate {
         BankExportTemplate.digitsOnly(line.branchCode),
         BankExportTemplate.fixedAmount(line.amountCents),
         BankExportTemplate.cleanText(
-            'SAL ${line.beneficiaryName}', referenceMaxLength),
+            'SAL ${line.beneficiaryName}', referenceMaxLength), // l10n-ignore: bank file format
         reference(line, ctx),
       ];
 }

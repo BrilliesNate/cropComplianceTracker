@@ -15,7 +15,7 @@ class CapitecTemplate extends BankExportTemplate {
   @override
   String get id => 'capitec';
   @override
-  String get displayName => 'Capitec';
+  String get displayName => 'Capitec'; // l10n-ignore: bank name
   @override
   bool get verified => true;
 

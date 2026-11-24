@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DocumentUploadCard extends StatefulWidget {
   final String categoryId;
@@ -31,6 +32,18 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
   List<FileUploadItem> _uploadItems = [];
   bool _isUploading = false;
   final TextEditingController _specificationController = TextEditingController();
+  DateTime? _reviewedDate; // for document types with a reviewed date
+
+  Future<void> _pickReviewedDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _reviewedDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+      helpText: context.l10n.reviewedPolicyHelp,
+    );
+    if (date != null) setState(() => _reviewedDate = date);
+  }
 
   @override
   void dispose() {
@@ -39,19 +52,24 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
   }
 
   void _showToast(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
+    // Grab the messenger now: this card is often popped right after a success
+    // message, and a dismiss tap must not depend on a context that is gone.
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar(); // replace, don't stack
+    messenger.showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
         duration: Duration(seconds: isError ? 4 : 2),
+        // A SnackBar with an action stays on screen until dismissed unless told
+        // otherwise (Flutter's default since 3.29) — this one must time out.
+        persist: false,
         action: SnackBarAction(
-          label: 'Dismiss',
+          label: context.l10n.actionDismiss,
           textColor: Colors.white,
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
+          onPressed: messenger.hideCurrentSnackBar,
         ),
       ),
     );
@@ -72,12 +90,13 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
               .where((file) => file.bytes != null && file.name != null)
               .map((file) {
             final tempFile = File(file.name!);
+            // No expiry date unless the user picks one — and only types that use
+            // expiry dates ask for one. (This used to stamp "today + 365 days" on
+            // documents WITHOUT an expiry, which made them show as expired a
+            // year later.)
             return FileUploadItem(
               file: tempFile,
               bytes: file.bytes!,
-              expiryDate: widget.documentType.hasExpiryDate
-                  ? null
-                  : DateTime.now().add(const Duration(days: 365)),
             );
           }).toList();
 
@@ -95,9 +114,6 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
               .map((file) => FileUploadItem(
             file: File(file.path!),
             bytes: null,
-            expiryDate: widget.documentType.hasExpiryDate
-                ? null
-                : DateTime.now().add(const Duration(days: 365)),
           ))
               .toList();
 
@@ -110,7 +126,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
       }
     } catch (e) {
       print('Error picking files: $e');
-      _showToast('Error selecting files: $e', isError: true);
+      _showToast(context.l10n.uploadSelectFilesError('$e'), isError: true);
     }
   }
 
@@ -136,16 +152,16 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
     final extension = filename.split('.').last.toLowerCase();
     switch (extension) {
       case 'pdf':
-        return '📄';
+        return 'ðŸ“„';
       case 'doc':
       case 'docx':
-        return '📃';
+        return 'ðŸ“ƒ';
       case 'jpg':
       case 'jpeg':
       case 'png':
-        return '🖼️';
+        return 'ðŸ–¼ï¸';
       default:
-        return '📎';
+        return 'ðŸ“Ž';
     }
   }
 
@@ -172,20 +188,44 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
     print("DEBUG: specification: ${_specificationController.text}");
 
     if (_uploadItems.isEmpty) {
-      _showToast('Please select files to upload', isError: true);
+      _showToast(context.l10n.uploadSelectFilesFirst, isError: true);
       return;
     }
 
     if (widget.documentType.hasExpiryDate) {
       final missingExpiryDates = _uploadItems.where((item) => item.expiryDate == null).isNotEmpty;
       if (missingExpiryDates) {
-        _showToast('Please select an expiry date for all documents', isError: true);
+        _showToast(context.l10n.uploadSelectExpiryAll, isError: true);
         return;
       }
     }
 
+    if (widget.documentType.requiresSpecification &&
+        _specificationController.text.trim().isEmpty) {
+      _showToast(context.l10n.uploadNeedSpecPlease,
+          isError: true);
+      return;
+    }
+    if (widget.documentType.hasReviewedDate && _reviewedDate == null) {
+      _showToast(context.l10n.uploadNeedReviewedPlease, isError: true);
+      return;
+    }
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+
+    // CRITICAL FIX: Create user with correct companyId for document creation
+    // When admin manages a company, effectiveUser.companyId might be wrong/null
+    // We override it with the effectiveCompany.id to ensure documents go to the right company
+    if (authProvider.effectiveUser == null || authProvider.effectiveCompany == null) {
+      _showToast(context.l10n.uploadNoContext, isError: true);
+      return;
+    }
+
+    final effectiveUserWithCorrectCompany = authProvider.effectiveUser!.copyWith(
+      companyId: authProvider.effectiveCompany!.id,
+    );
+    print('DEBUG: Using companyId: ${authProvider.effectiveCompany!.id} for upload');
 
     setState(() {
       _isUploading = true;
@@ -197,45 +237,20 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
             ? null
             : _specificationController.text.trim();
 
-        if (widget.existingDocumentId != null) {
-          print("DEBUG: Resubmitting document: ${widget.existingDocumentId}");
-
-          List<dynamic> filesToUpload = [];
-          for (var item in _uploadItems) {
-            if (kIsWeb) {
-              if (item.bytes != null) {
-                filesToUpload.add({
-                  'name': item.file.path,
-                  'bytes': item.bytes,
-                });
-              }
-            } else {
-              filesToUpload.add(item.file);
-            }
+        // Always create a NEW document record regardless of whether this is
+        // a re-upload of an expired document. The old document is preserved
+        // as-is in Firestore for history/audit purposes.
+        {
+          if (widget.existingDocumentId != null) {
+            print("DEBUG: Creating new document as renewal (old doc ${widget.existingDocumentId} kept for history)");
+          } else {
+            print("DEBUG: Creating new document");
           }
-
-          final document = await documentProvider.updateDocumentFiles(
-            documentId: widget.existingDocumentId!,
-            files: filesToUpload,
-            user: authProvider.effectiveUser!,
-            expiryDate: widget.documentType.hasExpiryDate
-                ? _uploadItems.first.expiryDate
-                : null,
-            specification: specification,
-          );
-
-          if (document != null && mounted) {
-            _showToast("Document successfully resubmitted", isError: false);
-            Navigator.of(context).pop();
-          } else if (mounted) {
-            _showToast("Failed to resubmit document", isError: true);
-          }
-        } else {
-          print("DEBUG: Creating new document");
 
           int successCount = 0;
           int failCount = 0;
           List<String> failedFiles = [];
+          String? firstNewDocId; // to link the superseded old doc → new version
 
           for (var item in _uploadItems) {
             try {
@@ -250,12 +265,13 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                 print("DEBUG: Uploading web file: ${item.file.path} with expiry date: ${item.expiryDate}");
 
                 final document = await documentProvider.createDocument(
-                  user: authProvider.effectiveUser!,
+                  user: effectiveUserWithCorrectCompany,
                   categoryId: widget.categoryId,
                   documentTypeId: widget.documentType.id,
                   files: [webFile],
                   expiryDate: item.expiryDate,
                   specification: specification,
+                  reviewedDate: _reviewedDate,
                 );
 
                 if (document != null) {
@@ -263,9 +279,10 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                   print("DEBUG: Document expiryDate: ${document.expiryDate}");
                   print("DEBUG: Document specification: ${document.specification}");
                   successCount++;
+                  firstNewDocId ??= document.id;
 
                   if (mounted) {
-                    _showToast("Successfully uploaded: $filename", isError: false);
+                    _showToast(context.l10n.uploadedFileOk(filename), isError: false);
                   }
 
                   if (mounted &&
@@ -280,19 +297,20 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                   failCount++;
                   failedFiles.add(filename);
                   if (mounted) {
-                    _showToast("Failed to upload: $filename", isError: true);
+                    _showToast(context.l10n.uploadedFileFailed(filename), isError: true);
                   }
                 }
               } else {
                 print("DEBUG: Uploading file: ${item.file.path} with expiry date: ${item.expiryDate}");
 
                 final document = await documentProvider.createDocument(
-                  user: authProvider.effectiveUser!,
+                  user: effectiveUserWithCorrectCompany,
                   categoryId: widget.categoryId,
                   documentTypeId: widget.documentType.id,
                   files: [item.file],
                   expiryDate: item.expiryDate,
                   specification: specification,
+                  reviewedDate: _reviewedDate,
                 );
 
                 if (document != null) {
@@ -300,9 +318,10 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                   print("DEBUG: Document expiryDate: ${document.expiryDate}");
                   print("DEBUG: Document specification: ${document.specification}");
                   successCount++;
+                  firstNewDocId ??= document.id;
 
                   if (mounted) {
-                    _showToast("Successfully uploaded: $filename", isError: false);
+                    _showToast(context.l10n.uploadedFileOk(filename), isError: false);
                   }
 
                   if (mounted &&
@@ -317,7 +336,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                   failCount++;
                   failedFiles.add(filename);
                   if (mounted) {
-                    _showToast("Failed to upload: $filename", isError: true);
+                    _showToast(context.l10n.uploadedFileFailed(filename), isError: true);
                   }
                 }
               }
@@ -327,22 +346,32 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
               failCount++;
               failedFiles.add(filename);
               if (mounted) {
-                _showToast("Error uploading: $filename", isError: true);
+                _showToast(context.l10n.uploadedFileError(filename), isError: true);
               }
             }
           }
 
+          // If this upload replaces an existing (e.g. expired/rejected) document,
+          // mark the old one superseded so it drops out of action items while
+          // staying findable in the audit index.
+          if (widget.existingDocumentId != null && successCount > 0) {
+            await documentProvider.supersedeDocument(
+              widget.existingDocumentId!,
+              newDocumentId: firstNewDocId,
+            );
+          }
+
           if (mounted) {
             if (successCount > 0 && failCount == 0) {
-              _showToast("All documents uploaded successfully!", isError: false);
+              _showToast(context.l10n.uploadAllOk, isError: false);
               Navigator.of(context).pop();
             } else if (successCount > 0 && failCount > 0) {
-              _showToast("$successCount uploaded, $failCount failed", isError: true);
+              _showToast(context.l10n.uploadSomeFailed(successCount, failCount), isError: true);
               if (!widget.documentType.requiresSignature) {
                 Navigator.of(context).pop();
               }
             } else if (successCount == 0 && failCount > 0) {
-              _showToast("All uploads failed", isError: true);
+              _showToast(context.l10n.uploadAllFailed, isError: true);
             }
           }
         }
@@ -350,7 +379,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
     } catch (e) {
       print("ERROR during document upload: $e");
       print("ERROR stack trace: ${StackTrace.current}");
-      _showToast('Error uploading documents: $e', isError: true);
+      _showToast(context.l10n.uploadDocsError('$e'), isError: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -394,8 +423,8 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
             const SizedBox(height: 8),
             Text(
               widget.documentType.hasExpiryDate
-                  ? 'Upload documents and set expiry dates for each'
-                  : 'Upload documents for this category',
+                  ? context.l10n.uploadCardSubtitleExpiry
+                  : context.l10n.uploadCardSubtitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey.shade700,
               ),
@@ -404,9 +433,11 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Specification',
-                  style: TextStyle(
+                Text(
+                  widget.documentType.requiresSpecification
+                      ? context.l10n.uploadSpecRequired
+                      : context.l10n.specification,
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -415,7 +446,9 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                 TextField(
                   controller: _specificationController,
                   decoration: InputDecoration(
-                    hintText: 'Enter document specification (optional)',
+                    hintText: widget.documentType.requiresSpecification
+                        ? context.l10n.uploadSpecHintLong
+                        : context.l10n.uploadSpecHintOptional,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -428,6 +461,21 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                   ),
                   maxLines: 2,
                 ),
+                if (widget.documentType.hasReviewedDate) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    context.l10n.dateLastReviewedRequired,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _pickReviewedDate,
+                    icon: const Icon(Icons.fact_check_outlined, size: 18),
+                    label: Text(_reviewedDate == null
+                        ? context.l10n.uploadChooseReviewDate
+                        : DateFormat('d MMM yyyy').format(_reviewedDate!)),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 16),
@@ -467,7 +515,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Tap to select files',
+                        context.l10n.uploadTapToSelect,
                         style: TextStyle(
                           color: Theme.of(context).primaryColor,
                           fontSize: 16,
@@ -476,7 +524,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Supported formats: PDF, JPG, JPEG, PNG, DOC, DOCX',
+                        context.l10n.uploadSupportedFormats,
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 12,
@@ -493,7 +541,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Selected Documents (${_uploadItems.length})',
+                      context.l10n.uploadSelectedDocsTitle(_uploadItems.length),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -502,7 +550,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                     TextButton.icon(
                       onPressed: _pickFiles,
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add More'),
+                      label: Text(context.l10n.actionAddMore),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         shape: RoundedRectangleBorder(
@@ -587,7 +635,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                             Padding(
                               padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
                               child: Text(
-                                "${(item.bytes!.length / 1024).toStringAsFixed(1)} KB",
+                                "${(item.bytes!.length / 1024).toStringAsFixed(1)} KB", // l10n-ignore: unit
                                 style: TextStyle(
                                   color: Colors.grey.shade600,
                                   fontSize: 12,
@@ -627,7 +675,7 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                                         child: Text(
                                           item.expiryDate != null
                                               ? DateFormat('dd/MM/yy').format(item.expiryDate!)
-                                              : 'Set Date',
+                                              : context.l10n.actionSetDate,
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: item.expiryDate != null
@@ -672,8 +720,8 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                       ),
                       const SizedBox(width: 12),
                       Text(_uploadItems.length > 1
-                          ? "Uploading Documents..."
-                          : "Uploading Document..."),
+                          ? context.l10n.uploadingDocs
+                          : context.l10n.uploadingDoc),
                     ],
                   )
                       : Row(
@@ -684,9 +732,9 @@ class _DocumentUploadCardState extends State<DocumentUploadCard> {
                       Text(
                         _uploadItems.isNotEmpty
                             ? (_uploadItems.length > 1
-                            ? "Upload ${_uploadItems.length} Documents"
-                            : "Upload Document")
-                            : "Select and Upload Documents",
+                            ? context.l10n.uploadNDocs(_uploadItems.length)
+                            : context.l10n.uploadOneDoc)
+                            : context.l10n.uploadSelectAndUpload,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

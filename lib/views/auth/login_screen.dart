@@ -1,3 +1,5 @@
+import 'package:cropCompliance/views/shared/language_toggle.dart';
+import 'package:cropCompliance/core/services/push_notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
@@ -5,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'dart:ui';
 import 'package:animate_do/animate_do.dart'; // Add this package to pubspec.yaml
 import '../../providers/auth_provider.dart';
-import '../../core/constants/route_constants.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -16,14 +18,9 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  // Always start empty — never put real or test logins in code.
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  // final _emailController = TextEditingController(text: "alissa@crop-compliance.com");
-  // final _passwordController = TextEditingController(text: "804080");
-  // final _emailController = TextEditingController(text: "nathan@test5.com");
-  // final _passwordController = TextEditingController(text: "123456");
-  // final _emailController = "nathan@test4.com";
-  // final _passwordController = "123456";
   bool _obscurePassword = true;
   bool _rememberMe = true;
   late AnimationController _animationController;
@@ -63,7 +60,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       );
 
       if (success && mounted) {
-        Navigator.of(context).pushReplacementNamed(RouteConstants.dashboard);
+        // Admins → admin dashboard, auditors → Audit Index, everyone else → dashboard
+        Navigator.of(context).pushReplacementNamed(authProvider.homeRoute);
+        // Open any notification the user tapped to launch the app.
+        WidgetsBinding.instance.addPostFrameCallback(
+            (_) => PushNotificationService.instance.markAppReady());
       }
     }
   }
@@ -172,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   ),
                                                   const SizedBox(width: 16),
                                                   const Text(
-                                                    'Crop Compliance',
+                                                    'Crop Compliance', // l10n-ignore: product name
                                                     style: TextStyle(
                                                       color: Colors.white,
                                                       fontSize: 24,
@@ -187,8 +188,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                               // Taglines
                                               FadeInLeft(
                                                 delay: const Duration(milliseconds: 300),
-                                                child: const Text(
-                                                  'Simplified Compliance,',
+                                                child: Text(
+                                                  context.l10n.loginTagline1,
                                                   style: TextStyle(
                                                     color: Colors.white,
                                                     fontSize: 36,
@@ -199,8 +200,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                               ),
                                               FadeInLeft(
                                                 delay: const Duration(milliseconds: 600),
-                                                child: const Text(
-                                                  'Guaranteed Success',
+                                                child: Text(
+                                                  context.l10n.loginTagline2,
                                                   style: TextStyle(
                                                     color: Colors.white,
                                                     fontSize: 36,
@@ -231,7 +232,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                 delay: const Duration(milliseconds: 1200),
                                                 child: _buildFeatureItem(
                                                   Icons.check_circle,
-                                                  'Streamlined document management',
+                                                  context.l10n.loginFeature1,
                                                 ),
                                               ),
                                               const SizedBox(height: 16),
@@ -239,7 +240,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                 delay: const Duration(milliseconds: 1400),
                                                 child: _buildFeatureItem(
                                                   Icons.check_circle,
-                                                  'Real-time compliance tracking',
+                                                  context.l10n.loginFeature2,
                                                 ),
                                               ),
                                               const SizedBox(height: 16),
@@ -247,7 +248,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                 delay: const Duration(milliseconds: 1600),
                                                 child: _buildFeatureItem(
                                                   Icons.check_circle,
-                                                  'Effortless audit preparation',
+                                                  context.l10n.loginFeature3,
                                                 ),
                                               ),
                                               const SizedBox(height: 16),
@@ -255,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                 delay: const Duration(milliseconds: 1800),
                                                 child: _buildFeatureItem(
                                                   Icons.check_circle,
-                                                  'Comprehensive compliance reports',
+                                                  context.l10n.loginFeature4,
                                                 ),
                                               ),
 
@@ -263,8 +264,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                                               FadeInLeft(
                                                 delay: const Duration(milliseconds: 2000),
-                                                child: const Text(
-                                                  '© 2025 Crop Compliance. All rights reserved.',
+                                                child: Text(
+                                                  context.l10n.loginCopyright('${DateTime.now().year}'),
                                                   style: TextStyle(
                                                     color: Colors.white70,
                                                     fontSize: 12,
@@ -309,7 +310,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                         const SizedBox(height: 16),
                                         const Center(
                                           child: Text(
-                                            'Crop Compliance',
+                                            'Crop Compliance', // l10n-ignore: product name
                                             style: TextStyle(
                                               color: Color(0xFF2E7D32),
                                               fontSize: 24,
@@ -324,7 +325,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       FadeInUp(
                                         delay: const Duration(milliseconds: 300),
                                         child: Text(
-                                          isDesktop ? 'Welcome back!' : 'Welcome back!',
+                                          context.l10n.loginWelcomeBack,
                                           style: TextStyle(
                                             fontSize: isDesktop ? 32 : 24,
                                             fontWeight: FontWeight.bold,
@@ -338,7 +339,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                       FadeInUp(
                                         delay: const Duration(milliseconds: 400),
                                         child: Text(
-                                          'Enter your credentials to access your account',
+                                          context.l10n.loginEnterCredentials,
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: Colors.grey[600],
@@ -361,7 +362,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    'Email',
+                                                    context.l10n.fieldEmail,
                                                     style: TextStyle(
                                                       fontWeight: FontWeight.bold,
                                                       color: Colors.grey[700],
@@ -371,7 +372,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   TextFormField(
                                                     controller: _emailController,
                                                     decoration: InputDecoration(
-                                                      hintText: 'Enter your email',
+                                                      hintText: context.l10n.fieldEmailHint,
                                                       prefixIcon: Icon(
                                                         Icons.email_outlined,
                                                         color: Colors.grey[400],
@@ -391,10 +392,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                     textInputAction: TextInputAction.next,
                                                     validator: (value) {
                                                       if (value == null || value.isEmpty) {
-                                                        return 'Please enter your email';
+                                                        return context.l10n.validationEmailRequired;
                                                       }
                                                       if (!value.contains('@')) {
-                                                        return 'Please enter a valid email';
+                                                        return context.l10n.validationEmailInvalid;
                                                       }
                                                       return null;
                                                     },
@@ -412,7 +413,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    'Password',
+                                                    context.l10n.fieldPassword,
                                                     style: TextStyle(
                                                       fontWeight: FontWeight.bold,
                                                       color: Colors.grey[700],
@@ -422,7 +423,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                   TextFormField(
                                                     controller: _passwordController,
                                                     decoration: InputDecoration(
-                                                      hintText: 'Enter your password',
+                                                      hintText: context.l10n.fieldPasswordHint,
                                                       prefixIcon: Icon(
                                                         Icons.lock_outline,
                                                         color: Colors.grey[400],
@@ -455,7 +456,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                     textInputAction: TextInputAction.done,
                                                     validator: (value) {
                                                       if (value == null || value.isEmpty) {
-                                                        return 'Please enter your password';
+                                                        return context.l10n.validationPasswordRequired;
                                                       }
                                                       return null;
                                                     },
@@ -492,7 +493,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                       ),
                                                       const SizedBox(width: 8),
                                                       Text(
-                                                        'Remember me',
+                                                        context.l10n.loginRememberMe,
                                                         style: TextStyle(
                                                           color: Colors.grey[700],
                                                           fontSize: 14,
@@ -501,16 +502,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                     ],
                                                   ),
                                                   TextButton(
-                                                    onPressed: () {
-                                                      // Handle forgot password
-                                                    },
+                                                    onPressed: _showForgotPasswordDialog,
                                                     style: TextButton.styleFrom(
                                                       foregroundColor: const Color(0xFF2E7D32),
                                                       padding: EdgeInsets.zero,
                                                       minimumSize: const Size(0, 0),
                                                     ),
-                                                    child: const Text(
-                                                      'Forgot Password?',
+                                                    child: Text(
+                                                      context.l10n.loginForgotPassword,
                                                       style: TextStyle(
                                                         fontWeight: FontWeight.bold,
                                                       ),
@@ -546,8 +545,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                                       strokeWidth: 3,
                                                     ),
                                                   )
-                                                      : const Text(
-                                                    'Sign In',
+                                                      : Text(
+                                                    context.l10n.signIn,
                                                     style: TextStyle(
                                                       fontSize: 16,
                                                       fontWeight: FontWeight.bold,
@@ -599,14 +598,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                               child: Center(
                                                 child: RichText(
                                                   text: TextSpan(
-                                                    text: 'Don\'t have an account? ',
+                                                    text: context.l10n.loginNoAccount,
                                                     style: TextStyle(
                                                       color: Colors.grey[700],
                                                       fontSize: 14,
                                                     ),
                                                     children: [
                                                       TextSpan(
-                                                        text: 'Contact Support',
+                                                        text: context.l10n.loginContactSupport,
                                                         style: TextStyle(
                                                           color: const Color(0xFF2E7D32),
                                                           fontWeight: FontWeight.bold,
@@ -634,6 +633,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
             ),
           ),
+          // Language: choose English / Afrikaans before signing in.
+          const Positioned(
+            top: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: LanguageToggle(compact: true),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -658,6 +668,106 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    final emailCtrl = TextEditingController(text: _emailController.text.trim());
+    bool sending = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Row(
+            children: [
+              const Icon(Icons.lock_reset_outlined, color: Color(0xFF2E7D32)),
+              const SizedBox(width: 10),
+              Expanded(child: Text(context.l10n.resetPasswordTitle)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.resetPasswordBody,
+                style: TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: context.l10n.fieldEmail,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Text(
+                  context.l10n.resetPasswordSpamHint,
+                  style: TextStyle(fontSize: 11.5, color: Colors.amber.shade900),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: sending ? null : () => Navigator.pop(ctx),
+              child: Text(context.l10n.commonCancel),
+            ),
+            FilledButton.icon(
+              onPressed: sending
+                  ? null
+                  : () async {
+                      final email = emailCtrl.text.trim();
+                      if (email.isEmpty || !email.contains('@')) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(
+                              content: Text(context.l10n.validationEmailValidAddress)),
+                        );
+                        return;
+                      }
+                      setDialogState(() => sending = true);
+                      final authProvider =
+                          Provider.of<AuthProvider>(context, listen: false);
+                      final ok = await authProvider.resetPassword(email);
+                      if (!ctx.mounted || !mounted) return;
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(ok
+                              ? context.l10n.resetPasswordSent(email)
+                              : context.l10n.resetPasswordFailed),
+                          backgroundColor:
+                              ok ? const Color(0xFF2E7D32) : Colors.red,
+                          duration: const Duration(seconds: 6),
+                        ),
+                      );
+                    },
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF2E7D32)),
+              icon: sending
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child:
+                          CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.send_outlined, size: 16),
+              label: Text(context.l10n.resetPasswordSend),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
-import '../../models/enums.dart';
-import '../../core/constants/route_constants.dart';
+import '../../core/utils/session_actions.dart';
+import 'admin_farm_chip.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -26,7 +27,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return AppBar(
-      title: Text(title),
+      // Admins with a farm open see the orange farm badge (switch / ×)
+      // under the title.
+      title: TitleWithAdminFarm(title: Text(title)),
       automaticallyImplyLeading: showBackButton,
       actions: [
         if (actions != null) ...actions!,
@@ -44,30 +47,29 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'logout') {
-                authProvider.logout();
-                Navigator.of(context).pushReplacementNamed(RouteConstants.login);
+                signOutAndReset(context);
               } else if (value == 'profile') {
                 // Navigate to profile
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'profile',
                 child: Row(
                   children: [
-                    Icon(Icons.person),
-                    SizedBox(width: 8),
-                    Text('Profile'),
+                    const Icon(Icons.person),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.navProfile),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout),
-                    SizedBox(width: 8),
-                    Text('Logout'),
+                    const Icon(Icons.logout),
+                    const SizedBox(width: 8),
+                    Text(context.l10n.logout),
                   ],
                 ),
               ),

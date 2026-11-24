@@ -7,6 +7,7 @@ import '../../../models/category_model.dart';
 import '../../../models/document_type_model.dart';
 import '../../../models/document_model.dart';
 import '../../../models/enums.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DocumentStatusTable extends StatelessWidget {
   const DocumentStatusTable({Key? key}) : super(key: key);
@@ -19,7 +20,7 @@ class DocumentStatusTable extends StatelessWidget {
     final isMobile = MediaQuery.of(context).size.width < 650;
 
     if (categories.isEmpty) {
-      return const Center(child: Text('No documents found'));
+      return Center(child: Text(context.l10n.docsNoneFound));
     }
 
     return ListView.separated(
@@ -112,7 +113,7 @@ class DocumentStatusTable extends StatelessWidget {
       DocumentModel? document,
       bool isLastInCategory,
       ) {
-    final status = _getDocumentStatus(document);
+    final status = _getDocumentStatus(context, document);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -188,7 +189,7 @@ class DocumentStatusTable extends StatelessWidget {
       DocumentModel? document,
       bool isLastInCategory,
       ) {
-    final status = _getDocumentStatus(document);
+    final status = _getDocumentStatus(context, document);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -233,8 +234,8 @@ class DocumentStatusTable extends StatelessWidget {
           // Status badge
           Row(
             children: [
-              const Text(
-                'Status: ',
+              Text(
+                context.l10n.statusLabelColon,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -271,7 +272,7 @@ class DocumentStatusTable extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Updated: ${DateFormat('MMM d, yyyy').format(document.updatedAt)}',
+                  context.l10n.updatedOn(DateFormat('MMM d, yyyy').format(document.updatedAt)),
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.grey.shade600,
@@ -282,7 +283,7 @@ class DocumentStatusTable extends StatelessWidget {
           ],
 
           // Expiry date if available
-          if (document?.expiryDate != null) ...[
+          if (document?.effectiveExpiryDate != null) ...[
             const SizedBox(height: 6),
             Row(
               children: [
@@ -293,7 +294,7 @@ class DocumentStatusTable extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Expires: ${DateFormat('MMM d, yyyy').format(document.expiryDate!)}',
+                  context.l10n.expiresOn(DateFormat('MMM d, yyyy').format(document.effectiveExpiryDate!)),
                   style: TextStyle(
                     fontSize: 11,
                     color: document.isExpired ? Colors.red.shade600 : Colors.grey.shade600,
@@ -308,24 +309,26 @@ class DocumentStatusTable extends StatelessWidget {
     );
   }
 
-  Map<String, dynamic> _getDocumentStatus(DocumentModel? document) {
+  Map<String, dynamic> _getDocumentStatus(
+      BuildContext context, DocumentModel? document) {
+    final l10n = context.l10n;
     if (document == null) {
       return {
-        'label': 'Not Uploaded',
+        'label': l10n.statusNotUploaded,
         'color': Colors.grey.shade400,
       };
     }
 
     if (document.isNotApplicable) {
       return {
-        'label': 'N/A',
+        'label': l10n.statusNotApplicable,
         'color': Colors.grey.shade400,
       };
     }
 
     if (document.isExpired) {
       return {
-        'label': 'Expired',
+        'label': l10n.statusExpired,
         'color': Colors.red.shade300,
       };
     }
@@ -333,17 +336,17 @@ class DocumentStatusTable extends StatelessWidget {
     switch (document.status) {
       case DocumentStatus.APPROVED:
         return {
-          'label': 'Approved',
+          'label': l10n.statusApproved,
           'color': const Color(0xFF43A047),
         };
       case DocumentStatus.PENDING:
         return {
-          'label': 'Pending',
+          'label': l10n.statusPending,
           'color': Colors.orange.shade500,
         };
       case DocumentStatus.REJECTED:
         return {
-          'label': 'Rejected',
+          'label': l10n.statusRejected,
           'color': Colors.red.shade300,
         };
     }

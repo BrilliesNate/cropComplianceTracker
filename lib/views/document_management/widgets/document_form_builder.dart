@@ -1,5 +1,6 @@
 import 'package:cropCompliance/models/document_type_model.dart';
 import 'package:flutter/material.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DocumentFormBuilder extends StatefulWidget {
   final DocumentTypeModel documentType;
@@ -52,7 +53,7 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: fields.map<Widget>((field) {
             // Extract field properties
-            final String label = field['label'] ?? 'Untitled Field';
+            final String label = field['label'] ?? context.l10n.formUntitledField;
             final String type = field['type'] ?? 'text';
             final String fieldKey = field['key'] ?? label.toLowerCase().replaceAll(' ', '_');
 
@@ -64,13 +65,13 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
                 return _buildTextField(
                     fieldKey,
                     label,
-                    field['placeholder'] ?? 'Enter $label'
+                    field['placeholder'] ?? context.l10n.formEnterField(label)
                 );
               case 'textarea':
                 return _buildMultilineTextField(
                     fieldKey,
                     label,
-                    field['placeholder'] ?? 'Enter $label'
+                    field['placeholder'] ?? context.l10n.formEnterField(label)
                 );
               case 'date':
                 return _buildDateField(fieldKey, label);
@@ -81,11 +82,11 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
                       .toList();
                   return _buildDropdownField(fieldKey, label, options);
                 }
-                return _buildTextField(fieldKey, label, 'No options provided');
+                return _buildTextField(fieldKey, label, context.l10n.formNoOptions);
               case 'checkbox':
                 return _buildCheckboxField(fieldKey, label);
               default:
-                return _buildTextField(fieldKey, label, 'Enter $label');
+                return _buildTextField(fieldKey, label, context.l10n.formEnterField(label));
             }
           }).toList(),
         );
@@ -93,14 +94,14 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
 
       // If configJson doesn't have fields, return a message
       print("Invalid form configuration: ${configJson is Map ? 'Missing fields key' : 'configJson is not a Map'}");
-      return const Center(
-        child: Text('Invalid form configuration: missing fields'),
+      return Center(
+        child: Text(context.l10n.formInvalidConfig),
       );
     } catch (e) {
       // If any error occurs, log it and return a message
       print('Error building dynamic form: $e');
       return Center(
-        child: Text('Error building form: $e'),
+        child: Text(context.l10n.formBuildError('$e')),
       );
     }
   }
@@ -130,37 +131,43 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
       children: [
         _buildTextField(
           'contractName',
-          'Contract Name',
-          'Enter the name of the contract',
+          context.l10n.formContractName,
+          context.l10n.formContractNameHint,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           'contractNumber',
-          'Contract Number',
-          'Enter the contract reference number',
+          context.l10n.formContractNumber,
+          context.l10n.formContractNumberHint,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           'counterparty',
-          'Counterparty',
-          'Enter the name of the other party',
+          context.l10n.formCounterparty,
+          context.l10n.formCounterpartyHint,
         ),
         const SizedBox(height: 16),
         _buildDateField(
           'effectiveDate',
-          'Effective Date',
+          context.l10n.formEffectiveDate,
         ),
         const SizedBox(height: 16),
         _buildDropdownField(
           'status',
-          'Contract Status',
-          ['Active', 'Pending', 'Terminated', 'Expired'],
+          context.l10n.formContractStatus,
+          ['Active', 'Pending', 'Terminated', 'Expired'], // l10n-ignore: stored values
+          display: {
+            'Active': context.l10n.formOptActive, // l10n-ignore: stored value
+            'Pending': context.l10n.formOptPending, // l10n-ignore: stored value
+            'Terminated': context.l10n.formOptTerminated, // l10n-ignore: stored value
+            'Expired': context.l10n.formOptExpired, // l10n-ignore: stored value
+          },
         ),
         const SizedBox(height: 16),
         _buildMultilineTextField(
           'description',
-          'Description',
-          'Enter a description of the contract',
+          context.l10n.fieldDescription,
+          context.l10n.formContractDescHint,
         ),
       ],
     );
@@ -172,36 +179,36 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
       children: [
         _buildTextField(
           'certificationName',
-          'Certification Name',
-          'Enter the name of the certification',
+          context.l10n.formCertName,
+          context.l10n.formCertNameHint,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           'certificationNumber',
-          'Certification Number',
-          'Enter the certification reference number',
+          context.l10n.formCertNumber,
+          context.l10n.formCertNumberHint,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           'issuingAuthority',
-          'Issuing Authority',
-          'Enter the name of the issuing authority',
+          context.l10n.formIssuingAuthority,
+          context.l10n.formIssuingAuthorityHint,
         ),
         const SizedBox(height: 16),
         _buildDateField(
           'issueDate',
-          'Issue Date',
+          context.l10n.formIssueDate,
         ),
         const SizedBox(height: 16),
         _buildCheckboxField(
           'hasRestrictions',
-          'Has Restrictions',
+          context.l10n.formHasRestrictions,
         ),
         const SizedBox(height: 16),
         _buildMultilineTextField(
           'notes',
-          'Notes',
-          'Enter any additional notes',
+          context.l10n.formNotes,
+          context.l10n.formNotesHint,
         ),
       ],
     );
@@ -213,37 +220,43 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
       children: [
         _buildTextField(
           'inspectionLocation',
-          'Inspection Location',
-          'Enter the location that was inspected',
+          context.l10n.formInspectionLocation,
+          context.l10n.formInspectionLocationHint,
         ),
         const SizedBox(height: 16),
         _buildDateField(
           'inspectionDate',
-          'Inspection Date',
+          context.l10n.formInspectionDate,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           'inspector',
-          'Inspector',
-          'Enter the name of the inspector',
+          context.l10n.formInspector,
+          context.l10n.formInspectorHint,
         ),
         const SizedBox(height: 16),
         _buildDropdownField(
           'result',
-          'Inspection Result',
-          ['Pass', 'Pass with Conditions', 'Fail', 'Incomplete'],
+          context.l10n.formInspectionResult,
+          ['Pass', 'Pass with Conditions', 'Fail', 'Incomplete'], // l10n-ignore: stored values
+          display: {
+            'Pass': context.l10n.formOptPass, // l10n-ignore: stored value
+            'Pass with Conditions': context.l10n.formOptPassConditions, // l10n-ignore: stored value
+            'Fail': context.l10n.formOptFail, // l10n-ignore: stored value
+            'Incomplete': context.l10n.formOptIncomplete, // l10n-ignore: stored value
+          },
         ),
         const SizedBox(height: 16),
         _buildMultilineTextField(
           'findings',
-          'Findings',
-          'Enter inspection findings',
+          context.l10n.formFindings,
+          context.l10n.formFindingsHint,
         ),
         const SizedBox(height: 16),
         _buildMultilineTextField(
           'recommendations',
-          'Recommendations',
-          'Enter recommendations',
+          context.l10n.formRecommendations,
+          context.l10n.formRecommendationsHint,
         ),
       ],
     );
@@ -255,42 +268,48 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
       children: [
         _buildTextField(
           'assessmentTitle',
-          'Assessment Title',
-          'Enter the title of this risk assessment',
+          context.l10n.formAssessmentTitle,
+          context.l10n.formAssessmentTitleHint,
         ),
         const SizedBox(height: 16),
         _buildDateField(
           'assessmentDate',
-          'Assessment Date',
+          context.l10n.formAssessmentDate,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           'assessor',
-          'Assessor',
-          'Enter the name of the assessor',
+          context.l10n.formAssessor,
+          context.l10n.formAssessorHint,
         ),
         const SizedBox(height: 16),
         _buildDropdownField(
           'riskLevel',
-          'Overall Risk Level',
-          ['Low', 'Medium', 'High', 'Critical'],
+          context.l10n.formOverallRisk,
+          ['Low', 'Medium', 'High', 'Critical'], // l10n-ignore: stored values
+          display: {
+            'Low': context.l10n.formOptLow, // l10n-ignore: stored value
+            'Medium': context.l10n.formOptMedium, // l10n-ignore: stored value
+            'High': context.l10n.formOptHigh, // l10n-ignore: stored value
+            'Critical': context.l10n.formOptCritical, // l10n-ignore: stored value
+          },
         ),
         const SizedBox(height: 16),
         _buildMultilineTextField(
           'hazards',
-          'Identified Hazards',
-          'List the identified hazards',
+          context.l10n.formHazards,
+          context.l10n.formHazardsHint,
         ),
         const SizedBox(height: 16),
         _buildMultilineTextField(
           'controls',
-          'Control Measures',
-          'List the control measures',
+          context.l10n.formControlMeasures,
+          context.l10n.formControlMeasuresHint,
         ),
         const SizedBox(height: 16),
         _buildCheckboxField(
           'requiresFollowUp',
-          'Requires Follow-up',
+          context.l10n.formRequiresFollowUp,
         ),
       ],
     );
@@ -302,25 +321,25 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
       children: [
         _buildTextField(
           'title',
-          'Title',
-          'Enter a title',
+          context.l10n.formTitle,
+          context.l10n.formTitleHint,
         ),
         const SizedBox(height: 16),
         _buildTextField(
           'reference',
-          'Reference',
-          'Enter a reference number',
+          context.l10n.reference,
+          context.l10n.formReferenceHint,
         ),
         const SizedBox(height: 16),
         _buildDateField(
           'documentDate',
-          'Document Date',
+          context.l10n.formDocumentDate,
         ),
         const SizedBox(height: 16),
         _buildMultilineTextField(
           'notes',
-          'Notes',
-          'Enter any additional notes',
+          context.l10n.formNotes,
+          context.l10n.formNotesHint,
         ),
       ],
     );
@@ -427,7 +446,7 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
                   child: Text(
                     selectedDate != null
                         ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
-                        : 'Select a date',
+                        : context.l10n.formSelectDate,
                   ),
                 ),
                 const Icon(Icons.calendar_today),
@@ -439,11 +458,14 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
     );
   }
 
+  /// [options] are the values stored on the document; [display] (optional)
+  /// shows them in the app language.
   Widget _buildDropdownField(
       String fieldKey,
       String label,
-      List<String> options,
-      ) {
+      List<String> options, {
+      Map<String, String>? display,
+      }) {
     String? selectedValue;
 
     return Column(
@@ -464,7 +486,7 @@ class _DocumentFormBuilderState extends State<DocumentFormBuilder> {
           items: options.map((option) {
             return DropdownMenuItem<String>(
               value: option,
-              child: Text(option),
+              child: Text(display?[option] ?? option),
             );
           }).toList(),
           onChanged: (value) {

@@ -40,12 +40,13 @@ PayslipModel buildTimesheetPayslip({
 }) {
   final rate = employee.normalHourlyRate;
   final keptEarnings = (existing?.additionalEarnings ?? const [])
-      .where((e) => !isTimesheetLine(e.description))
+      .where((e) => !e.generated && !isTimesheetLine(e.description))
       .toList();
   final earnings = [
     ...keptEarnings,
     for (final e in figures.earnings)
-      AdditionalEarning(description: e.description, amount: e.amount),
+      AdditionalEarning(
+          description: e.description, amount: e.amount, generated: true),
   ];
 
   PayslipModel build(double paye, bool auto) => PayslipModel(
@@ -64,14 +65,17 @@ PayslipModel buildTimesheetPayslip({
         payDate: existing?.payDate ?? period.end,
         normalHours: figures.normalHours,
         overtimeHours: figures.overtimeHours,
-        doubleTimeHours: 0,
+        // Sunday work: double the ordinary wage (SD13).
+        doubleTimeHours: figures.sundayHours,
         publicHolidayHours: figures.publicHolidayHours,
         sickLeaveHours: sickLeaveHours ?? figures.sickLeaveHours,
         holidayLeaveHours: holidayLeaveHours ?? figures.holidayLeaveHours,
         familyLeaveHours: existing?.familyLeaveHours ?? 0,
         normalRate: rate,
         overtimeRate: figures.overtimeRate ?? existing?.overtimeRate ?? 0,
-        doubleTimeRate: existing?.doubleTimeRate ?? 0,
+        doubleTimeRate: figures.sundayHours > 0
+            ? rate * 2
+            : (existing?.doubleTimeRate ?? 0),
         additionalDeductions: existing?.additionalDeductions ?? const [],
         additionalEarnings: earnings,
         payeDeduction: paye,

@@ -9,6 +9,7 @@ import 'package:cropCompliance/views/shared/loading_indicator.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DocumentUploadScreen extends StatefulWidget {
   final String categoryId;
@@ -47,18 +48,18 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
 
     if (categoryProvider.isLoading) {
       return Scaffold(
-        appBar: const CustomAppBar(
-          title: 'Upload Document',
+        appBar: CustomAppBar(
+          title: context.l10n.uploadOneDoc,
           showBackButton: true,
         ),
-        body: const LoadingIndicator(message: 'Loading document type...'),
+        body: LoadingIndicator(message: context.l10n.docTypeLoading),
       );
     }
 
     if (categoryProvider.error != null) {
       return Scaffold(
-        appBar: const CustomAppBar(
-          title: 'Upload Document',
+        appBar: CustomAppBar(
+          title: context.l10n.uploadOneDoc,
           showBackButton: true,
         ),
         body: ErrorDisplay(
@@ -74,7 +75,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
       orElse: () => DocumentTypeModel(
         id: '',
         categoryId: '',
-        name: 'Unknown Document Type',
+        name: context.l10n.unknownDocumentType,
         allowMultipleDocuments: false,
         isUploadable: true,
         hasExpiryDate: false,
@@ -86,19 +87,19 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
 
     if (documentType.id.isEmpty) {
       return Scaffold(
-        appBar: const CustomAppBar(
-          title: 'Upload Document',
+        appBar: CustomAppBar(
+          title: context.l10n.uploadOneDoc,
           showBackButton: true,
         ),
-        body: const Center(
-          child: Text('Document type not found'),
+        body: Center(
+          child: Text(context.l10n.docTypeNotFound),
         ),
       );
     }
 
     return Scaffold(
       appBar: CustomAppBar(
-        title: 'Upload ${documentType.name}',
+        title: context.l10n.actionUploadType(documentType.name),
         showBackButton: true,
       ),
       body: SingleChildScrollView(

@@ -4,6 +4,7 @@ import 'package:cropCompliance/models/document_model.dart';
 import 'package:cropCompliance/models/enums.dart';
 import 'package:cropCompliance/providers/document_provider.dart';
 import 'package:cropCompliance/theme/theme_constants.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DashboardDocumentsTable extends StatefulWidget {
   final DocumentProvider documentProvider;
@@ -31,8 +32,12 @@ class _DashboardDocumentsTableState extends State<DashboardDocumentsTable> {
     // Check if mobile
     final isMobile = MediaQuery.of(context).size.width < 650;
 
-    // Get and sort documents
-    List<DocumentModel> documents = List.from(widget.documentProvider.documents.cast<DocumentModel>());
+    // Get documents, excluding any that belong to deactivated document types
+    final activeDocTypeIds = widget.documentProvider.documentTypes.map((dt) => dt.id).toSet();
+    List<DocumentModel> documents = widget.documentProvider.documents
+        .where((doc) => activeDocTypeIds.contains(doc.documentTypeId))
+        .toList()
+        .cast<DocumentModel>();
 
     // Apply sorting
     documents.sort((a, b) {
@@ -42,8 +47,8 @@ class _DashboardDocumentsTableState extends State<DashboardDocumentsTable> {
           comparison = a.status.index.compareTo(b.status.index);
           break;
         case 'expiry':
-          final aExpiry = a.expiryDate ?? DateTime(2100);
-          final bExpiry = b.expiryDate ?? DateTime(2100);
+          final aExpiry = a.effectiveExpiryDate ?? DateTime(2100);
+          final bExpiry = b.effectiveExpiryDate ?? DateTime(2100);
           comparison = aExpiry.compareTo(bExpiry);
           break;
         case 'updated':
@@ -78,12 +83,12 @@ class _DashboardDocumentsTableState extends State<DashboardDocumentsTable> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Documents',
+                Text(
+                  context.l10n.documentsTitle,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '${documents.length} total',
+                  context.l10n.docsTotalCount(documents.length),
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
@@ -105,22 +110,22 @@ class _DashboardDocumentsTableState extends State<DashboardDocumentsTable> {
                 children: [
                   Expanded(
                     flex: 4,
-                    child: Text('Document Type',
+                    child: Text(context.l10n.colDocumentType,
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[700])),
                   ),
                   Expanded(
                     flex: 2,
-                    child: _buildSortableHeader('Status', 'status'),
+                    child: _buildSortableHeader(context.l10n.colStatus, 'status'),
                   ),
                   // Hide "Updated" column on mobile
                   if (!isMobile)
                     Expanded(
                       flex: 2,
-                      child: _buildSortableHeader('Updated', 'updated'),
+                      child: _buildSortableHeader(context.l10n.colUpdated, 'updated'),
                     ),
                   Expanded(
                     flex: 2,
-                    child: _buildSortableHeader('Expires', 'expiry'),
+                    child: _buildSortableHeader(context.l10n.colExpires, 'expiry'),
                   ),
                 ],
               ),
@@ -137,7 +142,7 @@ class _DashboardDocumentsTableState extends State<DashboardDocumentsTable> {
                 children: [
                   Icon(Icons.description_outlined, size: 48, color: Colors.grey[400]),
                   const SizedBox(height: 8),
-                  Text('No documents found', style: TextStyle(color: Colors.grey[600])),
+                  Text(context.l10n.docsNoneFound, style: TextStyle(color: Colors.grey[600])),
                 ],
               ),
             ),
@@ -166,7 +171,7 @@ class _DashboardDocumentsTableState extends State<DashboardDocumentsTable> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Page $_currentPage of $totalPages',
+                    context.l10n.pageOf(_currentPage, totalPages),
                     style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                   ),
                   Row(
@@ -234,27 +239,27 @@ class _DashboardDocumentsTableState extends State<DashboardDocumentsTable> {
   Widget _buildDocumentRow(BuildContext context, DocumentModel doc, int index, bool isMobile) {
     // Find the document type name
     final docType = widget.documentProvider.documentTypes
-        .firstWhere((type) => type.id == doc.documentTypeId, orElse: () => throw Exception('Type not found'));
+        .firstWhere((type) => type.id == doc.documentTypeId, orElse: () => widget.documentProvider.getDocumentTypeById(doc.documentTypeId)!);
     final documentTypeName = docType.name;
 
     final isSelected = widget.selectedDocumentId == doc.id;
 
     // Check if document is expiring soon (within 30 days)
-    final isExpiringSoon = doc.expiryDate != null &&
-        doc.expiryDate!.difference(DateTime.now()).inDays <= 30 &&
-        doc.expiryDate!.isAfter(DateTime.now());
+    final isExpiringSoon = doc.effectiveExpiryDate != null &&
+        doc.effectiveExpiryDate!.difference(DateTime.now()).inDays <= 30 &&
+        doc.effectiveExpiryDate!.isAfter(DateTime.now());
 
     // Status widget
     Widget statusWidget;
     switch (doc.status) {
       case DocumentStatus.APPROVED:
-        statusWidget = _buildCompactStatus(Colors.green, 'Approved');
+        statusWidget = _buildCompactStatus(Colors.green, context.l10n.statusApproved);
         break;
       case DocumentStatus.PENDING:
-        statusWidget = _buildCompactStatus(Colors.orange, 'Pending');
+        statusWidget = _buildCompactStatus(Colors.orange, context.l10n.statusPending);
         break;
       case DocumentStatus.REJECTED:
-        statusWidget = _buildCompactStatus(Colors.red, 'Rejected');
+        statusWidget = _buildCompactStatus(Colors.red, context.l10n.statusRejected);
         break;
     }
 
@@ -303,7 +308,7 @@ class _DashboardDocumentsTableState extends State<DashboardDocumentsTable> {
             // Expiry Date
             Expanded(
               flex: 2,
-              child: doc.expiryDate != null
+              child: doc.effectiveExpiryDate != null
                   ? Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -312,7 +317,7 @@ class _DashboardDocumentsTableState extends State<DashboardDocumentsTable> {
                   if (isExpiringSoon) const SizedBox(width: 4),
                   Flexible(
                     child: Text(
-                      DateFormat('MMM d, yy').format(doc.expiryDate!),
+                      DateFormat('MMM d, yy').format(doc.effectiveExpiryDate!),
                       style: TextStyle(
                         fontSize: 12,
                         color: isExpiringSoon ? Colors.orange : Colors.grey[700],

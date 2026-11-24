@@ -1,10 +1,19 @@
+import 'package:cropCompliance/models/enums.dart';
+import 'package:cropCompliance/views/shared/language_toggle.dart';
+import 'package:cropCompliance/views/shared/admin_farm_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/document_provider.dart';
 import '../../providers/route_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../core/services/push_notification_service.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/constants/route_constants.dart';
+import '../../core/utils/session_actions.dart';
+import '../../models/company_model.dart';
 import '../../models/user_model.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class AppScaffoldWrapper extends StatefulWidget {
   final Widget child;
@@ -51,31 +60,26 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
   // Menu items
   final List<Map<String, dynamic>> _menuItems = [
     {
-      'title': 'Dashboard',
       'icon': Icons.grid_view,
       'route': RouteConstants.dashboard,
       'adminOnly': false,
     },
     {
-      'title': 'Compliance Tracker',
       'icon': Icons.track_changes,
       'route': RouteConstants.auditTracker,
       'adminOnly': false,
     },
     {
-      'title': 'Compliance Report',
       'icon': Icons.bar_chart,
       'route': RouteConstants.complianceReport,
       'adminOnly': false,
     },
     {
-      'title': 'Audit Index',
       'icon': Icons.folder_outlined,
       'route': RouteConstants.auditIndex,
       'adminOnly': false,
     },
     {
-      'title': 'Payslip Manager',
       'icon': Icons.receipt_long_outlined,
       'route': RouteConstants.payslipManager,
       'adminOnly': false,
@@ -85,25 +89,29 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
   // Admin menu items
   final List<Map<String, dynamic>> _adminMenuItems = [
     {
-      'title': 'User Management',
       'icon': Icons.people_outline,
       'route': RouteConstants.userManagement,
     },
     {
-      'title': 'Category Management',
       'icon': Icons.category_outlined,
       'route': RouteConstants.categoryManagement,
     },
 
     {
-      'title': 'override',
-      'icon': Icons.category_outlined,
+      'icon': Icons.toggle_on_outlined,
       'route': RouteConstants.overrid,
     },
     {
-      'title': 'Company Management',
       'icon': Icons.business_outlined,
       'route': RouteConstants.companyManagement,
+    },
+    {
+      'icon': Icons.build_outlined,
+      'route': RouteConstants.dataFixUtility,
+    },
+    {
+      'icon': Icons.eco_outlined,
+      'route': RouteConstants.farmableConsole,
     },
   ];
 
@@ -112,9 +120,23 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
     final authProvider = Provider.of<AuthProvider>(context);
     final routeProvider = Provider.of<RouteProvider>(context);
 
+    // Keep the notification listener bound to the signed-in user.
+    // start() is idempotent — it only re-subscribes if the user changed.
+    // Auditors get no notifications (and no push registration) at all.
+    final uid = authProvider.currentUser?.id;
+    if (uid != null && !authProvider.isAuditer) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Provider.of<NotificationProvider>(context, listen: false).start(uid);
+          PushNotificationService.instance.init(uid);
+        }
+      });
+    }
+
     final isLargeScreen = MediaQuery.of(context).size.width > 1100;
     final isMediumScreen = MediaQuery.of(context).size.width > 800 && MediaQuery.of(context).size.width <= 1100;
     final primaryColor = Theme.of(context).primaryColor;
+    final isPhone = MediaQuery.of(context).size.width < 650;
 
     // Determine the effective sidebar width
     double effectiveSidebarWidth = 0;
@@ -148,57 +170,29 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
             widget.title,
             style: const TextStyle(color: Colors.white),
           ),
-          // Selected user indicator in app bar for mobile/tablet
-          // Selected user indicator in app bar - SHOW ON ALL SCREENS
-          // Selected user indicator in app bar - SHOW ON ALL SCREENS
-          if (authProvider.isAdmin && authProvider.selectedUser != null) ...[
+          // Admin with a farm open: the orange farm badge (tap name to
+          // switch farm, × for all farms). On phones it gets its own strip
+          // under the title instead (see `bottom:`), where it has room.
+          if (!isPhone && adminFarmOpen(authProvider)) ...[
             const SizedBox(width: 8),
-            Flexible(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade600,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white, width: 1),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.person, color: Colors.white, size: 16),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        'Managing: ${authProvider.selectedUser!.name}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    InkWell(
-                      onTap: () async {
-                        authProvider.clearUserSelection();
-                        // Refresh documents for the admin's own account
-                        final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
-                        await documentProvider.refreshForUserContext(context);
-                      },
-                      child: const Icon(Icons.close, color: Colors.white, size: 18),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            const Flexible(child: AdminFarmChip(compact: true)),
           ],
         ],
       ),
+      bottom: isPhone ? adminFarmAppBarBottom(context) : null,
       elevation: 0,
       backgroundColor: primaryColor,
       automaticallyImplyLeading: false,
-      actions: widget.actions,
+      actions: [
+        if (authProvider.canSwitchCompany) _buildFarmSwitcher(context, authProvider),
+        if (!authProvider.isAuditer) _buildNotificationBell(context),
+        if (widget.actions != null) ...widget.actions!,
+        // English / Afrikaans
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8),
+          child: Center(child: LanguageToggle(compact: true, onDark: true)),
+        ),
+      ],
     );
 
     return Scaffold(
@@ -222,7 +216,11 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                     duration: const Duration(milliseconds: 200),
                     width: effectiveSidebarWidth,
                     color: Colors.white,
-                    child: Column(
+                    child: Material(
+                      // ListTiles paint on the nearest Material; the coloured container
+                      // above would hide their selection/hover effects.
+                      type: MaterialType.transparency,
+                      child: Column(
                       children: [
                         // Banner image
                         ClipRRect(
@@ -278,13 +276,13 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                             padding: EdgeInsets.zero,
                             child: Column(
                               children: [
-                                ..._menuItems.map((item) {
+                                ..._visibleMenuItems(authProvider).map((item) {
                                   final bool isSelected = routeProvider.activeRoute == item['route'];
 
                                   return _buildMenuItem(
                                     context,
                                     item['icon'],
-                                    item['title'],
+                                    _menuTitle(context, item['route'] as String),
                                     item['route'],
                                     isSelected,
                                     _isSidebarCollapsed,
@@ -294,6 +292,50 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                                     },
                                   );
                                 }).toList(),
+
+                                // Farmable section — only shown when company has a linked farm
+                                if (!authProvider.isAuditer && authProvider.effectiveCompany?.hasFarmable == true) ...[
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          context.l10n.menuFarmableSection,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.grey[500],
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  _buildMenuItem(
+                                    context,
+                                    Icons.map_outlined,
+                                    context.l10n.menuFarmRegister,
+                                    RouteConstants.farmRegister,
+                                    routeProvider.activeRoute == RouteConstants.farmRegister,
+                                    _isSidebarCollapsed,
+                                    onTap: () {
+                                      routeProvider.setActiveRoute(RouteConstants.farmRegister);
+                                      Navigator.of(context).pushReplacementNamed(RouteConstants.farmRegister);
+                                    },
+                                  ),
+                                  _buildMenuItem(
+                                    context,
+                                    Icons.science_outlined,
+                                    context.l10n.menuSprayRecords,
+                                    RouteConstants.sprayRecords,
+                                    routeProvider.activeRoute == RouteConstants.sprayRecords,
+                                    _isSidebarCollapsed,
+                                    onTap: () {
+                                      routeProvider.setActiveRoute(RouteConstants.sprayRecords);
+                                      Navigator.of(context).pushReplacementNamed(RouteConstants.sprayRecords);
+                                    },
+                                  ),
+                                ],
 
                                 if (authProvider.isAdmin) ...[
                                   // Admin header
@@ -321,7 +363,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                                     return _buildMenuItem(
                                       context,
                                       item['icon'],
-                                      item['title'],
+                                      _menuTitle(context, item['route'] as String),
                                       item['route'],
                                       isSelected,
                                       _isSidebarCollapsed,
@@ -342,15 +384,11 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                                 _buildMenuItem(
                                   context,
                                   Icons.logout,
-                                  'Logout',
+                                  context.l10n.logout,
                                   '',
                                   false,
                                   _isSidebarCollapsed,
-                                  onTap: () {
-                                    authProvider.logout();
-                                    routeProvider.setActiveRoute(RouteConstants.login);
-                                    Navigator.of(context).pushReplacementNamed(RouteConstants.login);
-                                  },
+                                  onTap: () => signOutAndReset(context),
                                 ),
                               ],
                             ),
@@ -384,7 +422,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      'Collapse',
+                                      context.l10n.menuCollapse,
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey[600],
@@ -396,6 +434,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                             ),
                           ),
                       ],
+                    ),
                     ),
                   ),
 
@@ -410,6 +449,134 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
       ),
       floatingActionButton: widget.floatingActionButton,
     );
+  }
+
+  /// Menu entries this user may see. Auditors get the Audit Index and nothing
+  /// else; everyone else gets the full list.
+  /// Menu item names in the app language, by route.
+  String _menuTitle(BuildContext context, String route) {
+    final l10n = context.l10n;
+    switch (route) {
+      case RouteConstants.dashboard:
+        return l10n.dashboardTitle;
+      case RouteConstants.auditTracker:
+        return l10n.trackerTitle;
+      case RouteConstants.complianceReport:
+        return l10n.menuComplianceReport;
+      case RouteConstants.auditIndex:
+        return l10n.menuAuditIndex;
+      case RouteConstants.payslipManager:
+        return l10n.menuPayslipManager;
+      case RouteConstants.myFarms:
+        return l10n.menuMyFarms;
+      case RouteConstants.userManagement:
+        return l10n.menuUserManagement;
+      case RouteConstants.categoryManagement:
+        return l10n.menuCategoryManagement;
+      case RouteConstants.overrid:
+        return l10n.menuDocumentSettings;
+      case RouteConstants.companyManagement:
+        return l10n.menuCompanyManagement;
+      case RouteConstants.dataFixUtility:
+        return l10n.menuDataFixUtility;
+      case RouteConstants.farmableConsole:
+        return l10n.menuFarmableConsole;
+    }
+    return route;
+  }
+
+  List<Map<String, dynamic>> _visibleMenuItems(AuthProvider auth) {
+    final items = auth.isAuditer
+        ? _menuItems.where((i) => i['route'] == RouteConstants.auditIndex).toList()
+        : _menuItems;
+    // Users with several farms get their farm picker at the top of the menu.
+    if (auth.canSwitchCompany) {
+      return [
+        {
+          'icon': Icons.agriculture_outlined,
+          'route': RouteConstants.myFarms,
+          'adminOnly': false,
+        },
+        ...items,
+      ];
+    }
+    return items;
+  }
+
+  /// App-bar chip showing the farm in view; tapping opens the farm switcher.
+  /// Icon-only on narrow screens so it can never crowd the title.
+  Widget _buildFarmSwitcher(BuildContext context, AuthProvider auth) {
+    final name = auth.effectiveCompany?.name ?? context.l10n.farmSelect;
+    final compact = MediaQuery.of(context).size.width < 700;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: Tooltip(
+        message: context.l10n.farmSwitchTooltip(name),
+        child: Material(
+          color: Colors.white.withOpacity(0.16),
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => _showFarmSwitcher(context, auth),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 12, vertical: 7),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.agriculture_outlined, color: Colors.white, size: 18),
+                  if (!compact) ...[
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 190),
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: 2),
+                  const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showFarmSwitcher(BuildContext context, AuthProvider auth) async {
+    final currentId = auth.effectiveCompany?.id;
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      constraints: const BoxConstraints(maxWidth: 520),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _FarmSwitcherSheet(
+        farms: auth.accessibleCompanies,
+        currentId: currentId,
+      ),
+    );
+
+    if (selected == null || selected == currentId || !context.mounted) return;
+
+    final ok = await switchFarm(context, selected);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.farmSwitchFailed)),
+      );
+    }
   }
 
   Widget _buildUserSelectionBanner(BuildContext context, AuthProvider authProvider) {
@@ -438,7 +605,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                   fontWeight: FontWeight.w500,
                 ),
                 children: [
-                  const TextSpan(text: 'ADMIN MODE: Managing documents for '),
+                  TextSpan(text: context.l10n.adminModeManagingFor),
                   TextSpan(
                     text: authProvider.selectedUser!.name,
                     style: const TextStyle(fontWeight: FontWeight.bold),
@@ -447,7 +614,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
               ),
             )
                 : Text(
-              'Admin Mode: Managing your own documents',
+              context.l10n.adminModeOwnDocs,
               style: TextStyle(
                 fontSize: 14,
                 color: primaryColor,
@@ -459,8 +626,8 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
             TextButton.icon(
               onPressed: () => authProvider.clearUserSelection(),
               icon: const Icon(Icons.close, size: 18, color: Colors.white),
-              label: const Text(
-                'Switch Back',
+              label: Text(
+                context.l10n.actionSwitchBack,
                 style: TextStyle(color: Colors.white, fontSize: 12),
               ),
               style: TextButton.styleFrom(
@@ -478,7 +645,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                 Icons.people,
                 color: authProvider.selectedUser != null ? Colors.orange.shade700 : primaryColor,
               ),
-              tooltip: 'Select User to Manage',
+              tooltip: context.l10n.selectUserToManage,
             ),
           ],
         ],
@@ -500,12 +667,12 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Select User to Manage',
+                context.l10n.selectUserToManage,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
               Text(
-                'Choose a user to manage their documents and compliance status.',
+                context.l10n.selectUserToManageHint,
                 style: TextStyle(color: Colors.grey[600]),
               ),
               const SizedBox(height: 24),
@@ -520,8 +687,8 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                           backgroundColor: Theme.of(context).primaryColor,
                           child: const Icon(Icons.person, color: Colors.white),
                         ),
-                        title: Text(authProvider.currentUser?.name ?? 'You'),
-                        subtitle: const Text('Manage your own documents'),
+                        title: Text(authProvider.currentUser?.name ?? context.l10n.you),
+                        subtitle: Text(context.l10n.manageOwnDocs),
                         trailing: authProvider.selectedUser == null
                             ? Icon(Icons.check, color: Theme.of(context).primaryColor)
                             : null,
@@ -542,7 +709,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                           ),
                         ),
                         title: Text(user.name),
-                        subtitle: Text(user.role.name),
+                        subtitle: Text(user.role.label(context.l10n)),
                         trailing: authProvider.selectedUser?.id == user.id
                             ? Icon(Icons.check, color: Theme.of(context).primaryColor)
                             : null,
@@ -561,7 +728,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
+                    child: Text(context.l10n.commonCancel),
                   ),
                 ],
               ),
@@ -596,6 +763,25 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
           ),
         ),),),
 
+          // Farm switcher — only for users with access to more than one farm.
+          // (The app-bar chip is icon-only on phones, so this is the clear way in.)
+          if (authProvider.canSwitchCompany)
+            ListTile(
+              leading: Icon(Icons.swap_horiz, color: primaryColor),
+              title: Text(
+                authProvider.effectiveCompany?.name ?? context.l10n.farmSelect,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              subtitle: Text(context.l10n.farmTapToSwitch, style: const TextStyle(fontSize: 12)),
+              tileColor: primaryColor.withOpacity(0.06),
+              onTap: () {
+                Navigator.of(context).pop(); // close the drawer
+                _showFarmSwitcher(context, authProvider);
+              },
+            ),
+
           // Menu header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -619,13 +805,13 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                ..._menuItems.map((item) {
+                ..._visibleMenuItems(authProvider).map((item) {
                   final bool isSelected = routeProvider.activeRoute == item['route'];
 
                   return _buildMenuItem(
                     context,
                     item['icon'],
-                    item['title'],
+                    _menuTitle(context, item['route'] as String),
                     item['route'],
                     isSelected,
                     false,
@@ -635,6 +821,50 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                     },
                   );
                 }).toList(),
+
+                // Farmable section in drawer
+                if (!authProvider.isAuditer && authProvider.effectiveCompany?.hasFarmable == true) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          context.l10n.menuFarmableSection,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[500],
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildMenuItem(
+                    context,
+                    Icons.map_outlined,
+                    context.l10n.menuFarmRegister,
+                    RouteConstants.farmRegister,
+                    routeProvider.activeRoute == RouteConstants.farmRegister,
+                    false,
+                    onTap: () {
+                      routeProvider.setActiveRoute(RouteConstants.farmRegister);
+                      Navigator.of(context).pushReplacementNamed(RouteConstants.farmRegister);
+                    },
+                  ),
+                  _buildMenuItem(
+                    context,
+                    Icons.science_outlined,
+                    context.l10n.menuSprayRecords,
+                    RouteConstants.sprayRecords,
+                    routeProvider.activeRoute == RouteConstants.sprayRecords,
+                    false,
+                    onTap: () {
+                      routeProvider.setActiveRoute(RouteConstants.sprayRecords);
+                      Navigator.of(context).pushReplacementNamed(RouteConstants.sprayRecords);
+                    },
+                  ),
+                ],
 
                 if (authProvider.isAdmin) ...[
                   // Admin header
@@ -662,7 +892,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                     return _buildMenuItem(
                       context,
                       item['icon'],
-                      item['title'],
+                      _menuTitle(context, item['route'] as String),
                       item['route'],
                       isSelected,
                       false,
@@ -683,15 +913,11 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                 _buildMenuItem(
                   context,
                   Icons.logout,
-                  'Logout',
+                  context.l10n.logout,
                   '',
                   false,
                   false,
-                  onTap: () {
-                    authProvider.logout();
-                    routeProvider.setActiveRoute(RouteConstants.login);
-                    Navigator.of(context).pushReplacementNamed(RouteConstants.login);
-                  },
+                  onTap: () => signOutAndReset(context),
                 ),
               ],
             ),
@@ -713,7 +939,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
             child: Text(
               authProvider.currentUser?.name.isNotEmpty ?? false
                   ? authProvider.currentUser!.name.substring(0, 1).toUpperCase()
-                  : 'N',
+                  : '',
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -730,7 +956,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    authProvider.currentUser?.name ?? 'Nathan Test',
+                    authProvider.currentUser?.name ?? '',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -738,7 +964,7 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    authProvider.currentUser?.role.name ?? 'ADMIN',
+                    authProvider.currentUser?.role.name ?? '',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
@@ -750,6 +976,50 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
           ],
         ],
       ),
+    );
+  }
+
+  /// Notification bell with an unread-count badge, shown in the app bar.
+  Widget _buildNotificationBell(BuildContext context) {
+    return Consumer<NotificationProvider>(
+      builder: (context, notif, _) {
+        final count = notif.unreadCount;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+              tooltip: context.l10n.notificationsTitle,
+              onPressed: () {
+                Navigator.of(context).pushNamed(RouteConstants.notifications);
+              },
+            ),
+            if (count > 0)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade600,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white, width: 1),
+                  ),
+                  child: Text(
+                    count > 99 ? '99+' : '$count',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -786,6 +1056,137 @@ class _AppScaffoldWrapperState extends State<AppScaffoldWrapper> {
       selectedTileColor: isSelected ? primaryColor.withOpacity(0.1) : Colors.transparent,
       selectedColor: primaryColor,
       onTap: onTap,
+    );
+  }
+}
+
+/// Bottom sheet listing the farms a user may switch between. Searchable once
+/// the list is long enough to need it.
+class _FarmSwitcherSheet extends StatefulWidget {
+  final List<CompanyModel> farms;
+  final String? currentId;
+
+  const _FarmSwitcherSheet({required this.farms, required this.currentId});
+
+  @override
+  State<_FarmSwitcherSheet> createState() => _FarmSwitcherSheetState();
+}
+
+class _FarmSwitcherSheetState extends State<_FarmSwitcherSheet> {
+  String _query = '';
+
+  String _packagesLabel(CompanyModel c) {
+    final labels = AppConstants.auditPackages
+        .where((p) => c.packages.contains(p.id))
+        .map((p) => p.shortLabel)
+        .toList();
+    return labels.join(' · ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).primaryColor;
+    final q = _query.trim().toLowerCase();
+    final farms = q.isEmpty
+        ? widget.farms
+        : widget.farms.where((f) => f.name.toLowerCase().contains(q)).toList();
+    final maxHeight = MediaQuery.of(context).size.height * 0.75;
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                child: Text(
+                  context.l10n.farmSwitchFarm,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text(
+                  context.l10n.farmAccessCount(widget.farms.length),
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                ),
+              ),
+              if (widget.farms.length > 6)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: TextField(
+                    onChanged: (v) => setState(() => _query = v),
+                    decoration: InputDecoration(
+                      hintText: context.l10n.farmSearchHint,
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      isDense: true,
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ),
+              Flexible(
+                child: farms.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Center(
+                          child: Text(context.l10n.farmNoMatchQuery(_query),
+                              style: TextStyle(color: Colors.grey[600])),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.only(bottom: 12),
+                        itemCount: farms.length,
+                        itemBuilder: (context, i) {
+                          final farm = farms[i];
+                          final isCurrent = farm.id == widget.currentId;
+                          final subtitle = _packagesLabel(farm);
+                          return ListTile(
+                            leading: CircleAvatar(
+                              radius: 18,
+                              backgroundColor:
+                                  isCurrent ? primary : primary.withOpacity(0.12),
+                              child: Text(
+                                farm.name.isNotEmpty ? farm.name[0].toUpperCase() : '?',
+                                style: TextStyle(
+                                  color: isCurrent ? Colors.white : primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              farm.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                              ),
+                            ),
+                            subtitle: subtitle.isEmpty ? null : Text(subtitle),
+                            trailing: isCurrent
+                                ? Icon(Icons.check_circle, color: primary)
+                                : null,
+                            onTap: () => Navigator.of(context).pop(farm.id),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

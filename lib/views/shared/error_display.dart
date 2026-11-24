@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class ErrorDisplay extends StatelessWidget {
   final String error;
@@ -23,7 +24,7 @@ class ErrorDisplay extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Error',
+            context.l10n.errorTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
@@ -40,7 +41,7 @@ class ErrorDisplay extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(context.l10n.actionRetry),
             ),
           ],
         ],

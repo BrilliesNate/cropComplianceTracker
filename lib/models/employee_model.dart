@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 /// Whether the worker is on a permanent contract or seasonal.
 /// Required by BCEA auditors to be visible on the payslip.
@@ -9,13 +10,10 @@ extension EmploymentTypeX on EmploymentType {
   String get key =>
       this == EmploymentType.permanent ? 'permanent' : 'seasonal';
 
-  /// English label for UI / PDF.
-  String get label =>
-      this == EmploymentType.permanent ? 'Permanent' : 'Seasonal';
-
-  /// Afrikaans label for the payslip PDF.
-  String get labelAfr =>
-      this == EmploymentType.permanent ? 'Permanent' : 'Seisoen';
+  /// Label in the app language (screens and PDFs).
+  String get label => this == EmploymentType.permanent
+      ? LocaleProvider.instance.l10n.employmentPermanent
+      : LocaleProvider.instance.l10n.employmentSeasonal;
 
   static EmploymentType fromKey(String? k) =>
       k == 'seasonal' ? EmploymentType.seasonal : EmploymentType.permanent;
@@ -27,14 +25,27 @@ enum BankAccountType { current, savings, transmission }
 extension BankAccountTypeX on BankAccountType {
   String get key => name;
 
+  /// The value written into bank CSV files — fixed English, whatever the app
+  /// language, because the bank's import expects it.
+  String get bankValue {
+    switch (this) {
+      case BankAccountType.current:
+        return 'Current / Cheque'; // l10n-ignore: bank file format
+      case BankAccountType.savings:
+        return 'Savings'; // l10n-ignore: bank file format
+      case BankAccountType.transmission:
+        return 'Transmission'; // l10n-ignore: bank file format
+    }
+  }
+
   String get label {
     switch (this) {
       case BankAccountType.current:
-        return 'Current / Cheque';
+        return LocaleProvider.instance.l10n.accountCurrent;
       case BankAccountType.savings:
-        return 'Savings';
+        return LocaleProvider.instance.l10n.accountSavings;
       case BankAccountType.transmission:
-        return 'Transmission';
+        return LocaleProvider.instance.l10n.accountTransmission;
     }
   }
 
@@ -59,14 +70,14 @@ extension BankAccountTypeX on BankAccountType {
 /// the employee form fills the branch code automatically.
 const Map<String, String> kSaUniversalBranchCodes = {
   'ABSA': '632005',
-  'African Bank': '430000',
-  'Capitec': '470010',
-  'Discovery Bank': '679000',
+  'African Bank': '430000', // l10n-ignore: bank names
+  'Capitec': '470010', // l10n-ignore: bank names
+  'Discovery Bank': '679000', // l10n-ignore: bank names
   'FNB': '250655',
-  'Investec': '580105',
-  'Nedbank': '198765',
-  'Standard Bank': '051001',
-  'TymeBank': '678910',
+  'Investec': '580105', // l10n-ignore: bank names
+  'Nedbank': '198765', // l10n-ignore: bank names
+  'Standard Bank': '051001', // l10n-ignore: bank names
+  'TymeBank': '678910', // l10n-ignore: bank names
 };
 
 class EmployeeModel {
@@ -125,19 +136,19 @@ class EmployeeModel {
 
   /// Why this employee can't go in the bank CSV; empty list = ready to pay.
   List<String> get bankingIssues {
-    if (!hasAnyBankingDetails) return const ['no banking details'];
+    if (!hasAnyBankingDetails) return [LocaleProvider.instance.l10n.bankIssueNone];
     final issues = <String>[];
     final acc = accountNumber.replaceAll(RegExp(r'\s'), '');
     final branch = branchCode.replaceAll(RegExp(r'\s'), '');
     if (acc.isEmpty) {
-      issues.add('no account number');
+      issues.add(LocaleProvider.instance.l10n.bankIssueNoAccount);
     } else if (!RegExp(r'^\d{6,16}$').hasMatch(acc)) {
-      issues.add('account number must be 6–16 digits');
+      issues.add(LocaleProvider.instance.l10n.bankIssueAccountDigits);
     }
     if (branch.isEmpty) {
-      issues.add('no branch code');
+      issues.add(LocaleProvider.instance.l10n.bankIssueNoBranch);
     } else if (!RegExp(r'^\d{6}$').hasMatch(branch)) {
-      issues.add('branch code must be 6 digits');
+      issues.add(LocaleProvider.instance.l10n.bankIssueBranchDigits);
     }
     return issues;
   }

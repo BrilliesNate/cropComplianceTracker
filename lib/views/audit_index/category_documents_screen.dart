@@ -12,6 +12,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class CategoryDocumentsScreen extends StatefulWidget {
   final String categoryId;
@@ -30,73 +31,113 @@ class CategoryDocumentsScreen extends StatefulWidget {
 class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
   String? _statusFilter;
   String _searchQuery = '';
-  List<UserModel> _users = [];
+  // All users, keyed by id — so an uploader who isn't in THIS company (an admin
+  // who uploaded on the company's behalf, a removed user, or one carried over by
+  // a company merge) still resolves to a name instead of "Unknown User".
+  Map<String, UserModel> _allUsersById = {};
   final FirestoreService _firestoreService = FirestoreService();
-  bool _isLoadingUsers = false;
+  // False until documents and uploader names have both loaded, so the page
+  // appears finished in one go instead of filling in piece by piece.
+  late bool _ready;
 
   @override
   void initState() {
     super.initState();
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final docs = Provider.of<DocumentProvider>(context, listen: false);
+    // Documents already in memory for this company (the usual case when
+    // arriving from the Audit Index) → draw immediately.
+    _ready = auth.currentUser != null &&
+        docs.currentContextCompanyId == (auth.effectiveCompany?.id ?? '') &&
+        docs.documents.isNotEmpty &&
+        // Uploader names: admins have every user in memory, auditors don't need
+        // them; everyone else needs one quick lookup first.
+        (auth.isAuditer || (auth.isAdmin && auth.allUsers.isNotEmpty));
+    if (_ready) _useUsersInMemory(auth);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
     });
   }
 
+  void _useUsersInMemory(AuthProvider auth) {
+    if (auth.isAdmin && auth.allUsers.isNotEmpty) {
+      _allUsersById = {for (final u in auth.allUsers) u.id: u};
+    }
+  }
+
   Future<void> _initializeData() async {
+    if (!mounted) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
 
     if (authProvider.currentUser != null) {
-      // Use refreshForUserContext to respect company selection context
-      await documentProvider.refreshForUserContext(context);
-
       // Determine which company to load users for
       String companyId;
       if (authProvider.isManagingCompany && authProvider.selectedCompany != null) {
         // Admin is managing a specific company
         companyId = authProvider.selectedCompany!.id;
-        print('CategoryDocumentsScreen: Loading users for selected company: ${authProvider.selectedCompany!.name}');
       } else if (authProvider.hasSelectedUser && authProvider.selectedUser != null) {
         // Admin has selected a specific user
         companyId = authProvider.selectedUser!.companyId;
-        print('CategoryDocumentsScreen: Loading users for selected user company: $companyId');
       } else {
         // Regular user or admin viewing their own company
         companyId = authProvider.currentUser!.companyId;
-        print('CategoryDocumentsScreen: Loading users for current user company: $companyId');
       }
 
-      // Load users for the appropriate company
-      await _loadUsers(companyId);
+      try {
+        // Documents (respecting company selection) and uploader names together.
+        await Future.wait([
+          documentProvider.refreshForUserContext(context),
+          _loadUsers(companyId),
+        ]);
+      } finally {
+        if (mounted) setState(() => _ready = true);
+      }
     }
   }
 
   Future<void> _loadUsers(String companyId) async {
-    setState(() {
-      _isLoadingUsers = true;
-    });
-
     try {
-      final users = await _firestoreService.getUsers(companyId: companyId);
-      setState(() {
-        _users = users;
-      });
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+
+      // Auditors never need user records: the document carries the uploader's
+      // name, and auditors are not allowed to read user accounts at all.
+      if (auth.isAuditer) return;
+
+      // Admins already hold every user in memory — no query needed.
+      if (auth.isAdmin && auth.allUsers.isNotEmpty) {
+        _useUsersInMemory(auth);
+        return;
+      }
+
+      // Everyone else resolves from their own company's users (security rules
+      // only let an admin list all users) — plus the uploader name stored on
+      // each document.
+      final users = auth.isAdmin
+          ? await _firestoreService.getUsers()
+          : await _firestoreService.getUsers(companyId: companyId);
+      _allUsersById = {for (final u in users) u.id: u};
     } catch (e) {
       print('Error loading users: $e');
-    } finally {
-      setState(() {
-        _isLoadingUsers = false;
-      });
     }
   }
 
+  /// The label to show for a document's uploader. Prefers the name captured on
+  /// the document at upload time; otherwise resolves the stored userId.
+  String _uploaderLabel(dynamic document) {
+    final captured = document.uploadedByName;
+    if (captured is String && captured.trim().isNotEmpty) return captured;
+    // Auditors can't look users up, so an older document with no stored name
+    // reads as blank rather than a misleading "Unknown User".
+    if (Provider.of<AuthProvider>(context, listen: false).isAuditer) return '—';
+    return _getUserName(document.userId as String? ?? '');
+  }
+
   String _getUserName(String userId) {
-    try {
-      final user = _users.firstWhere((u) => u.id == userId);
-      return user.name;
-    } catch (_) {
-      return 'Unknown User';
-    }
+    final user = _allUsersById[userId];
+    if (user == null) return context.l10n.unknownUser;
+    // Show the actual person's name, whoever they are (admin included).
+    return user.name.trim().isNotEmpty ? user.name : context.l10n.unknownUser;
   }
 
   @override
@@ -105,14 +146,14 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
     final documentProvider = Provider.of<DocumentProvider>(context);
 
     if (authProvider.currentUser == null) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: Text('Please log in to continue'),
+          child: Text(context.l10n.pleaseLogIn),
         ),
       );
     }
 
-    final isLoading = documentProvider.isLoading || _isLoadingUsers;
+    final isLoading = !_ready || documentProvider.isLoading;
     final hasError = documentProvider.error != null;
     final error = documentProvider.error ?? '';
 
@@ -122,7 +163,7 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
         showBackButton: true,
       ),
       body: isLoading
-          ? const LoadingIndicator(message: 'Loading documents...')
+          ? LoadingIndicator(message: context.l10n.docsLoading)
           : hasError
           ? ErrorDisplay(error: error, onRetry: _initializeData)
           : Column(
@@ -137,6 +178,10 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
   }
 
   Widget _buildFilterBar() {
+    // Auditors only ever see approved documents, so a status filter would just
+    // offer them options that always come back empty.
+    final isAuditer = Provider.of<AuthProvider>(context, listen: false).isAuditer;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -152,6 +197,7 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
       child: Row(
         children: [
           // Status Filter Dropdown
+          if (!isAuditer) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
@@ -161,14 +207,14 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
             ),
             child: DropdownButton<String?>(
               value: _statusFilter,
-              hint: const Text('Filter'),
+              hint: Text(context.l10n.filterLabel),
               underline: const SizedBox(),
-              items: const [
-                DropdownMenuItem(value: null, child: Text('All')),
-                DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
-                DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
-                DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
-                DropdownMenuItem(value: 'EXPIRED', child: Text('Expired')),
+              items: [
+                DropdownMenuItem(value: null, child: Text(context.l10n.filterAll)),
+                DropdownMenuItem(value: 'APPROVED', child: Text(context.l10n.statusApproved)),
+                DropdownMenuItem(value: 'PENDING', child: Text(context.l10n.statusPending)),
+                DropdownMenuItem(value: 'REJECTED', child: Text(context.l10n.statusRejected)),
+                DropdownMenuItem(value: 'EXPIRED', child: Text(context.l10n.statusExpired)),
                 DropdownMenuItem(value: 'NOT_APPLICABLE', child: Text('N/A')),
               ],
               onChanged: (value) {
@@ -185,6 +231,7 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
             ),
           ),
           const SizedBox(width: 12),
+          ],
 
           // Search field
           Expanded(
@@ -196,8 +243,8 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                 border: Border.all(color: Colors.grey.shade300),
               ),
               child: TextField(
-                decoration: const InputDecoration(
-                  hintText: 'Search documents...',
+                decoration: InputDecoration(
+                  hintText: context.l10n.docsSearchHint,
                   contentPadding: EdgeInsets.symmetric(horizontal: 12),
                   border: InputBorder.none,
                   prefixIcon: Icon(Icons.search, size: 20),
@@ -223,7 +270,7 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
     documents = _applyFilters(documents, documentProvider);
 
     if (documents.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32.0),
           child: Column(
@@ -232,12 +279,12 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
               Icon(Icons.folder_open, size: 64, color: Colors.grey),
               SizedBox(height: 16),
               Text(
-                'No documents found',
+                context.l10n.docsNoneFound,
                 style: TextStyle(fontSize: 18, color: Colors.grey),
               ),
               SizedBox(height: 8),
               Text(
-                'Try adjusting your filters or search criteria',
+                context.l10n.docsTryAdjusting,
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
             ],
@@ -297,7 +344,7 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '${documentsInGroup.length} document${documentsInGroup.length > 1 ? 's' : ''}',
+                        context.l10n.documentCount(documentsInGroup.length),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -383,7 +430,7 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
         documentType = null;
       }
 
-      final documentTypeName = documentType?.name ?? 'Unknown Document Type';
+      final documentTypeName = documentType?.name ?? context.l10n.unknownDocumentType;
 
       if (!grouped.containsKey(documentTypeName)) {
         grouped[documentTypeName] = [];
@@ -447,8 +494,8 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Specification',
+                        Text(
+                          context.l10n.specification,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -459,7 +506,7 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                         Text(
                           document.specification?.isNotEmpty == true
                               ? document.specification!
-                              : 'No specification provided',
+                              : context.l10n.specNone,
                           style: TextStyle(
                             fontSize: 13,
                             color: document.specification?.isNotEmpty == true
@@ -470,6 +517,14 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                                 : FontStyle.italic,
                           ),
                         ),
+                        if (document.reviewedDate != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            context.l10n.lastReviewedShort(_fmtReviewed(document.reviewedDate!)),
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade700),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -486,8 +541,8 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Uploaded By',
+                        Text(
+                          context.l10n.uploadedBy,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -496,7 +551,7 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _getUserName(document.userId),
+                          _uploaderLabel(document),
                           style: const TextStyle(fontSize: 13, color: Colors.black87),
                         ),
                       ],
@@ -515,8 +570,8 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Upload Date',
+                        Text(
+                          context.l10n.uploadDate,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -539,11 +594,11 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
               Row(
                 children: [
                   Icon(
-                    document.expiryDate != null && document.isExpired
+                    document.effectiveExpiryDate != null && document.isExpired
                         ? Icons.warning_amber_rounded
                         : Icons.event_outlined,
                     size: 16,
-                    color: document.expiryDate != null && document.isExpired
+                    color: document.effectiveExpiryDate != null && document.isExpired
                         ? Colors.red.shade600
                         : Colors.grey.shade600,
                   ),
@@ -552,8 +607,8 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Expiry Date',
+                        Text(
+                          context.l10n.expiryDateTitle,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -562,17 +617,17 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          document.expiryDate != null
-                              ? DateFormat('MMM d, yyyy').format(document.expiryDate!)
-                              : 'No expiry date',
+                          document.effectiveExpiryDate != null
+                              ? DateFormat('MMM d, yyyy').format(document.effectiveExpiryDate!)
+                              : context.l10n.expiryNone,
                           style: TextStyle(
                             fontSize: 13,
-                            color: document.expiryDate != null && document.isExpired
+                            color: document.effectiveExpiryDate != null && document.isExpired
                                 ? Colors.red.shade700
-                                : document.expiryDate != null
+                                : document.effectiveExpiryDate != null
                                 ? Colors.black87
                                 : Colors.grey.shade600,
-                            fontWeight: document.expiryDate != null && document.isExpired
+                            fontWeight: document.effectiveExpiryDate != null && document.isExpired
                                 ? FontWeight.w600
                                 : FontWeight.normal,
                           ),
@@ -587,8 +642,8 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
               // Status
               Row(
                 children: [
-                  const Text(
-                    'Status: ',
+                  Text(
+                    context.l10n.statusLabelColon,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -614,7 +669,7 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                     );
                   },
                   icon: const Icon(Icons.visibility_outlined, size: 16),
-                  label: const Text('View Details'),
+                  label: Text(context.l10n.actionViewDetails),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
@@ -640,10 +695,10 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
           color: Colors.grey.shade50,
           child: Row(
             children: [
-              const Expanded(
+              Expanded(
                 flex: 3,
                 child: Text(
-                  'Specification',
+                  context.l10n.specification,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -651,10 +706,10 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                   ),
                 ),
               ),
-              const Expanded(
+              Expanded(
                 flex: 2,
                 child: Text(
-                  'Uploaded By',
+                  context.l10n.uploadedBy,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -662,10 +717,10 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                   ),
                 ),
               ),
-              const Expanded(
+              Expanded(
                 flex: 2,
                 child: Text(
-                  'Upload Date',
+                  context.l10n.uploadDate,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -673,10 +728,10 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                   ),
                 ),
               ),
-              const Expanded(
+              Expanded(
                 flex: 2,
                 child: Text(
-                  'Expiry Date',
+                  context.l10n.expiryDateTitle,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -684,10 +739,10 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                   ),
                 ),
               ),
-              const Expanded(
+              Expanded(
                 flex: 2,
                 child: Text(
-                  'Status',
+                  context.l10n.colStatus,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -716,13 +771,16 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Specification
+                    // Specification (+ last reviewed, when the type has one)
                     Expanded(
                       flex: 3,
                       child: Text(
-                        document.specification?.isNotEmpty == true
-                            ? document.specification!
-                            : 'No specification provided',
+                        (document.specification?.isNotEmpty == true
+                                ? document.specification!
+                                : context.l10n.specNone) +
+                            (document.reviewedDate != null
+                                ? context.l10n.reviewedSuffix(_fmtReviewed(document.reviewedDate!))
+                                : ''),
                         style: TextStyle(
                           fontSize: 13,
                           color: document.specification?.isNotEmpty == true
@@ -739,7 +797,7 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        _getUserName(document.userId),
+                        _uploaderLabel(document),
                         style: const TextStyle(fontSize: 13, color: Colors.black87),
                       ),
                     ),
@@ -757,17 +815,17 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        document.expiryDate != null
-                            ? DateFormat('MMM d, yyyy').format(document.expiryDate!)
-                            : 'No expiry date',
+                        document.effectiveExpiryDate != null
+                            ? DateFormat('MMM d, yyyy').format(document.effectiveExpiryDate!)
+                            : context.l10n.expiryNone,
                         style: TextStyle(
                           fontSize: 13,
-                          color: document.expiryDate != null && document.isExpired
+                          color: document.effectiveExpiryDate != null && document.isExpired
                               ? Colors.red.shade700
-                              : document.expiryDate != null
+                              : document.effectiveExpiryDate != null
                               ? Colors.black87
                               : Colors.grey.shade600,
-                          fontWeight: document.expiryDate != null && document.isExpired
+                          fontWeight: document.effectiveExpiryDate != null && document.isExpired
                               ? FontWeight.w600
                               : FontWeight.normal,
                         ),
@@ -794,7 +852,7 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
                             arguments: {'documentId': document.id},
                           );
                         },
-                        tooltip: 'View Details',
+                        tooltip: context.l10n.actionViewDetails,
                       ),
                     ),
                   ],
@@ -807,3 +865,6 @@ class _CategoryDocumentsScreenState extends State<CategoryDocumentsScreen> {
     );
   }
 }
+
+// Month names follow the app language.
+String _fmtReviewed(DateTime d) => DateFormat('d MMM yyyy').format(d);

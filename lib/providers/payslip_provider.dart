@@ -1,3 +1,4 @@
+import '../core/offline/offline_write.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
@@ -161,11 +162,11 @@ class PayslipProvider with ChangeNotifier {
   /// one field (merge) so it can't overwrite other payroll settings.
   Future<bool> saveBankExportTemplate(String companyId, String templateId) async {
     try {
-      await _db.collection('payrollSettings').doc(companyId).set({
+      await commitWrite(_db.collection('payrollSettings').doc(companyId).set({
         'companyId': companyId,
         'bankExportTemplateId': templateId,
         'updatedAt': Timestamp.fromDate(DateTime.now()),
-      }, SetOptions(merge: true));
+      }, SetOptions(merge: true)), label: 'bank choice'); // l10n-ignore: log label
       if (_currentCompanyId == companyId) {
         _payrollSettings = (_payrollSettings ?? PayrollSettings.empty(companyId))
             .copyWith(bankExportTemplateId: templateId);
@@ -180,10 +181,12 @@ class PayslipProvider with ChangeNotifier {
 
   Future<bool> savePayrollSettings(PayrollSettings settings) async {
     try {
-      await _db
-          .collection('payrollSettings')
-          .doc(settings.companyId)
-          .set(settings.toMap(), SetOptions(merge: true));
+      await commitWrite(
+          _db
+              .collection('payrollSettings')
+              .doc(settings.companyId)
+              .set(settings.toMap(), SetOptions(merge: true)),
+          label: 'payroll settings'); // l10n-ignore: log label
       // Callers build fresh settings objects; keep the remembered bank
       // (toMap omits it when null, so Firestore keeps it too via merge).
       _payrollSettings = settings.bankExportTemplateId == null
@@ -219,7 +222,9 @@ class PayslipProvider with ChangeNotifier {
       }
       data['updatedAt'] = Timestamp.fromDate(DateTime.now());
 
-      await _db.collection('employees').doc(id).set(data, SetOptions(merge: true));
+      await commitWrite(
+          _db.collection('employees').doc(id).set(data, SetOptions(merge: true)),
+          label: 'employee'); // l10n-ignore: log label
 
       final saved = EmployeeModel.fromMap(data, id);
       if (idx == -1) {
@@ -251,7 +256,7 @@ class PayslipProvider with ChangeNotifier {
           'updatedAt': Timestamp.fromDate(DateTime.now()),
         });
       }
-      await batch.commit();
+      await commitWrite(batch.commit(), label: 'relink payslips'); // l10n-ignore: log label
       for (var i = 0; i < _payslips.length; i++) {
         final p = _payslips[i];
         if (ids.contains(p.id)) {
@@ -270,7 +275,8 @@ class PayslipProvider with ChangeNotifier {
 
   Future<bool> deleteEmployee(String employeeId) async {
     try {
-      await _db.collection('employees').doc(employeeId).delete();
+      await commitWrite(_db.collection('employees').doc(employeeId).delete(),
+          label: 'remove employee'); // l10n-ignore: log label
       _employees.removeWhere((e) => e.id == employeeId);
       notifyListeners();
       return true;
@@ -293,7 +299,9 @@ class PayslipProvider with ChangeNotifier {
       }
       data['updatedAt'] = Timestamp.fromDate(DateTime.now());
 
-      await _db.collection('payslips').doc(id).set(data, SetOptions(merge: true));
+      await commitWrite(
+          _db.collection('payslips').doc(id).set(data, SetOptions(merge: true)),
+          label: 'payslip'); // l10n-ignore: log label
 
       final saved = PayslipModel.fromMap(data, id);
       if (isNew) {
@@ -313,7 +321,8 @@ class PayslipProvider with ChangeNotifier {
 
   Future<bool> deletePayslip(String payslipId) async {
     try {
-      await _db.collection('payslips').doc(payslipId).delete();
+      await commitWrite(_db.collection('payslips').doc(payslipId).delete(),
+          label: 'delete payslip'); // l10n-ignore: log label
       _payslips.removeWhere((p) => p.id == payslipId);
       notifyListeners();
       return true;
@@ -342,10 +351,12 @@ class PayslipProvider with ChangeNotifier {
 
   Future<bool> saveLeaveBalance(LeaveBalanceModel balance) async {
     try {
-      await _db
-          .collection('leaveBalances')
-          .doc(balance.employeeId)
-          .set(balance.toMap(), SetOptions(merge: true));
+      await commitWrite(
+          _db
+              .collection('leaveBalances')
+              .doc(balance.employeeId)
+              .set(balance.toMap(), SetOptions(merge: true)),
+          label: 'leave balance'); // l10n-ignore: log label
       _leaveBalances[balance.employeeId] = balance;
       notifyListeners();
       return true;

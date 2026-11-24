@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../core/services/firestore_service.dart';
 import '../core/services/document_service.dart';
 import '../core/services/storage_service.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class AuditProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
@@ -75,7 +76,7 @@ class AuditProvider with ChangeNotifier {
       _categoryComplianceMap = tempComplianceMap;
       notifyListeners();
     } catch (e) {
-      _error = 'Failed to calculate compliance statistics: $e';
+      _error = LocaleProvider.instance.l10n.errComplianceStats('$e');
       notifyListeners();
     } finally {
       _setLoading(false);
@@ -157,7 +158,7 @@ class AuditProvider with ChangeNotifier {
 
       return docs;
     } catch (e) {
-      _error = 'Failed to get documents for audit: $e';
+      _error = LocaleProvider.instance.l10n.errAuditDocs('$e');
       return [];
     }
   }

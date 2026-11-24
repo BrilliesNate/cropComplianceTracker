@@ -16,13 +16,13 @@ class AbsaTemplate extends BankExportTemplate {
 
   @override
   List<String> get headerRow => const [
-        'Account Number',
-        'Branch Code',
-        'Account Type',
-        'Amount',
-        'Beneficiary Name',
-        'Beneficiary Reference',
-        'Own Reference',
+        'Account Number', // l10n-ignore: bank file format
+        'Branch Code', // l10n-ignore: bank file format
+        'Account Type', // l10n-ignore: bank file format
+        'Amount', // l10n-ignore: bank file format
+        'Beneficiary Name', // l10n-ignore: bank file format
+        'Beneficiary Reference', // l10n-ignore: bank file format
+        'Own Reference', // l10n-ignore: bank file format
       ];
 
   @override
@@ -34,6 +34,6 @@ class AbsaTemplate extends BankExportTemplate {
         BankExportTemplate.cleanText(line.beneficiaryName, nameMaxLength),
         reference(line, ctx),
         BankExportTemplate.cleanText(
-            'SAL ${line.beneficiaryName}', referenceMaxLength),
+            'SAL ${line.beneficiaryName}', referenceMaxLength), // l10n-ignore: bank file format
       ];
 }

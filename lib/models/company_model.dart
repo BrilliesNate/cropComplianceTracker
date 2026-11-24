@@ -6,6 +6,8 @@ class CompanyModel {
   final String address;
   final DateTime createdAt;
   final List<String> packages;
+  /// Farmable farm ID linked to this company. Null if not connected.
+  final int? farmableLocationId;
 
   CompanyModel({
     required this.id,
@@ -13,7 +15,10 @@ class CompanyModel {
     required this.address,
     required this.createdAt,
     required this.packages,
+    this.farmableLocationId,
   });
+
+  bool get hasFarmable => farmableLocationId != null;
 
   Map<String, dynamic> toMap() {
     return {
@@ -21,6 +26,7 @@ class CompanyModel {
       'address': address,
       'createdAt': Timestamp.fromDate(createdAt),
       'packages': packages,
+      if (farmableLocationId != null) 'farmableLocationId': farmableLocationId,
     };
   }
 
@@ -31,6 +37,7 @@ class CompanyModel {
       address: map['address'] ?? '',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       packages: List<String>.from(map['packages'] ?? ['siza_wieta']),
+      farmableLocationId: map['farmableLocationId'] as int?,
     );
   }
 
@@ -40,6 +47,8 @@ class CompanyModel {
     String? address,
     DateTime? createdAt,
     List<String>? packages,
+    int? farmableLocationId,
+    bool clearFarmable = false,
   }) {
     return CompanyModel(
       id: id ?? this.id,
@@ -47,6 +56,7 @@ class CompanyModel {
       address: address ?? this.address,
       createdAt: createdAt ?? this.createdAt,
       packages: packages ?? this.packages,
+      farmableLocationId: clearFarmable ? null : (farmableLocationId ?? this.farmableLocationId),
     );
   }
 
@@ -57,5 +67,8 @@ class CompanyModel {
 
   bool get hasSizaWieta => packages.contains('siza_wieta');
   bool get hasGlobalGap => packages.contains('globalgap');
+  bool get hasIpw => packages.contains('ipw');
+  bool get hasFairtrade => packages.contains('fairtrade');
+  bool get hasSizaEnvironmental => packages.contains('siza_environmental');
   bool get hasBothPackages => hasSizaWieta && hasGlobalGap;
 }

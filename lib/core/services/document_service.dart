@@ -1,6 +1,9 @@
+import '../offline/connectivity_service.dart';
+import '../offline/upload_outbox.dart';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/document_model.dart';
 import '../../models/document_type_model.dart';
@@ -10,6 +13,7 @@ import '../../models/user_model.dart';
 import '../../models/enums.dart';
 import 'firestore_service.dart';
 import 'storage_service.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DocumentService {
   final FirestoreService _firestoreService;
@@ -60,7 +64,7 @@ class DocumentService {
             'deletedBy': user.id,
             'deletedByName': user.name,
             'deletionDate': DateTime.now(),
-            'reason': reason ?? 'No reason provided',
+            'reason': reason ?? 'No reason provided', // l10n-ignore: stored audit log
             'originalDocument': document.toMap(),
           });
 
@@ -91,6 +95,7 @@ class DocumentService {
     bool isNotApplicable = false,
     UserModel? actingUser, // This is the admin who is performing the action (optional)
     String? specification, // NEW FIELD
+    DateTime? reviewedDate,
   }) async {
     try {
 
@@ -111,6 +116,13 @@ class DocumentService {
 
 
 
+      // Who actually uploaded — the acting admin if present, else the user.
+      // Captured now (their real name) so the "Uploaded By" label never relies
+      // on a later user lookup that can fail.
+      final uploader = actingUser ?? user;
+      final uploaderLabel =
+          uploader.name.trim().isNotEmpty ? uploader.name : LocaleProvider.instance.l10n.unknownUser;
+
       // Create the document object with explicit expiryDate and specification
       // Document is created for the target user, not the acting user
       final document = DocumentModel(
@@ -124,15 +136,20 @@ class DocumentService {
         formData: formData ?? {},
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        expiryDate: expiryDate,
+        // A document type that doesn't use expiry dates must never get one —
+        // otherwise it would eventually show up as "expired" for no reason.
+        expiryDate: documentType.hasExpiryDate ? expiryDate : null,
         isNotApplicable: isNotApplicable,
         signatures: [],
         comments: [],
         specification: specification, // NEW FIELD
+        uploadedByName: uploaderLabel,
+        reviewedDate: documentType.hasReviewedDate ? reviewedDate : null,
       );
 
       // Upload files if needed
       List<String> fileUrls = [];
+      final pendingFiles = <String>[]; // waiting in the offline outbox
       if (!isNotApplicable && documentType.isUploadable && files.isNotEmpty) {
 
 
@@ -166,21 +183,31 @@ class DocumentService {
             } else {
               // For mobile/desktop platforms
               if (file is File) {
-                final fileName = file.path.split('/').last;
+                final fileName = file.path.split(Platform.pathSeparator).last;
 
-
-                final fileUrl = await _storageService.uploadFile(
-                  file,
-                  user.companyId, // Use target user's company for storage
-                  docId,
-                  fileName,
-                );
+                // Offline (or the upload fails): keep the file safely on the
+                // phone and let the outbox upload it when there's signal. The
+                // document is still created now, so the user sees it at once.
+                String? fileUrl;
+                if (ConnectivityService.instance.isOnline) {
+                  fileUrl = await _storageService.uploadFile(
+                    file,
+                    user.companyId, // Use target user's company for storage
+                    docId,
+                    fileName,
+                  );
+                }
 
                 if (fileUrl != null) {
-
                   fileUrls.add(fileUrl);
                 } else {
-
+                  await UploadOutbox.instance.enqueue(
+                    documentId: docId,
+                    companyId: user.companyId,
+                    source: file,
+                    fileName: fileName,
+                  );
+                  pendingFiles.add(fileName);
                 }
               } else {
                 print("DEBUG: Invalid file format for mobile/desktop upload: ${file.runtimeType}");
@@ -196,7 +223,8 @@ class DocumentService {
       }
 
       // Update document with file URLs
-      final updatedDocument = document.copyWith(fileUrls: fileUrls);
+      final updatedDocument =
+          document.copyWith(fileUrls: fileUrls, pendingFiles: pendingFiles);
       print("DEBUG: Updated document with file URLs: ${fileUrls.length}");
       print("DEBUG: Document's fileUrls: ${updatedDocument.fileUrls}");
 
@@ -220,6 +248,14 @@ class DocumentService {
             ? Timestamp.fromDate(updatedDocument.expiryDate!)
             : null,
         'specification': updatedDocument.specification, // NEW FIELD
+        // Who uploaded it, captured now so the "Uploaded By" label never depends
+        // on a later user lookup (which other users aren't allowed to do).
+        'uploadedByName': updatedDocument.uploadedByName,
+        'reviewedDate': updatedDocument.reviewedDate != null
+            ? Timestamp.fromDate(updatedDocument.reviewedDate!)
+            : null,
+        'isSuperseded': false,
+        if (pendingFiles.isNotEmpty) 'pendingFiles': pendingFiles,
       };
 
       print("DEBUG: Final Firestore data: $firestoreData");
@@ -237,7 +273,7 @@ class DocumentService {
             documentId: docId,
             userId: actingUser.id,
             userName: actingUser.name,
-            text: "Document created by admin ${actingUser.name} for user ${user.name}",
+            text: LocaleProvider.instance.l10n.cmtCreatedByAdmin(actingUser.name, user.name),
             createdAt: DateTime.now(),
           );
 
@@ -264,12 +300,18 @@ class DocumentService {
       DocumentStatus status,
       String? comment,
       UserModel user, // This could be admin or regular user
-          {UserModel? onBehalfOfUser} // Optional: if admin is acting for another user
-      ) async {
+          {
+        UserModel? onBehalfOfUser, // Optional: if admin is acting for another user
+        String? specification,     // NEW: Optional specification to update
+        DateTime? expiryDate,      // NEW: Optional expiry date to update
+        bool clearExpiryDate = false, // Remove the expiry date entirely
+      }) async {
     try {
       print("DEBUG: updateDocumentStatus called for document: $documentId");
       print("DEBUG: Acting user: ${user.name} (${user.email})");
       print("DEBUG: New status: ${status.toString()}");
+      print("DEBUG: New specification: $specification"); // NEW
+      print("DEBUG: New expiryDate: $expiryDate"); // NEW
 
       if (onBehalfOfUser != null) {
         print("DEBUG: Admin is updating status on behalf of: ${onBehalfOfUser.name}");
@@ -282,13 +324,33 @@ class DocumentService {
       }
 
       print("DEBUG: Current document status: ${document.status}");
+      print("DEBUG: Current specification: ${document.specification}");
+      print("DEBUG: Current expiryDate: ${document.expiryDate}");
       print("DEBUG: Current fileUrls: ${document.fileUrls}");
 
+      // NEW: Build the updated document with all fields
       final updatedDocument = document.copyWith(
         status: status,
         updatedAt: DateTime.now(),
+        // NEW: Update specification if provided (use new value, otherwise keep existing)
+        specification: specification ?? document.specification,
+        // Keep the existing expiry unless a new one is given, or the caller
+        // explicitly asks to clear it (a plain null can't mean "clear", because
+        // callers also pass null to mean "leave it alone").
+        expiryDate: expiryDate,
+        clearExpiryDate: clearExpiryDate && expiryDate == null,
+        // Store the rejection reason on the document so the notification
+        // Cloud Function can read it race-free on the status-change trigger.
+        rejectionReason: status == DocumentStatus.REJECTED
+            ? ((comment != null && comment.trim().isNotEmpty)
+                ? comment.trim()
+                : LocaleProvider.instance.l10n.noReasonProvided)
+            : null,
+        // Record who performed the rejection so the notification function
+        // can exclude them (no self-notifications).
+        rejectedBy: status == DocumentStatus.REJECTED ? user.id : null,
       );
-      print("DEBUG: Updated document with new status");
+      print("DEBUG: Updated document with new status and fields");
 
       final result = await _firestoreService.updateDocument(updatedDocument);
       print("DEBUG: Document update result: $result");
@@ -297,12 +359,30 @@ class DocumentService {
       if (result) {
         String? finalComment = comment;
 
+        // NEW: Track what was changed for the comment
+        List<String> changes = [];
+        if (specification != null && specification != document.specification) {
+          changes.add(LocaleProvider.instance.l10n.cmtSpecUpdated);
+        }
+        if (expiryDate != null && expiryDate != document.expiryDate) {
+          changes.add(LocaleProvider.instance.l10n.cmtExpiryUpdated(DateFormat('MMM d, y').format(expiryDate)));
+        } else if (clearExpiryDate && expiryDate == null && document.expiryDate != null) {
+          changes.add(LocaleProvider.instance.l10n.cmtExpiryRemoved);
+        }
+
         // If admin is acting on behalf of another user, modify the comment
         if (onBehalfOfUser != null && user.id != onBehalfOfUser.id) {
-          final adminNote = "Status updated by admin ${user.name}";
+          final adminNote = LocaleProvider.instance.l10n.cmtStatusByAdmin(user.name);
           finalComment = comment != null && comment.isNotEmpty
               ? "$comment\n\n[$adminNote]"
               : "[$adminNote]";
+        }
+
+        // NEW: Add changes to comment if any field was modified
+        if (changes.isNotEmpty && finalComment != null && finalComment.isNotEmpty) {
+          finalComment = "$finalComment\n\n[${changes.join(', ')}]";
+        } else if (changes.isNotEmpty && (finalComment == null || finalComment.isEmpty)) {
+          finalComment = "[${changes.join(', ')}]";
         }
 
         if (finalComment != null && finalComment.isNotEmpty) {
@@ -354,13 +434,19 @@ class DocumentService {
         return false;
       }
 
-      final imageUrl = await _storageService.uploadSignature(
-        signatureFile,
-        document.companyId, // Use document owner's company
-        signatureId,
-      );
-
-      if (imageUrl == null) {
+      // Online: upload the image now. Offline (or it fails) on the phone:
+      // save the signature record now without an image and let the outbox
+      // upload the image when there's signal.
+      String? imageUrl;
+      if (kIsWeb || ConnectivityService.instance.isOnline) {
+        imageUrl = await _storageService.uploadSignature(
+          signatureFile,
+          document.companyId, // Use document owner's company
+          signatureId,
+        );
+      }
+      final queueImage = imageUrl == null && !kIsWeb && signatureFile is File;
+      if (imageUrl == null && !queueImage) {
         print("DEBUG: Signature upload failed");
         return false;
       }
@@ -371,7 +457,7 @@ class DocumentService {
       // If admin is signing on behalf of someone, show both names
       String signatureName = user.name;
       if (onBehalfOfUser != null && user.id != onBehalfOfUser.id) {
-        signatureName = "${onBehalfOfUser.name} (via admin ${user.name})";
+        signatureName = LocaleProvider.instance.l10n.viaAdmin(onBehalfOfUser.name, user.name);
       }
 
       final signature = SignatureModel(
@@ -379,14 +465,26 @@ class DocumentService {
         documentId: documentId,
         userId: user.id,
         userName: signatureName,
-        imageUrl: imageUrl,
+        imageUrl: imageUrl ?? '',
         signedAt: DateTime.now(),
+        pendingImage: queueImage,
       );
 
       // Save signature to Firestore
       print("DEBUG: Saving signature to Firestore...");
       final savedId = await _firestoreService.addSignature(signature);
       print("DEBUG: Signature saved with ID: $savedId");
+
+      if (savedId != null && queueImage) {
+        await UploadOutbox.instance.enqueue(
+          documentId: documentId,
+          companyId: document.companyId,
+          source: signatureFile as File,
+          fileName: 'signature_$signatureId.png',
+          kind: 'signature',
+          targetId: savedId,
+        );
+      }
 
       return savedId != null;
     } catch (e) {
@@ -416,7 +514,7 @@ class DocumentService {
       String commenterName = user.name;
 
       if (onBehalfOfUser != null && user.id != onBehalfOfUser.id) {
-        commenterName = "${onBehalfOfUser.name} (via admin ${user.name})";
+        commenterName = LocaleProvider.instance.l10n.viaAdmin(onBehalfOfUser.name, user.name);
       }
 
       final comment = CommentModel(
@@ -593,12 +691,12 @@ class DocumentService {
 
       if (result) {
         // Add a system comment about resubmission
-        String commentText = "Document resubmitted with updated files.";
+        String commentText = LocaleProvider.instance.l10n.cmtResubmitted;
         String commenterName = user.name;
 
         if (onBehalfOfUser != null && user.id != onBehalfOfUser.id) {
-          commentText = "Document resubmitted with updated files by admin ${user.name} for user ${onBehalfOfUser.name}.";
-          commenterName = "${onBehalfOfUser.name} (via admin ${user.name})";
+          commentText = LocaleProvider.instance.l10n.cmtResubmittedByAdmin(user.name, onBehalfOfUser.name);
+          commenterName = LocaleProvider.instance.l10n.viaAdmin(onBehalfOfUser.name, user.name);
         }
 
         final commentModel = CommentModel(

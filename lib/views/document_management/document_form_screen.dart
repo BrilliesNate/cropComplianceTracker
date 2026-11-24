@@ -1,5 +1,3 @@
-
-
 import 'dart:math';
 
 import 'package:cropCompliance/core/services/firestore_service.dart';
@@ -14,6 +12,7 @@ import 'package:cropCompliance/views/shared/loading_indicator.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DocumentFormScreen extends StatefulWidget {
   final String categoryId;
@@ -101,6 +100,12 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
     final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
     final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
 
+    // CRITICAL FIX: Create user with correct companyId for document creation
+    // When admin manages a company, effectiveUser.companyId might be wrong/null
+    final effectiveUserWithCorrectCompany = authProvider.effectiveUser!.copyWith(
+      companyId: authProvider.effectiveCompany!.id,
+    );
+
     // Get document type to check if expiry date is required
     final documentTypes = categoryProvider.getDocumentTypes(widget.categoryId);
     DocumentTypeModel? documentType;
@@ -112,8 +117,8 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
 
     if (documentType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Document type not found'),
+        SnackBar(
+          content: Text(context.l10n.docTypeNotFound),
           backgroundColor: Colors.red,
         ),
       );
@@ -122,8 +127,8 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
 
     if (documentType.hasExpiryDate && _expiryDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select an expiry date'),
+        SnackBar(
+          content: Text(context.l10n.selectExpiryPlease),
           backgroundColor: Colors.red,
         ),
       );
@@ -135,14 +140,14 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
     });
 
     try {
-      if (authProvider.currentUser != null) {
+      if (authProvider.effectiveUser != null && authProvider.effectiveCompany != null) {
         // Save form configuration ID with form data for reference
         if (_formConfig != null) {
           _formData['_formConfigId'] = widget.documentTypeId;
         }
 
         final document = await documentProvider.createDocument(
-          user: authProvider.currentUser,
+          user: effectiveUserWithCorrectCompany,
           categoryId: widget.categoryId,
           documentTypeId: widget.documentTypeId,
           files: [],
@@ -152,8 +157,8 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
 
         if (document != null && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Document created successfully'),
+            SnackBar(
+              content: Text(context.l10n.docCreated),
               backgroundColor: Colors.green,
             ),
           );
@@ -164,7 +169,7 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error submitting form: $e'),
+            content: Text(context.l10n.formSubmitError('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -184,18 +189,18 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
 
     if (categoryProvider.isLoading) {
       return Scaffold(
-        appBar: const CustomAppBar(
-          title: 'Fill Document Form',
+        appBar: CustomAppBar(
+          title: context.l10n.fillDocForm,
           showBackButton: true,
         ),
-        body: const LoadingIndicator(message: 'Loading document type...'),
+        body: LoadingIndicator(message: context.l10n.docTypeLoading),
       );
     }
 
     if (categoryProvider.error != null) {
       return Scaffold(
-        appBar: const CustomAppBar(
-          title: 'Fill Document Form',
+        appBar: CustomAppBar(
+          title: context.l10n.fillDocForm,
           showBackButton: true,
         ),
         body: ErrorDisplay(
@@ -215,12 +220,12 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
 
     if (documentType == null) {
       return Scaffold(
-        appBar: const CustomAppBar(
-          title: 'Fill Document Form',
+        appBar: CustomAppBar(
+          title: context.l10n.fillDocForm,
           showBackButton: true,
         ),
-        body: const Center(
-          child: Text('Document type not found'),
+        body: Center(
+          child: Text(context.l10n.docTypeNotFound),
         ),
       );
     }
@@ -229,7 +234,7 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
     if (_isLoadingFormConfig) {
       return Scaffold(
         appBar: CustomAppBar(
-          title: 'Fill ${documentType.name}',
+          title: context.l10n.fillTypeName(documentType.name),
           showBackButton: true,
         ),
         body: const Center(
@@ -240,7 +245,7 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
 
     return Scaffold(
       appBar: CustomAppBar(
-        title: 'Fill ${documentType.name}',
+        title: context.l10n.fillTypeName(documentType.name),
         showBackButton: true,
       ),
       body: SingleChildScrollView(
@@ -270,8 +275,8 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
 
                 if (documentType.hasExpiryDate) ...[
                   const SizedBox(height: 24),
-                  const Text(
-                    'Expiry Date',
+                  Text(
+                    context.l10n.expiryDateTitle,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                     ),
@@ -282,7 +287,7 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
                         ? Text(
                       '${_expiryDate!.day}/${_expiryDate!.month}/${_expiryDate!.year}',
                     )
-                        : const Text('Select expiry date'),
+                        : Text(context.l10n.selectExpiryDateLower),
                     trailing: const Icon(Icons.calendar_today),
                     onTap: _selectExpiryDate,
                     tileColor: Colors.grey.shade50,
@@ -308,7 +313,7 @@ class _DocumentFormScreenState extends State<DocumentFormScreen> {
                         strokeWidth: 2,
                       ),
                     )
-                        : const Text('Submit Form'),
+                        : Text(context.l10n.submitForm),
                   ),
                 ),
               ],

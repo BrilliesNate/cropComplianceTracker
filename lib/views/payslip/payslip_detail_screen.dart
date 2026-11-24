@@ -1,3 +1,4 @@
+import 'package:cropCompliance/views/shared/admin_farm_chip.dart';
 import 'package:cropCompliance/core/constants/route_constants.dart';
 import 'package:cropCompliance/models/payslip_model.dart';
 import 'package:cropCompliance/providers/payslip_provider.dart';
@@ -5,6 +6,7 @@ import 'package:cropCompliance/views/payslip/utils/payslip_pdf_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class PayslipDetailScreen extends StatelessWidget {
   final String payslipId;
@@ -14,8 +16,8 @@ class PayslipDetailScreen extends StatelessWidget {
 
   static final _currency =
       NumberFormat.currency(locale: 'en_ZA', symbol: 'R ', decimalDigits: 2);
-  static final _dateFormat = DateFormat('d MMM yyyy');
-  static final _shortDate = DateFormat('d-MMM-yyyy');
+  static DateFormat get _dateFormat => DateFormat('d MMM yyyy'); // follows the app language
+  static DateFormat get _shortDate => DateFormat('d-MMM-yyyy'); // follows the app language
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +26,8 @@ class PayslipDetailScreen extends StatelessWidget {
 
     if (payslip == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Payslip')),
-        body: const Center(child: Text('Payslip not found')),
+        appBar: AppBar(title: Text(context.l10n.payslipWord)),
+        body: Center(child: Text(context.l10n.payslipNotFound)),
       );
     }
 
@@ -34,6 +36,7 @@ class PayslipDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
+        bottom: adminFarmAppBarBottom(context),
         backgroundColor: primaryColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -42,7 +45,7 @@ class PayslipDetailScreen extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Payslip',
+            Text(context.l10n.payslipWord,
                 style: TextStyle(color: Colors.white, fontSize: 16)),
             Text(payslip.employeeName,
                 style: const TextStyle(color: Colors.white70, fontSize: 12)),
@@ -52,18 +55,18 @@ class PayslipDetailScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.print_outlined, color: Colors.white),
-            tooltip: 'Print / Save PDF',
+            tooltip: context.l10n.printSavePdf,
             onPressed: () => _printPayslip(context, payslip),
           ),
           if (!payslip.isFinalised)
             IconButton(
               icon: const Icon(Icons.edit_outlined, color: Colors.white),
-              tooltip: 'Edit',
+              tooltip: context.l10n.actionEdit,
               onPressed: () => _edit(context, payslip),
             ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.white),
-            tooltip: 'Delete',
+            tooltip: context.l10n.actionDelete,
             onPressed: () => _delete(context, provider, payslip),
           ),
         ],
@@ -97,15 +100,15 @@ class PayslipDetailScreen extends StatelessWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete Payslip'),
-        content: Text('Delete this payslip for ${p.employeeName}?'),
+        title: Text(context.l10n.psDeleteTitle),
+        content: Text(context.l10n.deletePayslipFor(p.employeeName)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.commonCancel)),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red))),
+              child: Text(context.l10n.actionDelete, style: const TextStyle(color: Colors.red))),
         ],
       ),
     );
@@ -160,7 +163,7 @@ class PayslipDetailScreen extends StatelessWidget {
           width: double.infinity,
           color: Colors.grey.shade200,
           padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text('SALARIS STROKIE',
+          child: Text(LocaleProvider.instance.l10n.payslipTitle,
               style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
@@ -206,37 +209,37 @@ class PayslipDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeader('PERSOONLIKE BESONDERHEDE', primaryColor),
-          _detailRow('Naam', p.employeeName),
-          _detailRow('ID Nommer', p.employeeIdNumber),
-          _detailRow('Periode Begin', _shortDate.format(p.payPeriodStart)),
-          _detailRow('Periode Einde', _shortDate.format(p.payPeriodEnd)),
+          _sectionHeader(LocaleProvider.instance.l10n.psPersonalDetails, primaryColor),
+          _detailRow(LocaleProvider.instance.l10n.payslipName, p.employeeName),
+          _detailRow(LocaleProvider.instance.l10n.payslipIdNumber, p.employeeIdNumber),
+          _detailRow(LocaleProvider.instance.l10n.psPeriodStart, _shortDate.format(p.payPeriodStart)),
+          _detailRow(LocaleProvider.instance.l10n.psPeriodEnd, _shortDate.format(p.payPeriodEnd)),
           const SizedBox(height: 20),
           _sectionHeader('VERDIENSTE', primaryColor),
-          _rateRow('Uurlikse Loon', p.normalRate),
-          if (p.overtimeHours > 0) _rateRow('Oortyd Loon', p.overtimeRate),
+          _rateRow(LocaleProvider.instance.l10n.psHourlyRate, p.normalRate),
+          if (p.overtimeHours > 0) _rateRow(LocaleProvider.instance.l10n.psOvertimeRate, p.overtimeRate),
           if (p.doubleTimeHours > 0)
-            _rateRow('Dubbel Tyd Loon', p.doubleTimeRate),
+            _rateRow(LocaleProvider.instance.l10n.psDoubleTimeRate, p.doubleTimeRate),
           const SizedBox(height: 8),
-          _hoursRow('Normale Loon', p.normalHours, p.normalPay),
+          _hoursRow(LocaleProvider.instance.l10n.psNormalPay, p.normalHours, p.normalPay),
           if (p.overtimePay > 0)
-            _hoursRow('Oortyd Loon', p.overtimeHours, p.overtimePay),
+            _hoursRow(LocaleProvider.instance.l10n.psOvertimePay, p.overtimeHours, p.overtimePay),
           if (p.doubleTimePay > 0)
-            _hoursRow('Dubbel Tyd', p.doubleTimeHours, p.doubleTimePay),
+            _hoursRow(LocaleProvider.instance.l10n.psDoubleTime, p.doubleTimeHours, p.doubleTimePay),
           if (p.publicHolidayPay > 0)
             _hoursRow(
-                'Openbare Vakansie', p.publicHolidayHours, p.publicHolidayPay),
+                LocaleProvider.instance.l10n.psPublicHoliday, p.publicHolidayHours, p.publicHolidayPay),
           if (p.sickLeavePay > 0)
-            _hoursRowColored('Siekteverlof (SL)', p.sickLeaveHours,
+            _hoursRowColored(LocaleProvider.instance.l10n.psSickLeaveCoded, p.sickLeaveHours,
                 p.sickLeavePay, Colors.blue.shade700),
           if (p.holidayLeavePay > 0)
-            _hoursRowColored('Vakansieverlof (HL)', p.holidayLeaveHours,
+            _hoursRowColored(LocaleProvider.instance.l10n.psHolidayLeaveCoded, p.holidayLeaveHours,
                 p.holidayLeavePay, Colors.orange.shade700),
           if (p.familyLeavePay > 0)
-            _hoursRowColored('Gesinsverlof (FL)', p.familyLeaveHours,
+            _hoursRowColored(LocaleProvider.instance.l10n.psFamilyLeaveCoded, p.familyLeaveHours,
                 p.familyLeavePay, Colors.purple.shade700),
           const Divider(),
-          _totalRow('TOTALE INKOMSTE', p.totalEarnings, primaryColor),
+          _totalRow(LocaleProvider.instance.l10n.payslipTotalEarnings, p.totalEarnings, primaryColor),
         ],
       ),
     );
@@ -250,22 +253,22 @@ class PayslipDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeader('ANDER BESONDERHEDE', primaryColor),
-          _detailRow('Betaaldatum', _shortDate.format(p.payDate)),
+          _sectionHeader(LocaleProvider.instance.l10n.psOtherDetails, primaryColor),
+          _detailRow(LocaleProvider.instance.l10n.payslipPayDate, _shortDate.format(p.payDate)),
           _detailRow(
-              'UIF Reg Nr', p.uifRegNumber.isNotEmpty ? p.uifRegNumber : '-'),
+              LocaleProvider.instance.l10n.psUifRegNr, p.uifRegNumber.isNotEmpty ? p.uifRegNumber : '-'),
           const SizedBox(height: 20),
           _sectionHeader('AFTREKKINGS', primaryColor),
-          _deductionRow('UIF Werknemer (1%)', p.uifDeduction),
+          _deductionRow(LocaleProvider.instance.l10n.payslipUifEmployee, p.uifDeduction),
           if (p.payeDeduction > 0)
-            _deductionRow('PAYE Belasting', p.payeDeduction),
+            _deductionRow(LocaleProvider.instance.l10n.payslipPayeTax, p.payeDeduction),
           for (final d in p.additionalDeductions)
             _deductionRow(d.description, d.amount),
           const Divider(),
           _totalRow(
-              'TOTALE AFTREKKINGS', p.totalDeductions, Colors.red.shade700),
+              LocaleProvider.instance.l10n.payslipTotalDeductions, p.totalDeductions, Colors.red.shade700),
           const SizedBox(height: 16),
-          _sectionHeader('NETTO SALARIS', primaryColor),
+          _sectionHeader(LocaleProvider.instance.l10n.psNetSalaryCaps, primaryColor),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(14),
@@ -277,7 +280,7 @@ class PayslipDetailScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Nett Salaris',
+                Text(LocaleProvider.instance.l10n.payslipNetSalary,
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: primaryColor,
@@ -452,7 +455,7 @@ class PayslipDetailScreen extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not generate PDF: $e'),
+            content: Text(context.l10n.pdfGenerateFailed('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -481,8 +484,8 @@ class PayslipDetailScreen extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             isFinal
-                ? 'This payslip has been finalised'
-                : 'This payslip is a draft',
+                ? LocaleProvider.instance.l10n.payslipFinalised
+                : LocaleProvider.instance.l10n.payslipIsDraft,
             style: TextStyle(
               color:
                   isFinal ? Colors.green.shade800 : Colors.orange.shade800,

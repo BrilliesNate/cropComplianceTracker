@@ -1,3 +1,4 @@
+import 'package:cropCompliance/l10n/generated/app_localizations.dart';
 enum UserRole {
   ADMIN,
   AUDITER,
@@ -13,14 +14,15 @@ enum DocumentStatus {
 }
 
 extension UserRoleExtension on UserRole {
-  String get name {
+  /// The role in the app language.
+  String label(AppLocalizations l10n) {
     switch (this) {
       case UserRole.ADMIN:
-        return 'Admin';
+        return l10n.roleAdmin;
       case UserRole.AUDITER:
-        return 'Auditer';
+        return l10n.roleAuditor;
       case UserRole.USER:
-        return 'User';
+        return l10n.roleUser;
     }
   }
 
@@ -33,18 +35,15 @@ extension UserRoleExtension on UserRole {
 }
 
 extension DocumentStatusExtension on DocumentStatus {
-  String get name {
+  /// The status in the app language.
+  String label(AppLocalizations l10n) {
     switch (this) {
       case DocumentStatus.PENDING:
-        return 'Pending';
+        return l10n.statusPending;
       case DocumentStatus.APPROVED:
-        return 'Approved';
+        return l10n.statusApproved;
       case DocumentStatus.REJECTED:
-        return 'Rejected';
-      // case DocumentStatus.UPCOMING:
-      //   return 'Upcoming'; // need to create enum to say upcoming dates. dates hase to be generic change
-    // case DocumentStatus.NEWREQUIRMENTS:
-      //   return 'New Requirments';
+        return l10n.statusRejected;
     }
   }
 

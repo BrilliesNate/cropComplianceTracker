@@ -1,3 +1,4 @@
+import 'package:cropCompliance/views/shared/admin_farm_chip.dart';
 import 'package:cropCompliance/models/employee_model.dart';
 import 'package:cropCompliance/models/payslip_model.dart';
 import 'package:cropCompliance/providers/payslip_provider.dart';
@@ -5,6 +6,7 @@ import 'package:cropCompliance/views/payslip/utils/payslip_pdf_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 // ── Helper class to hold per-employee row state ───────────────────────────────
 
@@ -93,7 +95,7 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
 
   static final _currency =
       NumberFormat.currency(locale: 'en_ZA', symbol: 'R ', decimalDigits: 2);
-  static final _dateFmt = DateFormat('d MMM yyyy');
+  static DateFormat get _dateFmt => DateFormat('d MMM yyyy'); // follows the app language
 
   @override
   void initState() {
@@ -171,8 +173,8 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
     final rowsToGenerate = _rows.where((r) => r.hasAnyHours).toList();
     if (rowsToGenerate.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Enter hours for at least one employee.'),
+        SnackBar(
+          content: Text(context.l10n.bulkEnterHours),
           backgroundColor: Colors.orange,
         ),
       );
@@ -216,7 +218,7 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
         setState(() {
           row.generating = false;
           row.generated = saved;
-          row.error = saved == null ? 'Save failed' : null;
+          row.error = saved == null ? context.l10n.psSaveFailedShort : null;
         });
         if (saved != null) success++; else failed++;
       } catch (e) {
@@ -237,8 +239,8 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(failed == 0
-              ? '$success payslip${success == 1 ? '' : 's'} generated successfully'
-              : '$success generated, $failed failed'),
+              ? context.l10n.bulkGeneratedOk(success)
+              : context.l10n.bulkGeneratedSome(success, failed)),
           backgroundColor: failed == 0 ? Colors.green : Colors.orange,
           duration: const Duration(seconds: 4),
         ),
@@ -256,7 +258,7 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('PDF error: $e'),
+              content: Text(context.l10n.pdfError('$e')),
               backgroundColor: Colors.red),
         );
       }
@@ -272,6 +274,7 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
+        bottom: adminFarmAppBarBottom(context),
         backgroundColor: primary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -280,7 +283,7 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Bulk Payslip Generator',
+            Text(context.l10n.bulkTitle,
                 style: TextStyle(color: Colors.white, fontSize: 16)),
             Text(widget.companyName,
                 style: const TextStyle(color: Colors.white70, fontSize: 12)),
@@ -294,7 +297,7 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
               child: FilledButton.icon(
                 onPressed: _generate,
                 icon: const Icon(Icons.bolt, size: 18),
-                label: const Text('Generate All'),
+                label: Text(context.l10n.generateAll),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: primary,
@@ -323,16 +326,16 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
         children: [
           Icon(Icons.people_outline, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
-          const Text('No employees found',
+          Text(context.l10n.noEmployeesFound,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('Add employees in the Payslip Manager first.',
+          Text(context.l10n.addEmployeesFirst,
               style: TextStyle(color: Colors.grey.shade600)),
           const SizedBox(height: 24),
           OutlinedButton.icon(
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back),
-            label: const Text('Back to Manager'),
+            label: Text(context.l10n.backToManager),
           ),
         ],
       ),
@@ -351,19 +354,19 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           _dateChip(
-            label: 'Period Start',
+            label: context.l10n.psPeriodStart,
             date: _periodStart,
             onTap: _pickStart,
             primary: primary,
           ),
           _dateChip(
-            label: 'Period End',
+            label: context.l10n.psPeriodEnd,
             date: _periodEnd,
             onTap: _pickEnd,
             primary: primary,
           ),
           _dateChip(
-            label: 'Pay Date',
+            label: context.l10n.payDate,
             date: _payDate,
             onTap: _pickPayDate,
             primary: primary,
@@ -373,7 +376,7 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
             child: TextField(
               controller: _uifCtrl,
               decoration: InputDecoration(
-                labelText: 'Employer UIF Reg Nr',
+                labelText: context.l10n.employerUifRegNr,
                 hintText: 'e.g. 2230696/3',
                 isDense: true,
                 border: OutlineInputBorder(
@@ -462,13 +465,13 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
 
   Widget _buildTableHeader(Color primary) {
     final headers = [
-      'Employee',
-      'Rate (R/hr)',
-      'Normal\nhrs',
-      'Overtime\nhrs',
-      'Double\nTime',
-      'Public\nHol',
-      'Est. Net Pay',
+      context.l10n.colEmployee,
+      context.l10n.colRateRHr,
+      context.l10n.colNormalHrs,
+      context.l10n.colOvertimeHrs,
+      context.l10n.colDoubleTime,
+      context.l10n.colPublicHol,
+      context.l10n.colEstNetPay,
       '',
     ];
 
@@ -614,7 +617,7 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
                       textAlign: TextAlign.center,
                     )
                   : row.error != null
-                      ? Text('Error',
+                      ? Text(context.l10n.errorTitle,
                           style: TextStyle(
                               fontSize: 12, color: Colors.red.shade600),
                           textAlign: TextAlign.center)
@@ -636,7 +639,7 @@ class _BulkPayslipScreenState extends State<BulkPayslipScreen> {
                               CircularProgressIndicator(strokeWidth: 2)))
                   : hasGen
                       ? Tooltip(
-                          message: 'Download PDF',
+                          message: context.l10n.actionDownloadPdf,
                           child: IconButton(
                             icon: Icon(Icons.picture_as_pdf,
                                 color: primary, size: 20),

@@ -1,3 +1,4 @@
+import 'package:cropCompliance/core/offline/offline_write.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'timesheet_calc.dart';
@@ -112,8 +113,9 @@ class TimesheetService {
       ..sort((a, b) => b.start.compareTo(a.start));
   }
 
-  Future<void> savePeriod(PayPeriodRecord p) =>
-      _db.collection('payPeriods').doc(p.id).set(p.toMap(), SetOptions(merge: true));
+  Future<void> savePeriod(PayPeriodRecord p) => commitWrite(
+      _db.collection('payPeriods').doc(p.id).set(p.toMap(), SetOptions(merge: true)),
+      label: 'pay period'); // l10n-ignore: log label
 
   // ── Entries ───────────────────────────────────────────────────────────────
 
@@ -175,7 +177,7 @@ class TimesheetService {
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
-      await batch.commit();
+      await commitWrite(batch.commit(), label: 'timesheet entries'); // l10n-ignore: log label
     }
   }
 
@@ -200,7 +202,8 @@ class TimesheetService {
 
   Future<PieceRateInfo> addPieceRate(String companyId, String taskOrCrop,
       String unitType, double rate) async {
-    final ref = await _db.collection('pieceRates').add({
+    final ref = _db.collection('pieceRates').doc();
+    await commitWrite(ref.set({
       'companyId': companyId,
       'taskOrCrop': taskOrCrop,
       'unitType': unitType,
@@ -208,7 +211,7 @@ class TimesheetService {
       'validFrom': Timestamp.fromDate(DateTime.now()),
       'validTo': null,
       'active': true,
-    });
+    }), label: 'piece rate'); // l10n-ignore: log label
     return PieceRateInfo(
         id: ref.id, taskOrCrop: taskOrCrop, unitType: unitType, rate: rate);
   }
@@ -220,18 +223,19 @@ class TimesheetService {
     return TimesheetRates.fromMap(doc.data()?['timesheetRates'] as Map?);
   }
 
-  Future<void> saveRates(String companyId, TimesheetRates r) =>
+  Future<void> saveRates(String companyId, TimesheetRates r) => commitWrite(
       _db.collection('payrollSettings').doc(companyId).set({
         'companyId': companyId,
         'timesheetRates': r.toMap(),
-      }, SetOptions(merge: true));
+      }, SetOptions(merge: true)),
+      label: 'timesheet rates'); // l10n-ignore: log label
 
   // ── Audit ─────────────────────────────────────────────────────────────────
 
   Future<void> audit(String companyId, String periodId, String action,
       {String? actorId, String? actorName, String? detail}) async {
     try {
-      await _db.collection('timesheetAudit').add({
+      await commitWrite(_db.collection('timesheetAudit').doc().set({
         'companyId': companyId,
         'periodId': periodId,
         'action': action, // save | finalise | unfinalise
@@ -239,7 +243,7 @@ class TimesheetService {
         'actorName': actorName,
         if (detail != null) 'detail': detail,
         'at': FieldValue.serverTimestamp(),
-      });
+      }), label: 'timesheet audit'); // l10n-ignore: log label
     } catch (_) {
       // The log must never stop the user from saving.
     }

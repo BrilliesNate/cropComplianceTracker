@@ -1,3 +1,4 @@
+import 'package:cropCompliance/views/shared/admin_farm_chip.dart';
 import 'package:cropCompliance/models/employee_model.dart';
 import 'package:cropCompliance/models/payslip_model.dart';
 import 'package:cropCompliance/providers/payslip_provider.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class PayslipFormScreen extends StatefulWidget {
   final String? payslipId;
@@ -26,7 +28,7 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _currency =
       NumberFormat.currency(locale: 'en_ZA', symbol: 'R ', decimalDigits: 2);
-  final _dateFormat = DateFormat('d MMM yyyy');
+  DateFormat get _dateFormat => DateFormat('d MMM yyyy');
 
   // Employee
   EmployeeModel? _selectedEmployee;
@@ -214,7 +216,7 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedEmployee == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select an employee')));
+          SnackBar(content: Text(context.l10n.selectEmployeePlease)));
       return;
     }
 
@@ -222,16 +224,15 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Finalise Payslip'),
-          content: const Text(
-              'Once finalised this payslip cannot be edited. Continue?'),
+          title: Text(context.l10n.finalisePayslipTitle),
+          content: Text(context.l10n.finalisePayslipBody),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel')),
+                child: Text(context.l10n.commonCancel)),
             FilledButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Finalise')),
+                child: Text(context.l10n.actionFinalise)),
           ],
         ),
       );
@@ -248,7 +249,7 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
         Navigator.of(context).pop();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(provider.error ?? 'Failed to save')));
+            SnackBar(content: Text(provider.error ?? context.l10n.failedToSave)));
       }
     }
   }
@@ -265,6 +266,7 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
+        bottom: adminFarmAppBarBottom(context),
         backgroundColor: primaryColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -272,8 +274,8 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
         ),
         title: Text(
           readOnly
-              ? 'View Payslip'
-              : (_isEdit ? 'Edit Payslip' : 'New Payslip'),
+              ? context.l10n.viewPayslipTitle
+              : (_isEdit ? context.l10n.editPayslipTitle : context.l10n.newPayslip),
           style: const TextStyle(color: Colors.white),
         ),
         elevation: 0,
@@ -288,7 +290,7 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
 
             // ── Employee & Period ────────────────────────────────────────
             _buildSection(
-              title: 'Employee & Pay Period',
+              title: context.l10n.employeePayPeriod,
               icon: Icons.person_outline,
               children: [
                 _buildEmployeeDropdown(provider.employees, readOnly),
@@ -297,19 +299,19 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
                   children: [
                     Expanded(
                         child: _buildDateTile(
-                            'Period Start',
+                            context.l10n.psPeriodStart,
                             _periodStart,
                             readOnly ? null : () => _pickDate(true))),
                     const SizedBox(width: 12),
                     Expanded(
                         child: _buildDateTile(
-                            'Period End',
+                            context.l10n.psPeriodEnd,
                             _periodEnd,
                             readOnly ? null : () => _pickDate(false))),
                   ],
                 ),
                 const SizedBox(height: 14),
-                _buildDateTile('Pay Date', _payDate,
+                _buildDateTile(context.l10n.payDate, _payDate,
                     readOnly ? null : _pickPayDate),
               ],
             ),
@@ -317,13 +319,13 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
 
             // ── Rates ────────────────────────────────────────────────────
             _buildSection(
-              title: 'Hourly Rates',
+              title: context.l10n.hourlyRates,
               icon: Icons.attach_money,
               children: [
                 Row(
                   children: [
                     Expanded(
-                        child: _numField(_normalRate, 'Normal Rate (R)',
+                        child: _numField(_normalRate, context.l10n.normalRateR,
                             readOnly: readOnly,
                             onChanged: (_) {
                               final r = _d(_normalRate);
@@ -336,12 +338,12 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
                             })),
                     const SizedBox(width: 12),
                     Expanded(
-                        child: _numField(_overtimeRate, 'Overtime Rate (R)',
+                        child: _numField(_overtimeRate, context.l10n.overtimeRateR,
                             readOnly: readOnly,
                             helperText: '1.5×')),
                     const SizedBox(width: 12),
                     Expanded(
-                        child: _numField(_doubleTimeRate, 'Double Rate (R)',
+                        child: _numField(_doubleTimeRate, context.l10n.doubleRateR,
                             readOnly: readOnly,
                             helperText: '2×')),
                   ],
@@ -352,17 +354,17 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
 
             // ── Hours Worked ─────────────────────────────────────────────
             _buildSection(
-              title: 'Hours Worked',
+              title: context.l10n.hoursWorked,
               icon: Icons.schedule_outlined,
               children: [
                 Row(
                   children: [
                     Expanded(
-                        child: _numField(_normalHours, 'Normal Hours',
+                        child: _numField(_normalHours, context.l10n.normalHoursLabel,
                             readOnly: readOnly)),
                     const SizedBox(width: 12),
                     Expanded(
-                        child: _numField(_overtimeHours, 'Overtime Hours',
+                        child: _numField(_overtimeHours, context.l10n.overtimeHoursLabel,
                             readOnly: readOnly, required: false)),
                   ],
                 ),
@@ -370,12 +372,12 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
                 Row(
                   children: [
                     Expanded(
-                        child: _numField(_doubleHours, 'Double Time Hours',
+                        child: _numField(_doubleHours, context.l10n.doubleTimeHoursLabel,
                             readOnly: readOnly, required: false)),
                     const SizedBox(width: 12),
                     Expanded(
                         child: _numField(
-                            _publicHolidayHours, 'Public Holiday Hours',
+                            _publicHolidayHours, context.l10n.publicHolidayHoursLabel,
                             readOnly: readOnly, required: false)),
                   ],
                 ),
@@ -385,27 +387,27 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
 
             // ── Earnings Summary ─────────────────────────────────────────
             _buildSection(
-              title: 'Earnings Summary',
+              title: context.l10n.earningsSummary,
               icon: Icons.trending_up,
               children: [
                 if (live.normalPay > 0)
-                  _earningRow('Normal Pay',
-                      '${_d(_normalHours).toStringAsFixed(1)} hrs',
+                  _earningRow(context.l10n.normalPayLabel,
+                      context.l10n.hoursAmount(_d(_normalHours).toStringAsFixed(1)),
                       live.normalPay),
                 if (live.overtimePay > 0)
-                  _earningRow('Overtime Pay',
-                      '${_d(_overtimeHours).toStringAsFixed(1)} hrs',
+                  _earningRow(context.l10n.overtimePayLabel,
+                      context.l10n.hoursAmount(_d(_overtimeHours).toStringAsFixed(1)),
                       live.overtimePay),
                 if (live.doubleTimePay > 0)
-                  _earningRow('Double Time Pay',
-                      '${_d(_doubleHours).toStringAsFixed(1)} hrs',
+                  _earningRow(context.l10n.doubleTimePayLabel,
+                      context.l10n.hoursAmount(_d(_doubleHours).toStringAsFixed(1)),
                       live.doubleTimePay),
                 if (live.publicHolidayPay > 0)
-                  _earningRow('Public Holiday Pay',
-                      '${_d(_publicHolidayHours).toStringAsFixed(1)} hrs',
+                  _earningRow(context.l10n.publicHolidayPayLabel,
+                      context.l10n.hoursAmount(_d(_publicHolidayHours).toStringAsFixed(1)),
                       live.publicHolidayPay),
                 const Divider(),
-                _earningRow('Total Earnings', '', live.totalEarnings,
+                _earningRow(context.l10n.totalEarnings, '', live.totalEarnings,
                     bold: true),
               ],
             ),
@@ -413,11 +415,11 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
 
             // ── Deductions ───────────────────────────────────────────────
             _buildSection(
-              title: 'Deductions',
+              title: context.l10n.deductionsTitle,
               icon: Icons.remove_circle_outline,
               children: [
                 _earningRow(
-                    'UIF (1% of earnings)', 'Compulsory', live.uifDeduction),
+                    context.l10n.uifOnePercent, context.l10n.compulsory, live.uifDeduction),
                 if (_deductions.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   ..._deductions.asMap().entries.map((e) =>
@@ -433,11 +435,11 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
                             amount: TextEditingController()
                               ..addListener(_rebuild)))),
                     icon: const Icon(Icons.add),
-                    label: const Text('Add Deduction'),
+                    label: Text(context.l10n.addDeduction),
                   ),
                 ],
                 const Divider(),
-                _earningRow('Total Deductions', '', live.totalDeductions,
+                _earningRow(context.l10n.totalDeductions, '', live.totalDeductions,
                     bold: true, color: Colors.red.shade700),
               ],
             ),
@@ -466,7 +468,7 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Text('Save Draft',
+                          : Text(context.l10n.saveDraft,
                               style: TextStyle(fontSize: 15)),
                     ),
                   ),
@@ -488,7 +490,7 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
                               height: 18,
                               child: CircularProgressIndicator(
                                   color: Colors.white, strokeWidth: 2))
-                          : const Text('Finalise',
+                          : Text(context.l10n.actionFinalise,
                               style: TextStyle(
                                   fontSize: 15, color: Colors.white)),
                     ),
@@ -546,12 +548,12 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
       List<EmployeeModel> employees, bool readOnly) {
     if (readOnly) {
       return _readonlyField(
-          'Employee', _selectedEmployee?.name ?? '-');
+          context.l10n.colEmployee, _selectedEmployee?.name ?? '-');
     }
     return DropdownButtonFormField<EmployeeModel>(
       value: _selectedEmployee,
       decoration: InputDecoration(
-        labelText: 'Employee',
+        labelText: context.l10n.colEmployee,
         border:
             OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         contentPadding:
@@ -566,10 +568,10 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
       onChanged: (e) {
         if (e != null) _onEmployeeChanged(e);
       },
-      validator: (v) => v == null ? 'Select an employee' : null,
+      validator: (v) => v == null ? context.l10n.selectAnEmployee : null,
       hint: employees.isEmpty
-          ? const Text('No employees – add one first')
-          : const Text('Select employee'),
+          ? Text(context.l10n.noEmployeesAddFirst)
+          : Text(context.l10n.selectEmployee),
     );
   }
 
@@ -646,8 +648,8 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
       onChanged: onChanged,
       validator: required
           ? (v) {
-              if (v == null || v.isEmpty) return 'Required';
-              if (double.tryParse(v) == null) return 'Invalid number';
+              if (v == null || v.isEmpty) return context.l10n.required;
+              if (double.tryParse(v) == null) return context.l10n.invalidNumber;
               return null;
             }
           : null,
@@ -730,7 +732,7 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
             child: TextFormField(
               controller: row.desc,
               decoration: InputDecoration(
-                labelText: 'Description',
+                labelText: context.l10n.fieldDescription,
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10)),
                 contentPadding: const EdgeInsets.symmetric(
@@ -750,7 +752,7 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
                 FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
               ],
               decoration: InputDecoration(
-                labelText: 'Amount (R)',
+                labelText: context.l10n.fieldAmountR,
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10)),
                 contentPadding: const EdgeInsets.symmetric(
@@ -791,7 +793,7 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Net Salary',
+              Text(context.l10n.payslipNetSalary,
                   style: TextStyle(
                       color: Colors.white70,
                       fontSize: 13)),
@@ -823,7 +825,7 @@ class _PayslipFormScreenState extends State<PayslipFormScreen> {
         children: [
           Icon(Icons.lock_outline, color: Colors.green.shade700),
           const SizedBox(width: 10),
-          Text('This payslip has been finalised and cannot be edited.',
+          Text(context.l10n.payslipFinalisedNoEdit,
               style: TextStyle(color: Colors.green.shade800)),
         ],
       ),

@@ -1,0 +1,221 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Identity helpers ────────────────────────────────────────────────────
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // A deactivated account (isActive == false) loses ALL access at once, even
+    // if it still holds a valid sign-in session. A missing flag means active.
+    function isActiveAccount() {
+      return userData().get('isActive', true) != false;
+    }
+
+    // Signed in AND active. Used everywhere below instead of a bare sign-in check.
+    function isAuthed() {
+      return signedIn() && isActiveAccount();
+    }
+
+    function isAdmin() {
+      return isAuthed() && userData().role == 'ADMIN';
+    }
+
+    // Auditors are read-only: approved documents (and nothing else) only.
+    function isAuditor() {
+      return isAuthed() && userData().role == 'AUDITER';
+    }
+
+    // The user's own farm, or any farm an admin granted them (additionalCompanyIds).
+    function hasCompanyAccess(companyId) {
+      return isAuthed() && (
+        userData().companyId == companyId ||
+        companyId in userData().get('additionalCompanyIds', [])
+      );
+    }
+
+    // May read AND write a farm's data: has access, and isn't an auditor.
+    function canWorkIn(companyId) {
+      return hasCompanyAccess(companyId) && !isAuditor();
+    }
+
+    // ── Users ───────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Your own profile is always readable — even when deactivated — so the
+      // app can tell you why you're locked out. Auditors can't read other
+      // people's accounts.
+      allow read: if signedIn() && (
+        request.auth.uid == userId ||
+        isAdmin() ||
+        (!isAuditor() && hasCompanyAccess(resource.data.companyId))
+      );
+      allow write: if isAdmin();
+
+      // Anyone may change their OWN app language (English / Afrikaans) —
+      // that one field and nothing else.
+      allow update: if isAuthed() && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['language'])
+        && request.resource.data.language in ['en', 'af'];
+
+      // A user manages their own push device tokens. The server (Admin SDK)
+      // reads/cleans these up, bypassing rules.
+      match /devices/{token} {
+        allow read, write: if isAuthed() && request.auth.uid == userId;
+      }
+    }
+
+    // ── Companies ───────────────────────────────────────────────────────────
+    match /companies/{companyId} {
+      allow read: if isAuthed() && (isAdmin() || hasCompanyAccess(companyId));
+      allow write: if isAdmin();
+    }
+
+    // ── Categories, document types & form definitions (global, admin-managed) ─
+    match /categories/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+    match /documentTypes/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+    match /formConfigs/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+    // Collections the app also uses for digital forms / admin tooling. They were
+    // missing from the earlier rules file; included so deploying doesn't take
+    // anything away.
+    match /formConfig/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+    match /formConfigurations/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+    match /formTemplates/{id} {
+      allow read: if isAuthed();
+      allow write: if isAdmin();
+    }
+
+    match /companySettings/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // Audit trail of deleted documents: anyone who can delete may log one,
+    // only admins can read them back.
+    match /deleted_documents/{id} {
+      allow create: if isAuthed() && !isAuditor();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ── Company document type overrides ────────────────────────────────────
+    match /companyDocumentTypeSettings/{id} {
+      allow read: if isAuthed() && (isAdmin() || hasCompanyAccess(resource.data.companyId));
+      allow create: if isAuthed() && (isAdmin() || canWorkIn(request.resource.data.companyId));
+      allow update, delete: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+    }
+
+    // ── Documents, comments, signatures ─────────────────────────────────────
+    match /documents/{id} {
+      // Auditors see APPROVED documents only. (A query must itself ask for
+      // status == 'APPROVED' for the rules engine to allow it — the app does.)
+      allow read: if isAuthed() && (
+        isAdmin() ||
+        (hasCompanyAccess(resource.data.companyId) &&
+          (!isAuditor() || resource.data.status == 'APPROVED'))
+      );
+      allow create: if isAuthed() && (isAdmin() || canWorkIn(request.resource.data.companyId));
+      allow update, delete: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+    }
+
+    // Review comments are the internal conversation between a company and its
+    // reviewer — auditors never see them.
+    match /comments/{id} {
+      allow read, write: if isAuthed() && !isAuditor();
+    }
+
+    // Signatures are part of the evidence, so auditors may read them.
+    match /signatures/{id} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && !isAuditor();
+    }
+
+    // ── Notifications ─────────────────────────────────────────────────────────
+    // Created server-side only (Cloud Functions / Admin SDK bypass rules).
+    // A user may read and mark-read/delete ONLY their own notifications.
+    match /notifications/{id} {
+      allow read, delete: if isAuthed() && resource.data.userId == request.auth.uid;
+      allow update: if isAuthed() && resource.data.userId == request.auth.uid;
+      allow create: if false;
+    }
+
+    // ── Payroll (auditors have no access) ─────────────────────────────────────
+    match /employees/{id} {
+      allow read: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+      allow create: if isAuthed() && (isAdmin() || canWorkIn(request.resource.data.companyId));
+      allow update, delete: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+    }
+
+    match /payslips/{id} {
+      allow read: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+      allow create: if isAuthed() && (isAdmin() || canWorkIn(request.resource.data.companyId));
+      allow update, delete: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+    }
+
+    match /payrollSettings/{companyId} {
+      allow read, write: if isAuthed() && (isAdmin() || canWorkIn(companyId));
+    }
+
+    match /leaveBalances/{employeeId} {
+      allow read: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+      allow create: if isAuthed() && (isAdmin() || canWorkIn(request.resource.data.companyId));
+      allow update, delete: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+    }
+
+    // ── Timesheet (Payslip Manager) — same access as payroll ─────────────────
+    match /payPeriods/{id} {
+      allow read: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+      allow create: if isAuthed() && (isAdmin() || canWorkIn(request.resource.data.companyId));
+      allow update, delete: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+    }
+
+    match /timesheetEntries/{id} {
+      allow read: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+      allow create: if isAuthed() && (isAdmin() || canWorkIn(request.resource.data.companyId));
+      allow update, delete: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+    }
+
+    match /pieceRates/{id} {
+      allow read: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+      allow create: if isAuthed() && (isAdmin() || canWorkIn(request.resource.data.companyId));
+      allow update, delete: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+    }
+
+    // Audit log: append-only for the farm; nobody edits history.
+    match /timesheetAudit/{id} {
+      allow read: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+      allow create: if isAuthed() && (isAdmin() || canWorkIn(request.resource.data.companyId));
+      allow update, delete: if false;
+    }
+
+    // ── Spray / Fertilizer Records (auditors have no access) ──────────────────
+    match /sprayRecords/{id} {
+      allow read: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+      allow create: if isAuthed() && (isAdmin() || canWorkIn(request.resource.data.companyId));
+      allow update, delete: if isAuthed() && (isAdmin() || canWorkIn(resource.data.companyId));
+    }
+  }
+}

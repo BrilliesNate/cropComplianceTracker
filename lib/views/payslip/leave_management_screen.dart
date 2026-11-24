@@ -1,3 +1,4 @@
+import 'package:cropCompliance/views/shared/admin_farm_chip.dart';
 import 'package:cropCompliance/models/employee_model.dart';
 import 'package:cropCompliance/models/leave_balance_model.dart';
 import 'package:cropCompliance/providers/payslip_provider.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class LeaveManagementScreen extends StatefulWidget {
   final String companyId;
@@ -24,7 +26,7 @@ class LeaveManagementScreen extends StatefulWidget {
 class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
   static const _uuid = Uuid();
   static final _numFmt = NumberFormat('#,##0.0', 'en_ZA');
-  static final _dateFmt = DateFormat('d MMM yyyy');
+  static DateFormat get _dateFmt => DateFormat('d MMM yyyy'); // follows the app language
 
   final _searchCtrl = TextEditingController();
 
@@ -64,13 +66,14 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        bottom: adminFarmAppBarBottom(context),
         backgroundColor: primary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Leave Records – ${widget.companyName}',
+          context.l10n.leaveRecordsTitle(widget.companyName),
           style: const TextStyle(color: Colors.white),
         ),
       ),
@@ -91,7 +94,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
               Expanded(
                 child: employees.isEmpty
                     ? Center(
-                        child: Text('No employees found.',
+                        child: Text(context.l10n.noEmployeesFoundDot,
                             style: TextStyle(
                                 color: Colors.grey.shade500, fontSize: 14)))
                     : ListView.separated(
@@ -122,14 +125,15 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
               spacing: 24,
               runSpacing: 6,
               children: [
-                _legendItem(Icons.beach_access_outlined, 'HL', 'Holiday Leave',
-                    Colors.orange.shade700, '1 hr per 17 hrs worked'),
-                _legendItem(Icons.medical_services_outlined, 'SL', 'Sick Leave',
-                    Colors.blue.shade700,
-                    '1 hr per 26 hrs (pre-6mo) / 30 days per 3 yrs'),
-                _legendItem(Icons.family_restroom_outlined, 'FL',
-                    'Family Resp. Leave', Colors.purple.shade700,
-                    '3 days/yr after 4 months (needs start date)'),
+                _legendItem(Icons.beach_access_outlined, context.l10n.leaveCodeHL,
+                    context.l10n.leaveHoliday, Colors.orange.shade700,
+                    context.l10n.leaveHolidayRule),
+                _legendItem(Icons.medical_services_outlined, context.l10n.leaveCodeSL,
+                    context.l10n.leaveSickTitle, Colors.blue.shade700,
+                    context.l10n.leaveSickRule),
+                _legendItem(Icons.family_restroom_outlined, context.l10n.leaveCodeFL,
+                    context.l10n.leaveFamilyTitle, Colors.purple.shade700,
+                    context.l10n.leaveFamilyRule),
               ],
             ),
           ),
@@ -139,7 +143,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                 ? null
                 : () => _downloadReport(provider),
             icon: const Icon(Icons.download_outlined, size: 16),
-            label: const Text('Leave Report (PDF)',
+            label: Text(context.l10n.leaveReportPdf,
                 style: TextStyle(fontSize: 13)),
             style: FilledButton.styleFrom(
               backgroundColor: primary,
@@ -194,7 +198,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
         child: TextField(
           controller: _searchCtrl,
           decoration: InputDecoration(
-            hintText: 'Search employees…',
+            hintText: context.l10n.searchEmployees,
             hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
             prefixIcon:
                 Icon(Icons.search, size: 18, color: Colors.grey.shade400),
@@ -259,13 +263,13 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                               fontWeight: FontWeight.bold, fontSize: 14)),
                       Row(
                         children: [
-                          Text(emp.idNumber.isNotEmpty ? emp.idNumber : 'No ID',
+                          Text(emp.idNumber.isNotEmpty ? emp.idNumber : context.l10n.employeeNoId,
                               style: TextStyle(
                                   fontSize: 12, color: Colors.grey.shade600)),
                           if (emp.employmentStartDate != null) ...[
                             Text(' · ', style: TextStyle(color: Colors.grey.shade400)),
                             Text(
-                                'Employed ${_dateFmt.format(emp.employmentStartDate!)}',
+                                context.l10n.employedSince(_dateFmt.format(emp.employmentStartDate!)),
                                 style: TextStyle(
                                     fontSize: 12, color: Colors.grey.shade600)),
                           ],
@@ -279,7 +283,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                   onPressed: () =>
                       _showSetOpeningLeaveDialog(emp, balance, provider),
                   icon: const Icon(Icons.edit_outlined, size: 14),
-                  label: const Text('Set opening leave',
+                  label: Text(context.l10n.setOpeningLeave,
                       style: TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -301,14 +305,14 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                 children: [
                   const Icon(Icons.access_time, size: 14, color: Colors.grey),
                   const SizedBox(width: 6),
-                  Text('Hours worked in system: ',
+                  Text(context.l10n.hoursWorkedInSystem,
                       style: TextStyle(
                           fontSize: 12, color: Colors.grey.shade700)),
-                  Text('${_numFmt.format(totalHrs)} hrs',
+                  Text(context.l10n.hoursAmount(_numFmt.format(totalHrs)),
                       style: const TextStyle(
                           fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(width: 6),
-                  Text('(drives new accrual; opening balances set separately)',
+                  Text(context.l10n.accrualNote,
                       style: TextStyle(
                           fontSize: 11, color: Colors.grey.shade500)),
                 ],
@@ -324,7 +328,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                 // Holiday leave
                 _leaveCard(
                   code: 'HL',
-                  label: 'Holiday Leave',
+                  label: context.l10n.leaveHoliday,
                   color: Colors.orange.shade700,
                   opening: balance.openingHolidayHours,
                   accrued: hlAccrued,
@@ -336,28 +340,28 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                 // Sick leave
                 _leaveCard(
                   code: 'SL',
-                  label: 'Sick Leave',
+                  label: context.l10n.leaveSickTitle,
                   color: Colors.blue.shade700,
                   opening: balance.openingSickHours,
                   accrued: slInSystem,
                   used: slUsed,
                   balance: slBalance,
                   eligible: true,
-                  allocatedLabel: isSL6mo ? 'Allocated (30-day batches)' : 'Accrued (1/26 hrs)',
+                  allocatedLabel: isSL6mo ? context.l10n.allocated30Day : context.l10n.accrued126,
                   onAllocate: () => _showAllocateSickLeaveDialog(
                       emp, balance, provider, isSL6mo),
                 ),
                 // Family leave
                 _leaveCard(
                   code: 'FL',
-                  label: 'Family Resp. Leave',
+                  label: context.l10n.leaveFamilyTitle,
                   color: Colors.purple.shade700,
                   opening: balance.openingFamilyHours,
                   accrued: provider.familyLeaveEntitlement(emp.id),
                   used: flUsed,
                   balance: flBalance,
                   eligible: isFLEligible,
-                  allocatedLabel: 'Entitlement (3 days/yr)',
+                  allocatedLabel: context.l10n.entitlement3Days,
                   onAllocate: isFLEligible
                       ? () => _showAllocateFamilyLeaveDialog(
                           emp, balance, provider)
@@ -365,8 +369,8 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                   ineligibleReason: isFLEligible
                       ? null
                       : (emp.employmentStartDate == null
-                          ? 'Set employment start date to enable'
-                          : 'Eligible after 4 months employment'),
+                          ? context.l10n.setStartDateToEnable
+                          : context.l10n.eligibleAfter4Months),
                 ),
               ],
             ),
@@ -437,20 +441,21 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                 style: TextStyle(fontSize: 10, color: Colors.grey.shade500))
           else ...[
             if (opening > 0)
-              _balanceRow('Opening (pre-system)',
-                  '${_numFmt.format(opening)} hrs', color),
-            _balanceRow(allocatedLabel ?? 'Accrued',
-                '${_numFmt.format(accrued)} hrs', color),
-            _balanceRow('Taken', '${_numFmt.format(used)} hrs', Colors.grey),
+              _balanceRow(context.l10n.openingPreSystem,
+                  context.l10n.hoursAmount(_numFmt.format(opening)), color),
+            _balanceRow(allocatedLabel ?? context.l10n.accrued,
+                context.l10n.hoursAmount(_numFmt.format(accrued)), color),
+            _balanceRow(context.l10n.taken,
+                context.l10n.hoursAmount(_numFmt.format(used)), Colors.grey),
             const Divider(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Balance',
+                Text(context.l10n.balance,
                     style: TextStyle(
                         fontSize: 11, fontWeight: FontWeight.bold, color: color)),
                 Text(
-                  '${_numFmt.format(balance)} hrs',
+                  context.l10n.hoursAmount(_numFmt.format(balance)),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -515,7 +520,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('PDF error: $e'),
+            content: Text(context.l10n.pdfError('$e')),
             backgroundColor: Colors.grey.shade800));
       }
     }
@@ -549,7 +554,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
             decoration: InputDecoration(
               labelText: label,
               hintText: 'e.g. 40',
-              helperText: 'Balance in hours (8 hrs = 1 day)',
+              helperText: context.l10n.balanceHoursHelp,
               helperStyle: const TextStyle(fontSize: 10),
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -571,8 +576,8 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
           children: [
             Icon(Icons.history_toggle_off, color: primary, size: 20),
             const SizedBox(width: 8),
-            const Expanded(
-                child: Text('Leave Accumulated Before Using the System',
+            Expanded(
+                child: Text(context.l10n.openingLeaveTitle,
                     style: TextStyle(fontSize: 16))),
           ],
         ),
@@ -582,18 +587,14 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'For ${emp.name} — enter the leave this employee had already '
-                'banked BEFORE you started using the app. This is the opening '
-                'balance; the system adds new accrual on top and subtracts '
-                'leave taken. Enter each type separately — holiday and sick '
-                'leave are not the same.',
+                context.l10n.openingLeaveBody(emp.name),
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
               ),
               const SizedBox(height: 16),
-              field(hlCtrl, 'Holiday Leave (HL) opening',
+              field(hlCtrl, context.l10n.openingHL,
                   Colors.orange.shade700),
-              field(slCtrl, 'Sick Leave (SL) opening', Colors.blue.shade700),
-              field(flCtrl, 'Family Resp. Leave (FL) opening',
+              field(slCtrl, context.l10n.openingSL, Colors.blue.shade700),
+              field(flCtrl, context.l10n.openingFL,
                   Colors.purple.shade700),
             ],
           ),
@@ -601,7 +602,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.commonCancel)),
           FilledButton(
             onPressed: () async {
               final hl = double.tryParse(hlCtrl.text.trim()) ?? 0;
@@ -617,7 +618,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
               if (ctx.mounted) Navigator.pop(ctx);
             },
             style: FilledButton.styleFrom(backgroundColor: primary),
-            child: const Text('Save'),
+            child: Text(context.l10n.actionSave),
           ),
         ],
       ),
@@ -651,14 +652,14 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Sick Leave Allocation – ${emp.name}',
+                            Text(context.l10n.sickAllocationTitle(emp.name),
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14)),
                             Text(
                               isPostSixMonths
-                                  ? 'Employee has passed 6 months — grant 30-day batches'
-                                  : 'Pre-6 months: auto-accrues 1 hr per 26 hrs worked',
+                                  ? context.l10n.sickPost6Months
+                                  : context.l10n.sickPre6Months,
                               style: TextStyle(
                                   fontSize: 11, color: Colors.grey.shade600),
                             ),
@@ -675,7 +676,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                 if (existingAllocations.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Previous allocations',
+                    child: Text(context.l10n.previousAllocations,
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -687,7 +688,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                         leading: Icon(Icons.check_circle_outline,
                             size: 16, color: Colors.blue.shade600),
                         title: Text(
-                            '${_numFmt.format(a.hours)} hrs on ${_dateFmt.format(a.allocatedOn)}',
+                            context.l10n.hoursOnDate(_numFmt.format(a.hours), _dateFmt.format(a.allocatedOn)),
                             style: const TextStyle(fontSize: 13)),
                         subtitle: a.note.isNotEmpty
                             ? Text(a.note,
@@ -727,8 +728,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                         border: Border.all(color: Colors.blue.shade200),
                       ),
                       child: Text(
-                        'Sick leave is auto-calculated at 1 hour per 26 hours worked. '
-                        'No manual allocation needed until 6 months of employment.',
+                        context.l10n.sickAutoNote,
                         style: TextStyle(
                             fontSize: 12, color: Colors.blue.shade800),
                       ),
@@ -751,7 +751,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Grant new 30-day sick leave batch',
+        Text(context.l10n.grantSickBatch,
             style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -764,8 +764,8 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                 controller: hrsCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: 'Hours',
-                  hintText: '240 (= 30 days × 8 hrs)',
+                  labelText: context.l10n.colHours,
+                  hintText: context.l10n.hours240Hint,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   isDense: true,
                 ),
@@ -776,7 +776,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
               child: TextField(
                 controller: noteCtrl,
                 decoration: InputDecoration(
-                  labelText: 'Note (optional)',
+                  labelText: context.l10n.noteOptional,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   isDense: true,
                 ),
@@ -808,7 +808,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.blue.shade700),
             icon: const Icon(Icons.add, color: Colors.white, size: 16),
-            label: const Text('Grant Sick Leave',
+            label: Text(context.l10n.grantSickLeave,
                 style: TextStyle(color: Colors.white)),
           ),
         ),
@@ -832,7 +832,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
             Icon(Icons.family_restroom_outlined,
                 color: Colors.purple.shade700, size: 20),
             const SizedBox(width: 8),
-            const Text('Family Resp. Leave'),
+            Text(context.l10n.leaveFamilyTitle),
           ],
         ),
         content: Column(
@@ -840,8 +840,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${emp.name} — allocate annual family responsibility leave. '
-              'SA law provides 3 days per year for employees employed > 4 months.',
+              context.l10n.familyAllocateBody(emp.name),
               style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
             ),
             const SizedBox(height: 14),
@@ -851,9 +850,9 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
                   const TextInputType.numberWithOptions(decimal: true),
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'Hours allocated',
-                hintText: '24 (= 3 days × 8 hrs)',
-                helperText: 'Typically 24 hrs (3 working days at 8 hrs/day)',
+                labelText: context.l10n.hoursAllocated,
+                hintText: context.l10n.hours24Hint,
+                helperText: context.l10n.hours24Help,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 suffixText: 'hrs',
               ),
@@ -863,7 +862,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.commonCancel)),
           FilledButton(
             onPressed: () async {
               final hrs = double.tryParse(hrsCtrl.text);
@@ -877,7 +876,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
             },
             style: FilledButton.styleFrom(
                 backgroundColor: Colors.purple.shade700),
-            child: const Text('Allocate'),
+            child: Text(context.l10n.actionAllocate),
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'dart:math' as dart_math;
 import 'package:flutter/material.dart';
 import 'package:cropCompliance/providers/auth_provider.dart';
 import 'package:cropCompliance/theme/theme_constants.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DashboardComplianceCard extends StatelessWidget {
   final AuthProvider authProvider;
@@ -39,9 +40,9 @@ class DashboardComplianceCard extends StatelessWidget {
   Widget _buildMobileCard(BuildContext context) {
     final double percentage = double.parse(completionPercentage) / 100;
 
-    final displayName = authProvider.isAdmin && authProvider.selectedUser != null
-        ? authProvider.selectedUser!.name.split(' ').first
-        : authProvider.currentUser?.name.split(' ').first ?? "User";
+    final displayName = authProvider.isAdmin && authProvider.isManagingCompany
+        ? authProvider.selectedCompany!.name
+        : authProvider.currentUser?.name.split(' ').first ?? context.l10n.userFallbackName;
 
     return Stack(
       children: [
@@ -80,8 +81,8 @@ class DashboardComplianceCard extends StatelessWidget {
             children: [
               Text(
                 authProvider.isAdmin && authProvider.selectedUser != null
-                    ? 'Managing: $displayName'
-                    : 'Hi, $displayName',
+                    ? context.l10n.dashboardManagingName(displayName)
+                    : context.l10n.dashboardHiName(displayName),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 22,
@@ -90,8 +91,8 @@ class DashboardComplianceCard extends StatelessWidget {
               ),
               Text(
                 authProvider.isAdmin && authProvider.selectedUser != null
-                    ? 'Document compliance overview'
-                    : 'Welcome back.',
+                    ? context.l10n.dashboardOverview
+                    : context.l10n.dashboardWelcomeBackShort,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -149,7 +150,7 @@ class DashboardComplianceCard extends StatelessWidget {
                     child: _buildKPIContainer(
                       context,
                       icon: Icons.trending_up,
-                      title: 'Completion Rate',
+                      title: context.l10n.kpiCompletionRate,
                       value: '$approvedDocs/$totalDocTypes',
                       subtitle: '$completionPercentage%',
                     ),
@@ -159,7 +160,7 @@ class DashboardComplianceCard extends StatelessWidget {
                     child: _buildKPIContainer(
                       context,
                       icon: Icons.check_circle_outline,
-                      title: 'Approval Rate',
+                      title: context.l10n.kpiApprovalRate,
                       value: '$approvedDocs/$uploadedDocs',
                       subtitle:
                       '${(uploadedDocs > 0 ? (approvedDocs / uploadedDocs * 100).toStringAsFixed(1) : "0.0")}%',
@@ -174,9 +175,9 @@ class DashboardComplianceCard extends StatelessWidget {
                     child: _buildKPIContainer(
                       context,
                       icon: Icons.hourglass_empty,
-                      title: 'Pending Review',
+                      title: context.l10n.kpiPendingReview,
                       value: '$pendingDocs',
-                      subtitle: 'Action Needed',
+                      subtitle: context.l10n.kpiActionNeeded,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -184,9 +185,9 @@ class DashboardComplianceCard extends StatelessWidget {
                     child: _buildKPIContainer(
                       context,
                       icon: Icons.cancel_outlined,
-                      title: 'Rejected Item',
+                      title: context.l10n.kpiRejectedItem,
                       value: '$rejectedDocs',
-                      subtitle: 'Needs Attention',
+                      subtitle: context.l10n.kpiNeedsAttention,
                     ),
                   ),
                 ],
@@ -202,9 +203,9 @@ class DashboardComplianceCard extends StatelessWidget {
   Widget _buildDesktopCard(BuildContext context) {
     final double percentage = double.parse(completionPercentage) / 100;
 
-    final displayName = authProvider.isAdmin && authProvider.selectedUser != null
-        ? authProvider.selectedUser!.name.split(' ').first
-        : authProvider.currentUser?.name.split(' ').first ?? "User";
+    final displayName = authProvider.isAdmin && authProvider.isManagingCompany
+        ? authProvider.selectedCompany!.name
+        : authProvider.currentUser?.name.split(' ').first ?? context.l10n.userFallbackName;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -249,8 +250,8 @@ class DashboardComplianceCard extends StatelessWidget {
               children: [
                 Text(
                   authProvider.isAdmin && authProvider.selectedUser != null
-                      ? 'Managing: $displayName'
-                      : 'Hi, $displayName',
+                      ? context.l10n.dashboardManagingName(displayName)
+                      : context.l10n.dashboardHiName(displayName),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 25,
@@ -259,8 +260,8 @@ class DashboardComplianceCard extends StatelessWidget {
                 ),
                 Text(
                   authProvider.isAdmin && authProvider.selectedUser != null
-                      ? 'Document compliance overview'
-                      : 'Welcome back.',
+                      ? context.l10n.dashboardOverview
+                      : context.l10n.dashboardWelcomeBackShort,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -317,7 +318,7 @@ class DashboardComplianceCard extends StatelessWidget {
                   child: _buildKPIContainer(
                     context,
                     icon: Icons.trending_up,
-                    title: 'Completion Rate',
+                    title: context.l10n.kpiCompletionRate,
                     value: '$approvedDocs/$totalDocTypes',
                     subtitle: '$completionPercentage%',
                   ),
@@ -327,7 +328,7 @@ class DashboardComplianceCard extends StatelessWidget {
                   child: _buildKPIContainer(
                     context,
                     icon: Icons.check_circle_outline,
-                    title: 'Approval Rate',
+                    title: context.l10n.kpiApprovalRate,
                     value: '$approvedDocs/$uploadedDocs',
                     subtitle:
                     '${(uploadedDocs > 0 ? (approvedDocs / uploadedDocs * 100).toStringAsFixed(1) : "0.0")}%',
@@ -338,9 +339,9 @@ class DashboardComplianceCard extends StatelessWidget {
                   child: _buildKPIContainer(
                     context,
                     icon: Icons.hourglass_empty,
-                    title: 'Pending Review',
+                    title: context.l10n.kpiPendingReview,
                     value: '$pendingDocs',
-                    subtitle: 'Action Needed',
+                    subtitle: context.l10n.kpiActionNeeded,
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -348,9 +349,9 @@ class DashboardComplianceCard extends StatelessWidget {
                   child: _buildKPIContainer(
                     context,
                     icon: Icons.cancel_outlined,
-                    title: 'Rejected Item',
+                    title: context.l10n.kpiRejectedItem,
                     value: '$rejectedDocs',
-                    subtitle: 'Needs Attention',
+                    subtitle: context.l10n.kpiNeedsAttention,
                   ),
                 ),
               ],

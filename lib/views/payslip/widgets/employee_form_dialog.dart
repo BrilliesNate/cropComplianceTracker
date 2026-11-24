@@ -1,6 +1,7 @@
 import 'package:cropCompliance/models/employee_model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class EmployeeFormDialog extends StatefulWidget {
   final String companyId;
@@ -43,7 +44,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
   EmploymentType _employmentType = EmploymentType.permanent;
   bool _saving = false;
 
-  static final _dateFmt = DateFormat('d MMM yyyy');
+  static DateFormat get _dateFmt => DateFormat('d MMM yyyy'); // follows the app language
 
   bool get _isEdit => widget.employee != null;
 
@@ -93,8 +94,8 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
       // The failing field may be scrolled out of view — say so.
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Please complete the highlighted fields.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.l10n.completeHighlighted)));
       return;
     }
     setState(() => _saving = true);
@@ -151,7 +152,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                     Expanded(
                      child: Text(
                       widget.title ??
-                          (_isEdit ? 'Edit Employee' : 'Add Employee'),
+                          (_isEdit ? context.l10n.editEmployee : context.l10n.employeeAdd),
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.bold),
@@ -173,7 +174,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                         if (widget.bankingFirst) ...[
                           _bankingSection(),
                           const SizedBox(height: 22),
-                          Text('Employee details',
+                          Text(context.l10n.employeeDetails,
                               style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
@@ -182,34 +183,34 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                         ],
                         _field(
                           controller: _name,
-                          label: 'Full Name',
-                          hint: 'e.g. John Smith',
+                          label: context.l10n.fullName,
+                          hint: context.l10n.fullNameHint,
                           validator: (v) => v == null || v.trim().isEmpty
-                              ? 'Required'
+                              ? context.l10n.required
                               : null,
                         ),
                         const SizedBox(height: 14),
                         _field(
                           controller: _idNumber,
-                          label: 'ID Number',
+                          label: context.l10n.colIdNumber,
                           hint: 'e.g. 9001015009087',
                           validator: (v) => v == null || v.trim().isEmpty
-                              ? 'Required'
+                              ? context.l10n.required
                               : null,
                         ),
                         const SizedBox(height: 14),
                         _field(
                           controller: _rate,
-                          label: 'Normal Hourly Rate (R)',
+                          label: context.l10n.normalHourlyRateR,
                           hint: 'e.g. 28.79',
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) {
-                              return 'Required';
+                              return context.l10n.required;
                             }
                             if (double.tryParse(v) == null) {
-                              return 'Enter a valid number';
+                              return context.l10n.enterValidNumber;
                             }
                             return null;
                           },
@@ -218,8 +219,8 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                         const SizedBox(height: 14),
                         _field(
                           controller: _jobDescription,
-                          label: 'Job Description',
-                          hint: 'e.g. Farm Worker, Tractor Driver',
+                          label: context.l10n.jobDescription,
+                          hint: context.l10n.jobDescriptionHint,
                         ),
                         const SizedBox(height: 14),
                         // Employment type — Permanent / Seasonal
@@ -247,7 +248,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
                                   children: [
-                                    Text('Employment Start Date (optional)',
+                                    Text(context.l10n.employmentStartOptional,
                                         style: TextStyle(
                                             fontSize: 12,
                                             color: Colors.grey.shade600)),
@@ -256,7 +257,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                                       _employmentStartDate != null
                                           ? _dateFmt
                                               .format(_employmentStartDate!)
-                                          : 'Tap to set',
+                                          : context.l10n.tapToSet,
                                       style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
@@ -309,7 +310,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
                             height: 20,
                             child: CircularProgressIndicator(
                                 color: Colors.white, strokeWidth: 2))
-                        : Text(_isEdit ? 'Save Changes' : 'Add Employee',
+                        : Text(_isEdit ? context.l10n.saveChanges : context.l10n.employeeAdd,
                             style: const TextStyle(
                                 fontSize: 15, color: Colors.white)),
                   ),
@@ -377,7 +378,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(
-            'Employment Type',
+            context.l10n.employmentType,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade600,
@@ -394,7 +395,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
     );
   }
 
-  static const _otherBank = 'Other';
+  static const _otherBank = 'Other'; // l10n-ignore: internal value
 
   Widget _bankingSection() {
     final known = kSaUniversalBranchCodes.containsKey(_bankName.text.trim());
@@ -408,7 +409,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
           Icon(Icons.account_balance_outlined,
               size: 18, color: Colors.grey.shade700),
           const SizedBox(width: 8),
-          const Text('Banking Details',
+          Text(context.l10n.bankingDetails,
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
           const SizedBox(width: 6),
           Text('(optional)',
@@ -416,8 +417,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
         ]),
         const SizedBox(height: 4),
         Text(
-          'Only needed if you pay staff with the Bank CSV bulk-payment '
-          'file. Leave blank otherwise.',
+          context.l10n.bankingOnlyIfCsv,
           style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
         ),
         const SizedBox(height: 12),
@@ -425,7 +425,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
           initialValue: choice,
           isExpanded: true,
           decoration: InputDecoration(
-            labelText: 'Bank',
+            labelText: context.l10n.bank,
             border:
                 OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             contentPadding:
@@ -434,8 +434,8 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
           items: [
             ...kSaUniversalBranchCodes.keys
                 .map((b) => DropdownMenuItem(value: b, child: Text(b))),
-            const DropdownMenuItem(
-                value: _otherBank, child: Text('Other bank…')),
+            DropdownMenuItem(
+                value: _otherBank, child: Text(context.l10n.otherBank)),
           ],
           onChanged: (v) => setState(() {
             if (v == null) return;
@@ -454,26 +454,26 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
           const SizedBox(height: 14),
           _field(
             controller: _bankName,
-            label: 'Bank name',
-            hint: 'e.g. Bidvest Bank',
+            label: context.l10n.bankName,
+            hint: context.l10n.bankNameHint,
           ),
         ],
         const SizedBox(height: 14),
         _field(
           controller: _accountHolder,
-          label: 'Account holder (if not the employee)',
-          hint: 'Leave blank to use the employee\'s name',
+          label: context.l10n.accountHolderLabel,
+          hint: context.l10n.accountHolderHint,
         ),
         const SizedBox(height: 14),
         _field(
           controller: _accountNumber,
-          label: 'Account Number',
+          label: context.l10n.accountNumber,
           keyboardType: TextInputType.number,
           validator: (v) {
             final s = (v ?? '').replaceAll(RegExp(r'\s'), '');
             if (s.isEmpty) return null; // optional
             if (!RegExp(r'^\d{6,16}$').hasMatch(s)) {
-              return 'Digits only, 6–16 long';
+              return context.l10n.accountDigits;
             }
             return null;
           },
@@ -481,8 +481,8 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
         const SizedBox(height: 14),
         _field(
           controller: _branchCode,
-          label: 'Branch Code',
-          hint: 'Filled in automatically for major banks',
+          label: context.l10n.branchCode,
+          hint: context.l10n.branchCodeHint,
           keyboardType: TextInputType.number,
           validator: (v) {
             final s = (v ?? '').replaceAll(RegExp(r'\s'), '');
@@ -496,7 +496,7 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
           initialValue: _accountType,
           isExpanded: true,
           decoration: InputDecoration(
-            labelText: 'Account Type',
+            labelText: context.l10n.accountType,
             border:
                 OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             contentPadding:
@@ -528,16 +528,16 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Leave eligibility ($months months employed):',
+          Text(context.l10n.leaveEligibility(months),
               style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: Colors.blue.shade800)),
           const SizedBox(height: 4),
           _eligibilityRow(
-              'Family Resp. Leave (3 days/yr)', isFL, '4 months required'),
+              context.l10n.familyLeave3Days, isFL, context.l10n.months4Required),
           _eligibilityRow(
-              'Sick Leave (30 days/3 yr)', isSL6, '6 months required'),
+              context.l10n.sickLeave30Days, isSL6, context.l10n.months6Required),
         ],
       ),
     );
@@ -573,7 +573,8 @@ class _EmployeeFormDialogState extends State<EmployeeFormDialog> {
   String? _buildRateHelper() {
     final r = double.tryParse(_rate.text);
     if (r == null || r == 0) return null;
-    return 'Overtime: R ${(r * 1.5).toStringAsFixed(2)}/hr  ·  Double: R ${(r * 2).toStringAsFixed(2)}/hr';
+    return context.l10n.rateHelper(
+        (r * 1.5).toStringAsFixed(2), (r * 2).toStringAsFixed(2));
   }
 
   Widget _field({

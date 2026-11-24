@@ -6,6 +6,7 @@ import 'package:cropCompliance/views/payslip/utils/payslip_pdf_builder.dart';
 import 'package:cropCompliance/views/payslip/utils/pdf_downloader.dart';
 import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 /// Bulk exports for a set of payslips: one Excel spreadsheet of all details,
 /// or a ZIP of every individual PDF payslip. (The bank bulk-payment file is
@@ -13,8 +14,8 @@ import 'package:intl/intl.dart';
 class PayslipBulkExport {
   PayslipBulkExport._();
 
-  static final _d = DateFormat('yyyy-MM-dd');
-  static final _monthStamp = DateFormat('MMM-yyyy');
+  static DateFormat get _d => DateFormat('yyyy-MM-dd'); // follows the app language
+  static DateFormat get _monthStamp => DateFormat('MMM-yyyy'); // follows the app language
 
   static const _xlsxMime =
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -23,18 +24,22 @@ class PayslipBulkExport {
   static Future<void> downloadExcel(
       List<PayslipModel> payslips, String companyName) async {
     final excel = Excel.createExcel();
-    final sheet = excel['Payslips'];
+    final sheet = excel[LocaleProvider.instance.l10n.xlsSheet];
     if (excel.sheets.containsKey('Sheet1')) {
       excel.delete('Sheet1');
     }
 
-    const headers = [
-      'Employee', 'ID Number', 'Type', 'Job',
-      'Period Start', 'Period End', 'Pay Date', 'Status',
-      'Normal hrs', 'OT hrs', 'DT hrs', 'PH hrs',
-      'Sick hrs', 'Holiday hrs', 'Family hrs',
-      'Rate (R/hr)', 'Gross (R)', 'PAYE (R)', 'UIF 1% (R)',
-      'Other deductions (R)', 'Total deductions (R)', 'Net (R)',
+    final t = LocaleProvider.instance.l10n;
+    final headers = [
+      t.colEmployee, t.colIdNumber, t.xlsType, t.xlsJob,
+      t.psPeriodStart, t.psPeriodEnd, t.payDate, t.colStatus,
+      t.hoursTabNormal.replaceAll('\n', ' '),
+      t.hoursTabOvertime.replaceAll('\n', ' '),
+      t.hoursTabDouble.replaceAll('\n', ' '),
+      t.hoursTabPublicHoliday.replaceAll('\n', ' '),
+      t.xlsSickHrs, t.xlsHolidayHrs, t.xlsFamilyHrs,
+      t.colRateRHr, t.xlsGross, t.xlsPaye, t.xlsUif,
+      t.xlsOtherDed, t.xlsTotalDed, t.xlsNet,
     ];
     sheet.appendRow(headers.map((h) => TextCellValue(h)).toList());
 
@@ -75,7 +80,7 @@ class PayslipBulkExport {
     final totDed = payslips.fold<double>(0, (s, p) => s + p.totalDeductions);
     final net = payslips.fold<double>(0, (s, p) => s + p.netSalary);
     sheet.appendRow(<CellValue?>[
-      TextCellValue('TOTAL ($n)'),
+      TextCellValue(LocaleProvider.instance.l10n.xlsTotalRow(n)),
       ...List<CellValue?>.filled(14, null),
       DoubleCellValue(_round(gross)),
       DoubleCellValue(_round(paye)),
@@ -93,7 +98,7 @@ class PayslipBulkExport {
             .map((p) => p.payPeriodStart)
             .reduce((a, b) => a.isBefore(b) ? a : b));
     await triggerFileDownload(
-        Uint8List.fromList(bytes), '$companyName Payslips $period.xlsx',
+        Uint8List.fromList(bytes), LocaleProvider.instance.l10n.xlsFileName(companyName, period),
         _xlsxMime);
   }
 
@@ -109,10 +114,10 @@ class PayslipBulkExport {
       if (used.contains(name)) {
         var i = 2;
         final base = name.replaceAll('.pdf', '');
-        while (used.contains('$base ($i).pdf')) {
+        while (used.contains('$base ($i).pdf')) { // l10n-ignore: file name
           i++;
         }
-        name = '$base ($i).pdf';
+        name = '$base ($i).pdf'; // l10n-ignore: file name
       }
       used.add(name);
       archive.addFile(ArchiveFile(name, pdf.length, pdf));
@@ -120,7 +125,7 @@ class PayslipBulkExport {
     final zip = ZipEncoder().encode(archive);
     if (zip == null) return;
     await triggerFileDownload(
-        Uint8List.fromList(zip), '$companyName Payslips.zip', 'application/zip');
+        Uint8List.fromList(zip), LocaleProvider.instance.l10n.zipFileName(companyName), 'application/zip');
   }
 
   static double _round(double v) => (v * 100).roundToDouble() / 100;

@@ -1,3 +1,4 @@
+import 'package:cropCompliance/core/offline/pending_files_widgets.dart';
 import 'package:cropCompliance/models/category_model.dart';
 import 'package:cropCompliance/models/document_type_model.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import '../../../providers/document_provider.dart';
 import '../../../providers/category_provider.dart';
 import '../../../core/constants/route_constants.dart';
 import '../../shared/status_badge.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DocumentListItem extends StatelessWidget {
   final DocumentModel document;
@@ -39,8 +41,8 @@ class DocumentListItem extends StatelessWidget {
       documentType = null;
     }
 
-    final categoryName = category?.name ?? 'Unknown Category';
-    final documentTypeName = documentType?.name ?? 'Unknown Document Type';
+    final categoryName = category?.name ?? context.l10n.unknownCategory;
+    final documentTypeName = documentType?.name ?? context.l10n.unknownDocumentType;
 
     return Card(
         margin: const EdgeInsets.symmetric(
@@ -71,12 +73,32 @@ class DocumentListItem extends StatelessWidget {
       ),
       const SizedBox(height: 4),
       Text(
-        'Category: $categoryName',
+        context.l10n.categoryWithName(categoryName),
         style: Theme.of(context).textTheme.bodySmall,
       ),
     ],
     ),
     ),
+      if (document.isSuperseded) ...[
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: Colors.blueGrey.shade50,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.blueGrey.shade200),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.history, size: 12, color: Colors.blueGrey.shade400),
+            const SizedBox(width: 4),
+            Text(context.l10n.previousVersion,
+                style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blueGrey.shade500)),
+          ]),
+        ),
+        const SizedBox(width: 8),
+      ],
       StatusBadge(
         status: document.status,
         isExpired: document.isExpired,
@@ -88,24 +110,28 @@ class DocumentListItem extends StatelessWidget {
         children: [
           _buildInfoItem(
             context,
-            'Last Updated',
+            context.l10n.lastUpdated,
             DateFormat('MMM d, y').format(document.updatedAt),
             Icons.update,
           ),
           const SizedBox(width: 16),
-          if (document.expiryDate != null)
+          if (document.effectiveExpiryDate != null)
             _buildInfoItem(
               context,
-              'Expires',
-              DateFormat('MMM d, y').format(document.expiryDate!),
+              context.l10n.colExpires,
+              DateFormat('MMM d, y').format(document.effectiveExpiryDate!),
               Icons.event,
               isExpired: document.isExpired,
             ),
           const Spacer(),
+          if (document.hasPendingFiles) ...[
+            PendingUploadChip(document: document),
+            const SizedBox(width: 12),
+          ],
           if (document.fileUrls.isNotEmpty)
             _buildInfoItem(
               context,
-              'Files',
+              context.l10n.files,
               document.fileUrls.length.toString(),
               Icons.attach_file,
             ),
@@ -114,7 +140,7 @@ class DocumentListItem extends StatelessWidget {
           if (document.signatures.isNotEmpty)
             _buildInfoItem(
               context,
-              'Signatures',
+              context.l10n.signatures,
               document.signatures.length.toString(),
               Icons.draw,
             ),
@@ -123,7 +149,7 @@ class DocumentListItem extends StatelessWidget {
           if (document.comments.isNotEmpty)
             _buildInfoItem(
               context,
-              'Comments',
+              context.l10n.comments,
               document.comments.length.toString(),
               Icons.comment,
             ),
@@ -140,8 +166,8 @@ class DocumentListItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Rejection Comment:',
+              Text(
+                context.l10n.rejectionComment,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.red,

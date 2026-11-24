@@ -10,19 +10,19 @@ class NedbankTemplate extends BankExportTemplate {
   @override
   String get id => 'nedbank';
   @override
-  String get displayName => 'Nedbank';
+  String get displayName => 'Nedbank'; // l10n-ignore: bank name
   @override
   bool get verified => false;
 
   @override
   List<String> get headerRow => const [
-        'Beneficiary Name',
-        'Account Number',
-        'Branch Code',
-        'Account Type',
-        'Amount',
-        'Beneficiary Reference',
-        'Own Reference',
+        'Beneficiary Name', // l10n-ignore: bank file format
+        'Account Number', // l10n-ignore: bank file format
+        'Branch Code', // l10n-ignore: bank file format
+        'Account Type', // l10n-ignore: bank file format
+        'Amount', // l10n-ignore: bank file format
+        'Beneficiary Reference', // l10n-ignore: bank file format
+        'Own Reference', // l10n-ignore: bank file format
       ];
 
   @override
@@ -34,6 +34,6 @@ class NedbankTemplate extends BankExportTemplate {
         BankExportTemplate.fixedAmount(line.amountCents),
         reference(line, ctx),
         BankExportTemplate.cleanText(
-            'SAL ${line.beneficiaryName}', referenceMaxLength),
+            'SAL ${line.beneficiaryName}', referenceMaxLength), // l10n-ignore: bank file format
       ];
 }

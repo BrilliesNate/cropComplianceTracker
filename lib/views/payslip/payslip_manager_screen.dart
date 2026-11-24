@@ -14,6 +14,7 @@ import 'package:cropCompliance/views/payslip/widgets/leave_shortfall_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 // ── Draft snapshot ─────────────────────────────────────────────────────────────
 
@@ -239,8 +240,8 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
 
   static final _currency =
       NumberFormat.currency(locale: 'en_ZA', symbol: 'R ', decimalDigits: 2);
-  static final _dateFmt   = DateFormat('d MMM yy');
-  static final _shortDate = DateFormat('d-MMM-yyyy');
+  static DateFormat get _dateFmt => DateFormat('d MMM yy'); // follows the app language
+  static DateFormat get _shortDate => DateFormat('d-MMM-yyyy'); // follows the app language
 
   // ── Flex column widths (shared between header and rows) ───────────────────
   static const int _fName = 22;
@@ -568,8 +569,8 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
     }
 
     if (toSave.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Enter hours for at least one employee first.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.l10n.psEnterHoursFirst)));
       return;
     }
 
@@ -670,7 +671,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
           });
         } else {
           fail++;
-          setState(() { row.generating = false; row.error = 'Save failed'; });
+          setState(() { row.generating = false; row.error = context.l10n.psSaveFailedShort; });
         }
       } catch (e) {
         fail++;
@@ -682,8 +683,8 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(fail == 0
-            ? '$ok payslip${ok == 1 ? '' : 's'} saved'
-            : '$ok saved, $fail failed'),
+            ? context.l10n.psSavedCount(ok)
+            : context.l10n.psSavedSomeFailed(ok, fail)),
         backgroundColor: fail == 0 ? Colors.green.shade700 : Colors.grey.shade800,
         duration: const Duration(seconds: 4),
       ));
@@ -716,7 +717,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       final notes = <LeaveType, String>{
         if (row.employee.employmentStartDate == null)
           LeaveType.family:
-              'Family leave starts once an employment start date is set — add it via Edit employee if it should apply.',
+              context.l10n.psFamilyLeaveNeedsStart,
       };
       final found = findLeaveShortfalls(
         employeeId: id,
@@ -768,7 +769,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Delete Payslip'),
+        title: Text(context.l10n.psDeleteTitle),
         content: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(p.employeeName,
@@ -776,19 +777,19 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
           const SizedBox(height: 6),
           Text('${_shortDate.format(p.payPeriodStart)} – ${_shortDate.format(p.payPeriodEnd)}',
               style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-          Text('Net: ${_currency.format(p.netSalary)}',
+          Text(context.l10n.psNetAmount(_currency.format(p.netSalary)),
               style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
           const SizedBox(height: 10),
-          const Text('This cannot be undone.',
+          Text(context.l10n.cannotUndo,
               style: TextStyle(fontSize: 12, color: Colors.black54)),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.commonCancel)),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.black87),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(context.l10n.actionDelete),
           ),
         ],
       ),
@@ -820,8 +821,11 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(ok
-                ? (employee == null ? 'Employee added' : 'Employee updated')
-                : 'Error: ${prov.error ?? 'Could not save'}'),
+                ? (employee == null
+                    ? context.l10n.employeeAdded
+                    : context.l10n.employeeUpdated)
+                : context.l10n
+                    .errorWithDetail(prov.error ?? context.l10n.couldNotSave)),
             backgroundColor: ok ? Colors.green.shade700 : Colors.grey.shade800,
           ));
           if (ok) _rebuildRows(prov);
@@ -834,17 +838,14 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Remove Employee'),
-        content: Text(
-            'Remove ${row.employee.name}? Their payslips are kept. If you '
-            'add them again later, use the same ID number so old payslips '
-            'link back to them (e.g. for bank payments).'),
+        title: Text(context.l10n.employeeRemoveTitle),
+        content: Text(context.l10n.employeeRemoveBody(row.employee.name)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.commonCancel)),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remove',
+            child: Text(context.l10n.actionRemove,
                 style: TextStyle(color: Colors.black87)),
           ),
         ],
@@ -871,7 +872,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
     if (list.isEmpty) return;
     await PayslipPdfBuilder.downloadAllAsSinglePdf(
       list,
-      '${_selectedCompany?.name ?? 'Company'} Payslips.pdf',
+      context.l10n.psAllPdfName(_selectedCompany?.name ?? context.l10n.companyFallback),
     );
   }
 
@@ -885,10 +886,10 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
     final period = _rowPeriod(row);
     final periods = PayslipModel.payPeriodsPerYear(period.start, period.end);
     final freqLabel = periods == 52
-        ? 'weekly'
+        ? context.l10n.freqWeekly
         : periods == 26
-            ? 'fortnightly'
-            : 'monthly';
+            ? context.l10n.freqFortnightly
+            : context.l10n.freqMonthly;
     final auto = PayslipModel.calculatePayeForPeriod(
         row.grossForPaye, period.start, period.end);
     final overridden = row.payeCtrl.text.trim().isNotEmpty;
@@ -899,10 +900,10 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
         Row(children: [
           const Icon(Icons.account_balance_outlined, size: 16),
           const SizedBox(width: 8),
-          const Text('PAYE (Tax)',
+          Text(context.l10n.payeTax,
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const Spacer(),
-          Text('Auto ($freqLabel): ${_currency.format(auto)}',
+          Text(context.l10n.payeAutoAmount(freqLabel, _currency.format(auto)),
               style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
         ]),
         const SizedBox(height: 8),
@@ -914,9 +915,9 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                   const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(fontSize: 13),
               decoration: InputDecoration(
-                labelText: 'PAYE amount (R)',
+                labelText: context.l10n.payeAmountLabel,
                 labelStyle: const TextStyle(fontSize: 12),
-                hintText: 'Leave blank to use auto',
+                hintText: context.l10n.payeBlankAuto,
                 hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                 isDense: true,
                 border: OutlineInputBorder(
@@ -934,15 +935,15 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                 row.payeCtrl.clear();
                 set(() {});
               },
-              child: const Text('Use auto', style: TextStyle(fontSize: 12)),
+              child: Text(context.l10n.payeUseAuto, style: const TextStyle(fontSize: 12)),
             ),
           ],
         ]),
         const SizedBox(height: 4),
         Text(
           overridden
-              ? 'Manual PAYE — this exact amount will be used.'
-              : 'Auto PAYE is calculated on the taxable gross for this $freqLabel period.',
+              ? context.l10n.payeManualNote
+              : context.l10n.payeAutoNote(freqLabel),
           style: TextStyle(fontSize: 10.5, color: Colors.grey.shade500),
         ),
       ]),
@@ -966,7 +967,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(row.employee.name,
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text('Additional Deductions',
+                    Text(context.l10n.additionalDeductions,
                         style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                   ])),
                   IconButton(onPressed: () => Navigator.pop(ctx),
@@ -982,7 +983,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                         Icon(Icons.remove_circle_outline,
                             size: 40, color: Colors.grey.shade300),
                         const SizedBox(height: 10),
-                        Text('No deductions yet',
+                        Text(context.l10n.noDeductionsYet,
                             style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
                       ]))
                     : ListView.separated(
@@ -996,7 +997,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                               controller: e.descCtrl,
                               style: const TextStyle(fontSize: 13),
                               decoration: InputDecoration(
-                                labelText: 'Reason',
+                                labelText: context.l10n.fieldReason,
                                 labelStyle: const TextStyle(fontSize: 12),
                                 isDense: true,
                                 border: OutlineInputBorder(
@@ -1013,7 +1014,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                                   decimal: true),
                               style: const TextStyle(fontSize: 13),
                               decoration: InputDecoration(
-                                labelText: 'Amount (R)',
+                                labelText: context.l10n.fieldAmountR,
                                 labelStyle: const TextStyle(fontSize: 12),
                                 isDense: true,
                                 border: OutlineInputBorder(
@@ -1043,7 +1044,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                   child: Align(
                     alignment: Alignment.centerRight,
                     child: Text(
-                      'Total: ${_currency.format(row.deductions.fold<double>(0, (s, d) => s + d.amount))}',
+                      context.l10n.totalAmount(_currency.format(row.deductions.fold<double>(0, (s, d) => s + d.amount))),
                       style: const TextStyle(
                           fontSize: 12, fontWeight: FontWeight.w500),
                     ),
@@ -1055,7 +1056,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                   OutlinedButton.icon(
                     onPressed: () => set(() => row.deductions.add(_DeductionEntry())),
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add Deduction',
+                    label: Text(context.l10n.addDeduction,
                         style: TextStyle(fontSize: 13)),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 36),
@@ -1074,7 +1075,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8)),
                     ),
-                    child: const Text('Done'),
+                    child: Text(context.l10n.actionDone),
                   ),
                 ]),
               ),
@@ -1104,7 +1105,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(row.employee.name,
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    Text('Additional Income',
+                    Text(context.l10n.additionalIncome,
                         style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                   ])),
                   IconButton(onPressed: () => Navigator.pop(ctx),
@@ -1118,7 +1119,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                         Icon(Icons.add_circle_outline,
                             size: 40, color: Colors.grey.shade300),
                         const SizedBox(height: 10),
-                        Text('No additions yet',
+                        Text(context.l10n.noAdditionsYet,
                             style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
                       ]))
                     : ListView.separated(
@@ -1132,7 +1133,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                               controller: e.descCtrl,
                               style: const TextStyle(fontSize: 13),
                               decoration: InputDecoration(
-                                labelText: 'Description',
+                                labelText: context.l10n.fieldDescription,
                                 labelStyle: const TextStyle(fontSize: 12),
                                 isDense: true,
                                 border: OutlineInputBorder(
@@ -1149,7 +1150,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                                   decimal: true),
                               style: const TextStyle(fontSize: 13),
                               decoration: InputDecoration(
-                                labelText: 'Amount (R)',
+                                labelText: context.l10n.fieldAmountR,
                                 labelStyle: const TextStyle(fontSize: 12),
                                 isDense: true,
                                 border: OutlineInputBorder(
@@ -1179,7 +1180,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                   child: Align(
                     alignment: Alignment.centerRight,
                     child: Text(
-                      'Total: ${_currency.format(row.earnings.fold<double>(0, (s, e) => s + e.amount))}',
+                      context.l10n.totalAmount(_currency.format(row.earnings.fold<double>(0, (s, e) => s + e.amount))),
                       style: const TextStyle(
                           fontSize: 12, fontWeight: FontWeight.w500),
                     ),
@@ -1191,7 +1192,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                   OutlinedButton.icon(
                     onPressed: () => set(() => row.earnings.add(_EarningEntry())),
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add Income',
+                    label: Text(context.l10n.addIncome,
                         style: TextStyle(fontSize: 13)),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 36),
@@ -1210,7 +1211,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8)),
                     ),
-                    child: const Text('Done'),
+                    child: Text(context.l10n.actionDone),
                   ),
                 ]),
               ),
@@ -1242,7 +1243,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                 const Icon(Icons.summarize_outlined, size: 20),
                 const SizedBox(width: 10),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('UIF Summary',
+                  Text(context.l10n.uifSummary,
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   Text('${_shortDate.format(_periodStart)} – ${_shortDate.format(_periodEnd)}',
                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
@@ -1253,8 +1254,8 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
             ),
             const Divider(height: 20),
             if (list.isEmpty)
-              const Expanded(child: Center(
-                  child: Text('No payslips for this period.',
+              Expanded(child: Center(
+                  child: Text(context.l10n.noPayslipsForPeriod,
                       style: TextStyle(color: Colors.grey))))
             else
               Expanded(child: SingleChildScrollView(
@@ -1268,7 +1269,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                   onPressed: list.isEmpty ? null : () async {
                     try {
                       await PayslipPdfBuilder.downloadUifSummary(
-                        companyName: _selectedCompany?.name ?? 'Company',
+                        companyName: _selectedCompany?.name ?? context.l10n.companyFallback,
                         uifRegNumber: _uifCtrl.text.trim(),
                         periodStart: _periodStart,
                         periodEnd: _periodEnd,
@@ -1276,7 +1277,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                       );
                     } catch (e) {
                       if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(content: Text('PDF error: $e'),
+                          SnackBar(content: Text(context.l10n.pdfError('$e')),
                               backgroundColor: Colors.grey.shade800));
                     }
                   },
@@ -1288,7 +1289,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                   ),
                   icon: const Icon(Icons.download_outlined,
                       color: Colors.white, size: 18),
-                  label: const Text('Download UIF Summary PDF',
+                  label: Text(context.l10n.downloadUifPdf,
                       style: TextStyle(color: Colors.white)),
                 ),
               ),
@@ -1340,11 +1341,11 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
         TableRow(
           decoration: BoxDecoration(color: Colors.grey.shade100),
           children: [
-            _tHdr('Employee', TextAlign.left),
-            _tHdr('Earnings', TextAlign.right),
+            _tHdr(context.l10n.colEmployee, TextAlign.left),
+            _tHdr(context.l10n.colEarnings, TextAlign.right),
             _tHdr('PAYE', TextAlign.right),
             _tHdr('UIF', TextAlign.right),
-            _tHdr('Total Ded', TextAlign.right),
+            _tHdr(context.l10n.colTotalDed, TextAlign.right),
           ],
         ),
         ...empIds.map((id) => TableRow(children: [
@@ -1388,13 +1389,13 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
     // One loading indicator until the company and its payroll data are ready,
     // so the screen never flashes "no company" or an empty table first.
     if (_loadingCompanies) {
-      return const AppScaffoldWrapper(
-        title: 'Payslip Manager',
+      return AppScaffoldWrapper(
+        title: context.l10n.menuPayslipManager,
         child: Center(child: CircularProgressIndicator()),
       );
     }
     return AppScaffoldWrapper(
-      title: 'Payslip Manager',
+      title: context.l10n.menuPayslipManager,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1434,14 +1435,14 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       child: Row(children: [
         const Icon(Icons.business_outlined, size: 18, color: Colors.black87),
         const SizedBox(width: 10),
-        const Text('Company:',
+        Text(context.l10n.companyColon,
             style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
         const SizedBox(width: 10),
         Expanded(
           child: DropdownButtonHideUnderline(
             child: DropdownButton<CompanyModel>(
               value: _selectedCompany,
-              hint: const Text('Select a company',
+              hint: Text(context.l10n.selectCompany,
                   style: TextStyle(fontSize: 13)),
               isExpanded: true,
               items: _companies.map((c) => DropdownMenuItem(
@@ -1468,13 +1469,13 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
           spacing: 12, runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            _datePill('Default Start', _periodStart, subtitle: 'fills all rows',
+            _datePill(context.l10n.defaultStart, _periodStart, subtitle: context.l10n.fillsAllRows,
                 onTap: () => _pickDate(_periodStart, (d) =>
                     setState(() { _periodStart = d; _applyGlobalDates(); }))),
-            _datePill('Default End', _periodEnd, subtitle: 'fills all rows',
+            _datePill(context.l10n.defaultEnd, _periodEnd, subtitle: context.l10n.fillsAllRows,
                 onTap: () => _pickDate(_periodEnd, (d) =>
                     setState(() { _periodEnd = d; _applyGlobalDates(); }))),
-            _datePill('Pay Date', _payDate,
+            _datePill(context.l10n.payDate, _payDate,
                 onTap: () => _pickDate(_payDate,
                     (d) => setState(() => _payDate = d))),
             _buildUifField(),
@@ -1492,7 +1493,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
             controller: _addressCtrl, autofocus: true,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
-              labelText: 'Company Address (on payslip)', isDense: true,
+              labelText: context.l10n.companyAddressOnPayslip, isDense: true,
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8)),
               contentPadding: const EdgeInsets.symmetric(
@@ -1523,11 +1524,11 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Company Address',
+                Text(context.l10n.companyAddress,
                     style: TextStyle(
                         fontSize: 10, color: Colors.grey.shade500)),
                 Text(
-                  _addressCtrl.text.isEmpty ? 'Tap to set' : _addressCtrl.text,
+                  _addressCtrl.text.isEmpty ? context.l10n.tapToSet : _addressCtrl.text,
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1588,7 +1589,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
             controller: _uifCtrl, autofocus: true,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
-              labelText: 'Employer UIF Reg Nr', isDense: true,
+              labelText: context.l10n.employerUifRegNr, isDense: true,
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8)),
               contentPadding: const EdgeInsets.symmetric(
@@ -1615,9 +1616,9 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
           const Icon(Icons.badge_outlined, size: 13, color: Colors.black87),
           const SizedBox(width: 6),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Employer UIF Reg Nr',
+            Text(context.l10n.employerUifRegNr,
                 style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
-            Text(_uifCtrl.text.isEmpty ? 'Tap to set' : _uifCtrl.text,
+            Text(_uifCtrl.text.isEmpty ? context.l10n.tapToSet : _uifCtrl.text,
                 style: TextStyle(
                     fontSize: 13, fontWeight: FontWeight.w600,
                     color: _uifCtrl.text.isEmpty
@@ -1648,15 +1649,15 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
 
     String label;
     if (_generating) {
-      label = 'Saving…';
+      label = context.l10n.saving;
     } else if (editCount > 0 && newCount == 0) {
-      label = 'Save Changes ($editCount)';
+      label = context.l10n.saveChangesCount(editCount);
     } else if (editCount > 0) {
-      label = 'Save All ($total)';
+      label = context.l10n.saveAllCount(total);
     } else if (newCount > 0) {
-      label = 'Save Payslips ($newCount)';
+      label = context.l10n.savePayslipsCount(newCount);
     } else {
-      label = 'Save Payslips';
+      label = context.l10n.savePayslips;
     }
 
     final hasAny = prov.payslips.isNotEmpty;
@@ -1683,7 +1684,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
               alignment: WrapAlignment.end,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-              _barBtn(Icons.grid_on_outlined, 'Timesheet',
+              _barBtn(Icons.grid_on_outlined, context.l10n.timesheet,
                   tag: 'NEW',
                   onTap: () => Navigator.of(context).pushNamed(
                       RouteConstants.timesheet,
@@ -1691,26 +1692,26 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
                         'companyId': _selectedCompany?.id ?? '',
                         'companyName': _selectedCompany?.name ?? ''
                       })),
-              _barBtn(Icons.person_add_outlined, 'Add Employee',
+              _barBtn(Icons.person_add_outlined, context.l10n.employeeAdd,
                   onTap: _showEmployeeDialog),
-              _barBtn(Icons.event_note_outlined, 'Leave Records',
+              _barBtn(Icons.event_note_outlined, context.l10n.leaveRecords,
                   onTap: () => Navigator.of(context).pushNamed(
                       RouteConstants.leaveManagement,
                       arguments: {
                         'companyId': _selectedCompany?.id ?? '',
                         'companyName': _selectedCompany?.name ?? ''
                       })),
-              _barBtn(Icons.receipt_long_outlined, 'Payslip Records',
+              _barBtn(Icons.receipt_long_outlined, context.l10n.payslipRecords,
                   onTap: () => Navigator.of(context).pushNamed(
                       RouteConstants.payslipRecords,
                       arguments: {
                         'companyId': _selectedCompany?.id ?? '',
                         'companyName': _selectedCompany?.name ?? ''
                       })),
-              _barBtn(Icons.summarize_outlined, 'UIF Summary',
+              _barBtn(Icons.summarize_outlined, context.l10n.uifSummary,
                   onTap: _showUifSummary),
               if (hasAny) ...[
-                  _barBtn(Icons.download_outlined, 'Download',
+                  _barBtn(Icons.download_outlined, context.l10n.actionDownload,
                     onTap: () => _downloadAll(prov)),
               ],
               FilledButton.icon(
@@ -1789,7 +1790,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       _buildHeader(),
       Expanded(
         child: paged.isEmpty
-            ? _buildEmpty(Icons.people_outline, 'No employees found')
+            ? _buildEmpty(Icons.people_outline, context.l10n.noEmployeesFound)
             : ListView.builder(
                 itemCount: paged.length,
                 itemBuilder: (_, i) => _buildRow(paged[i], i, prov),
@@ -1811,20 +1812,20 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       child: SizedBox(
         height: 40,
         child: Row(children: [
-          Expanded(flex: _fName, child: _hdr('Employee',    TextAlign.left)),
-          Expanded(flex: _fId,   child: _hdr('ID Number',  TextAlign.left)),
-          Expanded(flex: _fRate, child: _hdr('Rate\n(R/hr)',TextAlign.center)),
-          Expanded(flex: _fHour, child: _hdr('Norm\nhrs',  TextAlign.center)),
-          Expanded(flex: _fHour, child: _hdr('OT\nhrs',    TextAlign.center)),
-          Expanded(flex: _fHour, child: _hdr('DT\nhrs',    TextAlign.center)),
-          Expanded(flex: _fHour, child: _hdr('PH\nhrs',    TextAlign.center)),
-          Expanded(flex: _fHour, child: _hdr('SL\nhrs',    TextAlign.center)),
-          Expanded(flex: _fHour, child: _hdr('HL\nhrs',    TextAlign.center)),
-          Expanded(flex: _fHour, child: _hdr('FL\nhrs',    TextAlign.center)),
-          Expanded(flex: _fNet,  child: _hdr('Net Pay',    TextAlign.right)),
+          Expanded(flex: _fName, child: _hdr(context.l10n.colEmployee, TextAlign.left)),
+          Expanded(flex: _fId,   child: _hdr(context.l10n.colIdNumber, TextAlign.left)),
+          Expanded(flex: _fRate, child: _hdr(context.l10n.hoursTabRate, TextAlign.center)),
+          Expanded(flex: _fHour, child: _hdr(context.l10n.hoursTabNormal, TextAlign.center)),
+          Expanded(flex: _fHour, child: _hdr(context.l10n.hoursTabOvertime, TextAlign.center)),
+          Expanded(flex: _fHour, child: _hdr(context.l10n.hoursTabDouble, TextAlign.center)),
+          Expanded(flex: _fHour, child: _hdr(context.l10n.hoursTabPublicHoliday, TextAlign.center)),
+          Expanded(flex: _fHour, child: _hdr(context.l10n.hoursTabSick, TextAlign.center)),
+          Expanded(flex: _fHour, child: _hdr(context.l10n.hoursTabHoliday, TextAlign.center)),
+          Expanded(flex: _fHour, child: _hdr(context.l10n.hoursTabFamily, TextAlign.center)),
+          Expanded(flex: _fNet,  child: _hdr(context.l10n.colNetPay, TextAlign.right)),
           Expanded(flex: _fNav,  child: Padding(
             padding: const EdgeInsets.only(left: 8),
-            child: _hdr('Payslip Period', TextAlign.center),
+            child: _hdr(context.l10n.colPayslipPeriod, TextAlign.center),
           )),
         ]),
       ),
@@ -1879,8 +1880,8 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
             // Employment type chip — visible, click-through to edit dialog.
             Tooltip(
               message: row.employee.employmentType == EmploymentType.permanent
-                  ? 'Permanent employee'
-                  : 'Seasonal worker',
+                  ? context.l10n.employeePermanent
+                  : context.l10n.employeeSeasonal,
               child: GestureDetector(
                 onTap: () => _showEmployeeDialog(employee: row.employee),
                 child: Container(
@@ -1923,8 +1924,8 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
             if (row.employee.hasAnyBankingDetails)
               Tooltip(
                 message: row.employee.hasBankingDetails
-                    ? 'Banking details on file — included in Bank CSV'
-                    : 'Banking details incomplete (${row.employee.bankingIssues.join(', ')}) — not included in Bank CSV',
+                    ? context.l10n.bankingOnFile
+                    : context.l10n.bankingIncomplete(row.employee.bankingIssues.join(', ')),
                 child: Padding(
                   padding: const EdgeInsets.all(2),
                   child: Icon(Icons.account_balance_outlined,
@@ -1936,7 +1937,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
               ),
             // Visible Edit icon — replaces the hidden ⋮ menu.
             Tooltip(
-              message: 'Edit employee details',
+              message: context.l10n.editEmployeeDetails,
               child: GestureDetector(
                 onTap: () => _showEmployeeDialog(employee: row.employee),
                 child: Padding(
@@ -1948,7 +1949,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
             ),
             // Remove employee — secondary action.
             Tooltip(
-              message: 'Remove employee',
+              message: context.l10n.removeEmployee,
               child: GestureDetector(
                 onTap: () => _removeEmployee(row),
                 child: Padding(
@@ -2086,25 +2087,25 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
         const SizedBox(height: 3),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           // PDF
-          _navIcon(Icons.picture_as_pdf, 'Download PDF', onTap: () async {
+          _navIcon(Icons.picture_as_pdf, context.l10n.actionDownloadPdf, onTap: () async {
             try {
               await PayslipPdfBuilder.downloadFile(p);
             } catch (e) {
               if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('PDF error: $e')));
+                  SnackBar(content: Text(context.l10n.pdfError('$e'))));
             }
           }),
           const SizedBox(width: 6),
           // Edit / Cancel
           if (!row.isEditingExisting)
-            _navIcon(Icons.edit_outlined, 'Edit this payslip', onTap: () {
+            _navIcon(Icons.edit_outlined, context.l10n.editThisPayslip, onTap: () {
               setState(() {
                 row.isEditingExisting = true;
                 _fillRowFromPayslip(row, p);
               });
             })
           else
-            _navIcon(Icons.close, 'Cancel edit', onTap: () {
+            _navIcon(Icons.close, context.l10n.cancelEdit, onTap: () {
               setState(() {
                 row.isEditingExisting = false;
                 _fillRowFromPayslip(row, p);
@@ -2116,11 +2117,11 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
             Icons.add_circle_outline,
             !locked
                 ? (row.earnings.isEmpty
-                    ? 'Add income'
-                    : '${row.earnings.length} addition${row.earnings.length == 1 ? '' : 's'}')
+                    ? context.l10n.addIncomeLower
+                    : context.l10n.additionsCount(row.earnings.length))
                 : (row.earnings.isEmpty
-                    ? 'No additions (edit to add)'
-                    : '${row.earnings.length} addition${row.earnings.length == 1 ? '' : 's'} (edit to change)'),
+                    ? context.l10n.noAdditionsEditToAdd
+                    : context.l10n.additionsEditToChange(row.earnings.length)),
             count: row.earnings.length,
             active: !locked,
             onTap: !locked ? () => _showEarningsDialog(row) : null,
@@ -2131,18 +2132,18 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
             Icons.remove_circle_outline,
             !locked
                 ? (row.deductions.isEmpty
-                    ? 'Add deductions'
-                    : '${row.deductions.length} deduction${row.deductions.length == 1 ? '' : 's'}')
+                    ? context.l10n.addDeductionsLower
+                    : context.l10n.deductionsCount(row.deductions.length))
                 : (row.deductions.isEmpty
-                    ? 'No deductions (edit to add)'
-                    : '${row.deductions.length} deduction${row.deductions.length == 1 ? '' : 's'} (edit to change)'),
+                    ? context.l10n.noDeductionsEditToAdd
+                    : context.l10n.deductionsEditToChange(row.deductions.length)),
             count: row.deductions.length,
             active: !locked,
             onTap: !locked ? () => _showDeductionsDialog(row) : null,
           ),
           const SizedBox(width: 6),
           // Delete
-          _navIcon(Icons.delete_outline, locked ? 'Delete payslip' : 'Finish editing first',
+          _navIcon(Icons.delete_outline, locked ? context.l10n.deletePayslip : context.l10n.finishEditingFirst,
               active: locked,
               onTap: locked ? () => _deletePayslip(p, prov, row) : null),
         ]),
@@ -2156,7 +2157,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Text('New Payslip',
+        Text(context.l10n.newPayslip,
             style: TextStyle(
                 fontSize: 11, fontWeight: FontWeight.w700,
                 color: Colors.black87)),
@@ -2176,8 +2177,8 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
           _navIcon(
             Icons.add_circle_outline,
             row.earnings.isEmpty
-                ? 'Add income'
-                : '${row.earnings.length} addition${row.earnings.length == 1 ? '' : 's'}',
+                ? context.l10n.addIncomeLower
+                : context.l10n.additionsCount(row.earnings.length),
             count: row.earnings.length,
             onTap: () => _showEarningsDialog(row),
           ),
@@ -2185,8 +2186,8 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
           _navIcon(
             Icons.remove_circle_outline,
             row.deductions.isEmpty
-                ? 'Add deductions'
-                : '${row.deductions.length} deduction${row.deductions.length == 1 ? '' : 's'}',
+                ? context.l10n.addDeductionsLower
+                : context.l10n.deductionsCount(row.deductions.length),
             count: row.deductions.length,
             onTap: () => _showDeductionsDialog(row),
           ),
@@ -2315,7 +2316,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       child: TextField(
         controller: _searchCtrl,
         decoration: InputDecoration(
-          hintText: 'Search employees…',
+          hintText: context.l10n.searchEmployees,
           hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
           prefixIcon: Icon(Icons.search, size: 16, color: Colors.grey[400]),
           suffixIcon: _searchCtrl.text.isNotEmpty
@@ -2351,7 +2352,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       decoration: BoxDecoration(color: Colors.white,
           border: Border(top: BorderSide(color: Colors.grey.shade200))),
       child: Row(children: [
-        Text('Showing $from–$to of $total',
+        Text(context.l10n.showingRange(from, to, total),
             style: TextStyle(fontSize: 12, color: Colors.grey[500])),
         const Spacer(),
         if (pages > 1) ...[
@@ -2423,7 +2424,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         const Icon(Icons.error_outline, color: Colors.black54, size: 48),
         const SizedBox(height: 16),
-        const Text('Failed to load data',
+        Text(context.l10n.failedToLoadData,
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Text(prov.error!, textAlign: TextAlign.center,
@@ -2437,7 +2438,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
             }
           },
           icon: const Icon(Icons.refresh),
-          label: const Text('Retry'),
+          label: Text(context.l10n.actionRetry),
         ),
       ]),
     ),
@@ -2447,7 +2448,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Icon(Icons.business_outlined, size: 56, color: Colors.grey[300]),
       const SizedBox(height: 16),
-      Text('Select a company to manage payslips',
+      Text(context.l10n.selectCompanyForPayslips,
           style: TextStyle(color: Colors.grey[500], fontSize: 15)),
     ]),
   );
@@ -2461,7 +2462,7 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       OutlinedButton.icon(
         onPressed: _showEmployeeDialog,
         icon: const Icon(Icons.person_add_outlined, size: 16),
-        label: const Text('Add First Employee'),
+        label: Text(context.l10n.addFirstEmployee),
       ),
     ]),
   );

@@ -11,7 +11,7 @@ class AppTheme {
         background: ThemeConstants.lightBackgroundColor,
       ),
       scaffoldBackgroundColor: ThemeConstants.lightBackgroundColor,
-      fontFamily: 'Roboto',
+      fontFamily: 'Roboto', // l10n-ignore: font
       appBarTheme: AppBarTheme(
         backgroundColor: ThemeConstants.primaryColor,
         elevation: 0,
@@ -47,7 +47,7 @@ class AppTheme {
         background: ThemeConstants.darkBackgroundColor,
       ),
       scaffoldBackgroundColor: ThemeConstants.darkBackgroundColor,
-      fontFamily: 'Roboto',
+      fontFamily: 'Roboto', // l10n-ignore: font
       appBarTheme: AppBarTheme(
         backgroundColor: ThemeConstants.darkAppBarColor,
         elevation: 0,

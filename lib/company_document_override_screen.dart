@@ -1,6 +1,8 @@
+import 'package:cropCompliance/models/category_model.dart';
 import 'package:cropCompliance/models/company_model.dart';
 import 'package:cropCompliance/models/document_type_model.dart';
 import 'package:cropCompliance/providers/auth_provider.dart';
+import 'package:cropCompliance/providers/category_provider.dart';
 import 'package:cropCompliance/views/shared/app_scaffold_wrapper.dart';
 import 'package:cropCompliance/views/shared/error_display.dart';
 import 'package:cropCompliance/views/shared/loading_indicator.dart';
@@ -24,8 +26,17 @@ class _CompanyDocumentOverrideScreenState extends State<CompanyDocumentOverrideS
   String? _selectedCompanyId;
 
   List<CompanyModel> _companies = [];
-  List<DocumentTypeModel> _allDocumentTypes = [];
-  Map<String, Map<String, dynamic>> _currentOverrides = {};
+  List<CategoryModel> _allCategories = [];
+  List<DocumentTypeModel> _naDocumentTypes = []; // Only doc types with hasNotApplicableOption
+  // documentTypeId -> isActive (null = not overridden = active by default)
+  Map<String, bool> _activeState = {};
+
+  @override
+  void dispose() {
+    // Switching document types on/off changes every company screen's totals.
+    CategoryProvider.markOverridesStale();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -46,10 +57,18 @@ class _CompanyDocumentOverrideScreenState extends State<CompanyDocumentOverrideS
           .map((doc) => CompanyModel.fromMap(doc.data(), doc.id))
           .toList();
 
-      // Load ALL document types from all categories
+      // Load all categories
+      final categoriesSnapshot = await _firestore.collection('categories').get();
+      _allCategories = categoriesSnapshot.docs
+          .map((doc) => CategoryModel.fromMap(doc.data(), doc.id))
+          .toList();
+      _allCategories.sort((a, b) => a.order.compareTo(b.order));
+
+      // Load only document types that have the N/A option
       final docTypesSnapshot = await _firestore.collection('documentTypes').get();
-      _allDocumentTypes = docTypesSnapshot.docs
+      _naDocumentTypes = docTypesSnapshot.docs
           .map((doc) => DocumentTypeModel.fromMap(doc.data(), doc.id))
+          .where((dt) => dt.hasNotApplicableOption)
           .toList();
 
     } catch (e) {
@@ -61,53 +80,71 @@ class _CompanyDocumentOverrideScreenState extends State<CompanyDocumentOverrideS
     }
   }
 
-  Future<void> _loadOverridesForCompany() async {
-    if (_selectedCompanyId == null) return;
-
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _loadOverridesForCompany(String companyId) async {
+    setState(() => _isLoading = true);
 
     try {
-      // Load existing overrides for this company
       final overridesSnapshot = await _firestore
           .collection('companyDocumentTypeSettings')
-          .where('companyId', isEqualTo: _selectedCompanyId)
+          .where('companyId', isEqualTo: companyId)
           .get();
 
-      _currentOverrides = {};
-      for (var doc in overridesSnapshot.docs) {
-        final data = doc.data();
-        final documentTypeId = data['documentTypeId'] as String;
-        final overrides = data['overrides'] as Map<String, dynamic>;
-        _currentOverrides[documentTypeId] = overrides;
+      // Start with all NA doc types as active (true)
+      final Map<String, bool> state = {};
+      for (var docType in _naDocumentTypes) {
+        state[docType.id] = true;
       }
 
-      print('Loaded ${_currentOverrides.length} overrides for company $_selectedCompanyId');
+      // Apply saved overrides
+      for (var doc in overridesSnapshot.docs) {
+        final data = doc.data();
+        final documentTypeId = data['documentTypeId'] as String?;
+        if (documentTypeId == null) continue;
+        final overrides = data['overrides'] as Map<String, dynamic>? ?? {};
+        if (overrides.containsKey('isActive')) {
+          state[documentTypeId] = overrides['isActive'] as bool;
+        }
+      }
 
-    } catch (e) {
-      _error = 'Error loading overrides: $e';
-    } finally {
       setState(() {
-        _isLoading = false;
+        _activeState = state;
       });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading settings: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _saveOverride(String documentTypeId, String field, dynamic value) async {
+  Future<void> _setDocumentTypeActive(String documentTypeId, bool isActive) async {
     if (_selectedCompanyId == null) return;
+
+    // Optimistically update UI
+    setState(() {
+      _activeState[documentTypeId] = isActive;
+    });
 
     try {
       final docId = '${_selectedCompanyId}_$documentTypeId';
 
-      // Get existing overrides for this document type
-      Map<String, dynamic> existingOverrides =
-      Map<String, dynamic>.from(_currentOverrides[documentTypeId] ?? {});
+      // Get existing overrides for this document type to preserve them
+      final existingDoc = await _firestore
+          .collection('companyDocumentTypeSettings')
+          .doc(docId)
+          .get();
 
-      // Update the specific field
-      existingOverrides[field] = value;
+      Map<String, dynamic> existingOverrides = {};
+      if (existingDoc.exists) {
+        final data = existingDoc.data()!;
+        existingOverrides = Map<String, dynamic>.from(data['overrides'] ?? {});
+      }
 
-      // Save to Firestore
+      existingOverrides['isActive'] = isActive;
+
       await _firestore
           .collection('companyDocumentTypeSettings')
           .doc(docId)
@@ -118,80 +155,25 @@ class _CompanyDocumentOverrideScreenState extends State<CompanyDocumentOverrideS
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      // Update local state
-      setState(() {
-        _currentOverrides[documentTypeId] = existingOverrides;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Override saved: $field = $value'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error saving override: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _removeOverride(String documentTypeId, String field) async {
-    if (_selectedCompanyId == null) return;
-
-    try {
-      final docId = '${_selectedCompanyId}_$documentTypeId';
-
-      // Get existing overrides
-      Map<String, dynamic> existingOverrides =
-      Map<String, dynamic>.from(_currentOverrides[documentTypeId] ?? {});
-
-      // Remove the field
-      existingOverrides.remove(field);
-
-      if (existingOverrides.isEmpty) {
-        // Delete the entire document if no overrides left
-        await _firestore
-            .collection('companyDocumentTypeSettings')
-            .doc(docId)
-            .delete();
-
-        setState(() {
-          _currentOverrides.remove(documentTypeId);
-        });
-      } else {
-        // Update with remaining overrides
-        await _firestore
-            .collection('companyDocumentTypeSettings')
-            .doc(docId)
-            .update({
-          'overrides': existingOverrides,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-
-        setState(() {
-          _currentOverrides[documentTypeId] = existingOverrides;
-        });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isActive ? 'Document type activated' : 'Document type deactivated'),
+            backgroundColor: isActive ? Colors.green : Colors.orange,
+            duration: const Duration(seconds: 1),
+          ),
+        );
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Override removed: $field'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error removing override: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // Revert on failure
+      if (mounted) {
+        setState(() {
+          _activeState[documentTypeId] = !isActive;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -201,39 +183,37 @@ class _CompanyDocumentOverrideScreenState extends State<CompanyDocumentOverrideS
 
     if (!authProvider.isAdmin) {
       return AppScaffoldWrapper(
-        title: 'Document Overrides',
-        child: const Center(
-          child: Text('You do not have permission to access this page'),
-        ),
+        title: 'Document Settings',
+        child: const Center(child: Text('You do not have permission to access this page')),
       );
     }
 
     Widget content;
-    if (_isLoading) {
+    if (_isLoading && _companies.isEmpty) {
       content = const LoadingIndicator(message: 'Loading...');
     } else if (_error != null) {
-      content = ErrorDisplay(
-        error: _error!,
-        onRetry: _loadData,
-      );
+      content = ErrorDisplay(error: _error!, onRetry: _loadData);
     } else {
       content = _buildContent();
     }
 
     return AppScaffoldWrapper(
-      title: 'Company Document Overrides',
+      title: 'Company Document Settings',
       backgroundColor: Colors.grey[100],
       child: content,
     );
   }
 
   Widget _buildContent() {
+    final deactivatedCount = _activeState.values.where((v) => !v).length;
+    final activeCount = _activeState.values.where((v) => v).length;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Instructions
+          // Info card
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -241,14 +221,15 @@ class _CompanyDocumentOverrideScreenState extends State<CompanyDocumentOverrideS
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Company Document Type Overrides',
+                    'Document Type Activation',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Customize document type settings for specific companies. '
-                        'This creates the companyDocumentTypeSettings collection in Firebase. '
-                        'Only changed settings are stored - defaults are used for everything else.',
+                    'Select a company and activate or deactivate the document types '
+                    'that have an N/A option. Deactivated document types will not '
+                    'appear in the audit checklist and will not count towards the '
+                    'compliance total for that company.',
                   ),
                 ],
               ),
@@ -257,7 +238,7 @@ class _CompanyDocumentOverrideScreenState extends State<CompanyDocumentOverrideS
 
           const SizedBox(height: 16),
 
-          // Company Selection
+          // Company selector
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -268,11 +249,10 @@ class _CompanyDocumentOverrideScreenState extends State<CompanyDocumentOverrideS
                     'Select Company',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
-                  const SizedBox(height: 16),
-
+                  const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(
-                      labelText: 'Select Company',
+                      labelText: 'Company',
                       border: OutlineInputBorder(),
                     ),
                     value: _selectedCompanyId,
@@ -285,10 +265,10 @@ class _CompanyDocumentOverrideScreenState extends State<CompanyDocumentOverrideS
                     onChanged: (value) {
                       setState(() {
                         _selectedCompanyId = value;
-                        _currentOverrides = {};
+                        _activeState = {};
                       });
                       if (value != null) {
-                        _loadOverridesForCompany();
+                        _loadOverridesForCompany(value);
                       }
                     },
                   ),
@@ -297,203 +277,235 @@ class _CompanyDocumentOverrideScreenState extends State<CompanyDocumentOverrideS
             ),
           ),
 
-          const SizedBox(height: 16),
+          if (_selectedCompanyId != null) ...[
+            const SizedBox(height: 16),
 
-          // Document Types List
-          if (_selectedCompanyId != null && _allDocumentTypes.isNotEmpty) ...[
-            Text(
-              'All Document Types (${_allDocumentTypes.length} total)',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
+            // Summary row
+            if (_activeState.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    _buildSummaryChip(
+                      '$activeCount Active',
+                      Colors.green,
+                      Icons.check_circle_outline,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildSummaryChip(
+                      '$deactivatedCount Deactivated',
+                      Colors.orange,
+                      Icons.block_outlined,
+                    ),
+                  ],
+                ),
+              ),
 
-            ...(_allDocumentTypes.map((docType) => _buildDocumentTypeCard(docType)).toList()),
+            if (_isLoading)
+              const Center(child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(),
+              ))
+            else if (_naDocumentTypes.isEmpty)
+              const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: Text('No document types with N/A option found.')),
+                ),
+              )
+            else
+              ..._buildGroupedDocumentTypes(),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildDocumentTypeCard(DocumentTypeModel docType) {
-    final hasOverrides = _currentOverrides.containsKey(docType.id);
-    final overrides = _currentOverrides[docType.id] ?? {};
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      color: hasOverrides ? Colors.blue.shade50 : null,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    docType.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                if (hasOverrides)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${overrides.length} OVERRIDE${overrides.length > 1 ? 'S' : ''}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Override Toggles
-            _buildOverrideToggle(
-              docType,
-              'Has Not Applicable Option',
-              'hasNotApplicableOption',
-              docType.hasNotApplicableOption,
-              overrides['hasNotApplicableOption'],
-            ),
-
-            _buildOverrideToggle(
-              docType,
-              'Requires Signature',
-              'requiresSignature',
-              docType.requiresSignature,
-              overrides['requiresSignature'],
-            ),
-
-            _buildOverrideToggle(
-              docType,
-              'Has Expiry Date',
-              'hasExpiryDate',
-              docType.hasExpiryDate,
-              overrides['hasExpiryDate'],
-            ),
-
-            _buildOverrideToggle(
-              docType,
-              'Is Uploadable',
-              'isUploadable',
-              docType.isUploadable,
-              overrides['isUploadable'],
-            ),
-
-            _buildOverrideToggle(
-              docType,
-              'Allow Multiple Documents',
-              'allowMultipleDocuments',
-              docType.allowMultipleDocuments,
-              overrides['allowMultipleDocuments'],
-            ),
-          ],
-        ),
+  Widget _buildSummaryChip(String label, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13)),
+        ],
       ),
     );
   }
 
-  Widget _buildOverrideToggle(
-      DocumentTypeModel docType,
-      String label,
-      String fieldName,
-      bool defaultValue,
-      dynamic overrideValue,
-      ) {
-    final bool currentValue = overrideValue ?? defaultValue;
-    final bool hasOverride = overrideValue != null;
+  List<Widget> _buildGroupedDocumentTypes() {
+    // Group NA doc types by category
+    final Map<String, List<DocumentTypeModel>> byCategory = {};
+    for (var docType in _naDocumentTypes) {
+      byCategory.putIfAbsent(docType.categoryId, () => []).add(docType);
+    }
 
+    // Build cards grouped by category, in category order
+    final widgets = <Widget>[];
+    for (var category in _allCategories) {
+      final docTypes = byCategory[category.id];
+      if (docTypes == null || docTypes.isEmpty) continue;
+
+      widgets.add(
+        Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Category header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.08),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.folder_outlined,
+                        size: 18, color: Theme.of(context).primaryColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      category.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${docTypes.length} document${docTypes.length > 1 ? 's' : ''}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Document types
+              ...docTypes.asMap().entries.map((entry) {
+                final index = entry.key;
+                final docType = entry.value;
+                final isActive = _activeState[docType.id] ?? true;
+
+                return Column(
+                  children: [
+                    if (index > 0)
+                      Divider(height: 1, indent: 16, endIndent: 16,
+                          color: Colors.grey.shade200),
+                    _buildDocumentTypeRow(docType, isActive),
+                  ],
+                );
+              }),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Handle doc types that don't match any known category
+    final knownCategoryIds = _allCategories.map((c) => c.id).toSet();
+    final uncategorized = _naDocumentTypes
+        .where((dt) => !knownCategoryIds.contains(dt.categoryId))
+        .toList();
+    if (uncategorized.isNotEmpty) {
+      widgets.add(
+        Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Uncategorized',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+              ...uncategorized.asMap().entries.map((entry) {
+                final isActive = _activeState[entry.value.id] ?? true;
+                return Column(
+                  children: [
+                    if (entry.key > 0)
+                      Divider(height: 1, indent: 16, endIndent: 16,
+                          color: Colors.grey.shade200),
+                    _buildDocumentTypeRow(entry.value, isActive),
+                  ],
+                );
+              }),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  Widget _buildDocumentTypeRow(DocumentTypeModel docType, bool isActive) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: hasOverride ? Colors.blue.shade700 : null,
-                fontWeight: hasOverride ? FontWeight.bold : null,
-              ),
-            ),
-          ),
-
-          // Current value indicator
+          // Status indicator dot
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            width: 8,
+            height: 8,
+            margin: const EdgeInsets.only(right: 12),
             decoration: BoxDecoration(
-              color: hasOverride
-                  ? Colors.blue.shade100
-                  : Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              hasOverride
-                  ? 'Override: ${currentValue ? 'Yes' : 'No'}'
-                  : 'Default: ${defaultValue ? 'Yes' : 'No'}',
-              style: TextStyle(
-                fontSize: 12,
-                color: hasOverride ? Colors.blue.shade700 : Colors.grey.shade700,
-              ),
+              shape: BoxShape.circle,
+              color: isActive ? Colors.green : Colors.orange,
             ),
           ),
 
-          const SizedBox(width: 8),
-
-          // Toggle buttons
-          if (!hasOverride) ...[
-            ElevatedButton(
-              onPressed: () => _saveOverride(docType.id, fieldName, !defaultValue),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              ),
-              child: Text(
-                'Set ${!defaultValue ? 'Yes' : 'No'}',
-                style: const TextStyle(fontSize: 12, color: Colors.white),
-              ),
-            ),
-          ] else ...[
-            Row(
-              mainAxisSize: MainAxisSize.min,
+          // Document type name
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ElevatedButton(
-                  onPressed: () => _saveOverride(docType.id, fieldName, !currentValue),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                  child: Text(
-                    !currentValue ? 'Yes' : 'No',
-                    style: const TextStyle(fontSize: 10, color: Colors.white),
+                Text(
+                  docType.name,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: isActive ? Colors.black87 : Colors.grey.shade500,
+                    decoration: isActive ? null : TextDecoration.none,
                   ),
                 ),
-                const SizedBox(width: 4),
-                ElevatedButton(
-                  onPressed: () => _removeOverride(docType.id, fieldName),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                if (!isActive)
+                  const Text(
+                    'Deactivated — hidden from checklist',
+                    style: TextStyle(fontSize: 11, color: Colors.orange),
                   ),
-                  child: const Text(
-                    'Reset',
-                    style: TextStyle(fontSize: 10, color: Colors.white),
-                  ),
-                ),
               ],
             ),
-          ],
+          ),
+
+          // Active/inactive toggle
+          Switch(
+            value: isActive,
+            activeColor: Colors.green,
+            inactiveTrackColor: Colors.orange.shade200,
+            onChanged: (value) => _setDocumentTypeActive(docType.id, value),
+          ),
         ],
       ),
     );

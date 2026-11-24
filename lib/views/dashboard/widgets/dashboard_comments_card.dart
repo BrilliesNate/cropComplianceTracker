@@ -5,6 +5,7 @@ import 'package:cropCompliance/core/constants/route_constants.dart';
 import 'package:cropCompliance/models/document_model.dart';
 import 'package:cropCompliance/providers/document_provider.dart';
 import 'package:cropCompliance/theme/theme_constants.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DashboardCommentsCard extends StatelessWidget {
   final String? selectedDocumentId;
@@ -61,8 +62,8 @@ class DashboardCommentsCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min, // FIXED: Let content size itself
             children: [
-              const Text(
-                'Document Comment',
+              Text(
+                context.l10n.commentsCardTitle,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -82,16 +83,16 @@ class DashboardCommentsCard extends StatelessWidget {
                         color: Colors.green.shade300,
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'No rejected documents with comments',
+                      Text(
+                        context.l10n.commentsNoRejected,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'All documents are in good standing',
+                      Text(
+                        context.l10n.commentsAllGood,
                         style: TextStyle(color: Colors.grey),
                       ),
                     ],
@@ -105,7 +106,7 @@ class DashboardCommentsCard extends StatelessWidget {
     }
 
     // Get the document type name
-    String documentTypeName = 'Unknown Document';
+    String documentTypeName = context.l10n.unknownDocument;
     try {
       final docType = documentProvider.documentTypes
           .firstWhere((dt) => dt.id == selectedDocument?.documentTypeId);
@@ -140,8 +141,8 @@ class DashboardCommentsCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Document Comment',
+                Text(
+                  context.l10n.commentsCardTitle,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -160,8 +161,8 @@ class DashboardCommentsCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    const Text(
-                      'Rejected',
+                    Text(
+                      context.l10n.statusRejected,
                       style: TextStyle(
                         color: Colors.red,
                         fontWeight: FontWeight.w600,
@@ -224,7 +225,7 @@ class DashboardCommentsCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Action required: Update and resubmit',
+                          context.l10n.commentsActionRequired,
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.orange[900],
@@ -261,7 +262,7 @@ class DashboardCommentsCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       textStyle: const TextStyle(fontSize: 12),
                     ),
-                    child: const Text('Resubmit'),
+                    child: Text(context.l10n.actionResubmit),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -278,7 +279,7 @@ class DashboardCommentsCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       textStyle: const TextStyle(fontSize: 12),
                     ),
-                    child: const Text('Details'),
+                    child: Text(context.l10n.actionDetails),
                   ),
                 ),
               ],

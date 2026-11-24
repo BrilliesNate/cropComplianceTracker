@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/document_provider.dart';
 import '../../../models/document_model.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class CategoryProgressBar extends StatelessWidget {
   final String categoryId;
@@ -18,7 +19,7 @@ class CategoryProgressBar extends StatelessWidget {
 
     // Calculate progress
     if (documents.isEmpty) {
-      return _buildProgressBar(context, 0, 'No documents available');
+      return _buildProgressBar(context, 0, context.l10n.catNoDocsAvailable);
     }
 
     int completedCount = 0;
@@ -36,7 +37,7 @@ class CategoryProgressBar extends StatelessWidget {
     }
 
     final percentage = (completedCount / documents.length) * 100;
-    final statusText = 'Completed: $completedCount / ${documents.length} (${percentage.toStringAsFixed(0)}%)';
+    final statusText = context.l10n.catCompletedStatus(completedCount, documents.length, percentage.toStringAsFixed(0));
 
     return Column(
       children: [
@@ -52,7 +53,7 @@ class CategoryProgressBar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Category Progress',
+          context.l10n.catProgress,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
@@ -86,11 +87,11 @@ class CategoryProgressBar extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildLegendItem(context, 'Completed', Colors.green, completed, total),
+        _buildLegendItem(context, context.l10n.statusCompleted, Colors.green, completed, total),
         const SizedBox(width: 16),
-        _buildLegendItem(context, 'Pending', Colors.orange, pending, total),
+        _buildLegendItem(context, context.l10n.statusPending, Colors.orange, pending, total),
         const SizedBox(width: 16),
-        _buildLegendItem(context, 'Rejected', Colors.red, rejected, total),
+        _buildLegendItem(context, context.l10n.statusRejected, Colors.red, rejected, total),
       ],
     );
   }

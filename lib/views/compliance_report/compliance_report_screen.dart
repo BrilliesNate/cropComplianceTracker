@@ -1,3 +1,4 @@
+import '../../core/utils/data_bootstrap.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +10,7 @@ import '../shared/loading_indicator.dart';
 import '../shared/error_display.dart';
 import '../shared/app_scaffold_wrapper.dart';
 import 'widgets/document_status_table.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class ComplianceReportScreen extends StatefulWidget {
   const ComplianceReportScreen({Key? key}) : super(key: key);
@@ -18,29 +20,28 @@ class ComplianceReportScreen extends StatefulWidget {
 }
 
 class _ComplianceReportScreenState extends State<ComplianceReportScreen> {
+  late bool _ready; // one loader, then the finished page (no half-filled UI)
+
   @override
   void initState() {
     super.initState();
+    _ready = isCompanyDataWarm(context);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
     });
   }
 
   Future<void> _initializeData() async {
+    if (!mounted) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
-    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    if (authProvider.currentUser == null) return;
 
-    if (authProvider.currentUser != null) {
-      await categoryProvider.initialize();
-
-      // Set package filter based on company packages
-      if (authProvider.effectiveCompany != null) {
-        categoryProvider.setPackageFilter(authProvider.effectiveCompany!.packages);
-      }
-
-      // Use the company-aware method instead of the old initialize method
-      await documentProvider.refreshForUserContext(context);
+    try {
+      // Includes the company's switched-off document types, so the totals here
+      // match the Dashboard and the Compliance Tracker.
+      await loadCompanyData(context);
+    } finally {
+      if (mounted) setState(() => _ready = true);
     }
   }
 
@@ -51,31 +52,34 @@ class _ComplianceReportScreenState extends State<ComplianceReportScreen> {
     final categoryProvider = Provider.of<CategoryProvider>(context);
 
     if (authProvider.currentUser == null) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: Text('Please log in to continue'),
+          child: Text(context.l10n.pleaseLogIn),
         ),
       );
     }
 
-    final isLoading = documentProvider.isLoading || categoryProvider.isLoading;
+    final isLoading = !_ready || documentProvider.isLoading || categoryProvider.isLoading;
     final hasError = documentProvider.error != null || categoryProvider.error != null;
     final error = documentProvider.error ?? categoryProvider.error ?? '';
 
     Widget content;
     if (isLoading) {
-      content = const LoadingIndicator(message: 'Loading compliance data...');
+      content = LoadingIndicator(message: context.l10n.reportLoading);
     } else if (hasError) {
       content = ErrorDisplay(
         error: error,
-        onRetry: _initializeData,
+        onRetry: () {
+          setState(() => _ready = false);
+          _initializeData();
+        },
       );
     } else {
       content = _buildReportView(context);
     }
 
     return AppScaffoldWrapper(
-      title: 'Compliance Report',
+      title: context.l10n.menuComplianceReport,
       backgroundColor: Colors.grey[100],
       child: content,
     );
@@ -124,8 +128,8 @@ class _ComplianceReportScreenState extends State<ComplianceReportScreen> {
                 children: [
                   Icon(Icons.analytics_outlined, size: 16, color: const Color(0xFF43A047)),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Compliance Report',
+                  Text(
+                    context.l10n.menuComplianceReport,
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),
@@ -140,10 +144,10 @@ class _ComplianceReportScreenState extends State<ComplianceReportScreen> {
               // Compact metrics row
               Row(
                 children: [
-                  _buildCompactMetric('${completionRate.toInt()}%', 'Complete', const Color(0xFF43A047)),
-                  _buildCompactMetric('$approvedDocs', 'Approved', Colors.green.shade600),
-                  _buildCompactMetric('$pendingDocs', 'Pending', Colors.blue.shade600),
-                  _buildCompactMetric('$rejectedDocs', 'Rejected', Colors.orange.shade600),
+                  _buildCompactMetric('${completionRate.toInt()}%', context.l10n.reportComplete, const Color(0xFF43A047)),
+                  _buildCompactMetric('$approvedDocs', context.l10n.statusApproved, Colors.green.shade600),
+                  _buildCompactMetric('$pendingDocs', context.l10n.statusPending, Colors.blue.shade600),
+                  _buildCompactMetric('$rejectedDocs', context.l10n.statusRejected, Colors.orange.shade600),
                 ],
               ),
             ],

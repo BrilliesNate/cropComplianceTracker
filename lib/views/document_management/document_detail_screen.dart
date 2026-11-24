@@ -1,3 +1,4 @@
+import 'package:cropCompliance/core/offline/pending_files_widgets.dart';
 import 'package:cropCompliance/core/constants/route_constants.dart';
 import 'package:cropCompliance/models/document_model.dart';
 import 'package:cropCompliance/models/document_type_model.dart';
@@ -14,6 +15,7 @@ import 'package:cropCompliance/views/shared/status_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DocumentDetailScreen extends StatefulWidget {
   final String documentId;
@@ -30,6 +32,12 @@ class DocumentDetailScreen extends StatefulWidget {
 class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   Future<DocumentModel?>? _documentFuture;
   TextEditingController _commentController = TextEditingController();
+
+  // NEW: Controllers for admin editable fields
+  TextEditingController _specificationController = TextEditingController();
+  DateTime? _selectedExpiryDate;
+  bool _adminFieldsInitialized = false;
+
   DocumentTypeModel? _documentType;
   bool _hasLoggedDocumentInfo = false;
 
@@ -42,6 +50,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   @override
   void dispose() {
     _commentController.dispose();
+    _specificationController.dispose();
     super.dispose();
   }
 
@@ -52,6 +61,15 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     }
   }
 
+  // NEW: Initialize admin editable fields with document values
+  void _initializeAdminFields(DocumentModel document) {
+    if (!_adminFieldsInitialized) {
+      _specificationController.text = document.specification ?? '';
+      _selectedExpiryDate = document.expiryDate;
+      _adminFieldsInitialized = true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -59,20 +77,20 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     final isAdmin = authProvider.currentUser?.role == UserRole.ADMIN;
 
     return Scaffold(
-      appBar: const CustomAppBar(
-        title: 'Document Details',
+      appBar: CustomAppBar(
+        title: context.l10n.docDetailsTitle,
         showBackButton: true,
       ),
       body: FutureBuilder<DocumentModel?>(
         future: _documentFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const LoadingIndicator(message: 'Loading document...');
+            return LoadingIndicator(message: context.l10n.docLoading);
           }
 
           if (snapshot.hasError) {
             return ErrorDisplay(
-              error: 'Error loading document: ${snapshot.error}',
+              error: context.l10n.docLoadError('${snapshot.error}'),
               onRetry: () {
                 setState(() {
                   _documentFuture = null;
@@ -84,7 +102,16 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
 
           final document = snapshot.data;
           if (document == null) {
-            return const Center(child: Text('Document not found'));
+            return Center(
+              child: Text(authProvider.isAuditer
+                  ? context.l10n.docNotAvailable
+                  : context.l10n.docNotFound),
+            );
+          }
+
+          // Initialize admin fields when document loads
+          if (isAdmin) {
+            _initializeAdminFields(document);
           }
 
           if (!_hasLoggedDocumentInfo) {
@@ -123,9 +150,11 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                       const SizedBox(height: 16),
 
                       // ACTION BUTTONS - Prominent and clear
-                      _buildActionButtons(document, isAdmin, authProvider),
-
-                      const SizedBox(height: 24),
+                      // (auditors are read-only: no uploading, signing or resubmitting)
+                      if (!authProvider.isAuditer) ...[
+                        _buildActionButtons(document, isAdmin, authProvider),
+                        const SizedBox(height: 24),
+                      ],
 
                       // DOCUMENT FILES SECTION
                       if (!document.isNotApplicable) _buildFilesSection(document),
@@ -133,9 +162,11 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                       const SizedBox(height: 24),
 
                       // COMMENTS/HISTORY SECTION
-                      _buildCommentsSection(document, isAdmin),
-
-                      const SizedBox(height: 24),
+                      // (internal review conversation — not shown to auditors)
+                      if (!authProvider.isAuditer) ...[
+                        _buildCommentsSection(document, isAdmin),
+                        const SizedBox(height: 24),
+                      ],
 
                       // ADMIN REVIEW SECTION (only for admins)
                       if (isAdmin) _buildAdminReviewSection(document),
@@ -159,29 +190,29 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     if (document.isExpired) {
       bannerColor = Colors.red.shade700;
       bannerIcon = Icons.warning_amber_rounded;
-      bannerText = 'DOCUMENT EXPIRED';
-      bannerSubtext = 'This document has expired and needs to be updated';
+      bannerText = context.l10n.bannerExpired;
+      bannerSubtext = context.l10n.bannerExpiredSub;
     } else if (document.status == DocumentStatus.REJECTED) {
       bannerColor = Colors.orange.shade700;
       bannerIcon = Icons.cancel_outlined;
-      bannerText = 'DOCUMENT REJECTED';
-      bannerSubtext = 'Please review the feedback and resubmit';
+      bannerText = context.l10n.bannerRejected;
+      bannerSubtext = context.l10n.bannerRejectedSub;
     } else if (document.status == DocumentStatus.PENDING) {
       bannerColor = Colors.blue.shade700;
       bannerIcon = Icons.hourglass_empty_rounded;
-      bannerText = 'PENDING REVIEW';
-      bannerSubtext = isAdmin ? 'Awaiting your review' : 'Awaiting admin review';
+      bannerText = context.l10n.bannerPending;
+      bannerSubtext = isAdmin ? context.l10n.bannerAwaitingYou : context.l10n.bannerAwaitingAdmin;
     } else if (document.status == DocumentStatus.APPROVED) {
       bannerColor = Colors.green.shade700;
       bannerIcon = Icons.check_circle_outline;
-      bannerText = 'APPROVED';
-      bannerSubtext = document.expiryDate != null
-          ? 'Valid until ${DateFormat('MMM d, y').format(document.expiryDate!)}'
-          : 'Document is approved';
+      bannerText = context.l10n.bannerApprovedCaps;
+      bannerSubtext = document.effectiveExpiryDate != null
+          ? context.l10n.bannerValidUntil(DateFormat('MMM d, y').format(document.effectiveExpiryDate!))
+          : context.l10n.bannerApproved;
     } else {
       bannerColor = Colors.grey.shade700;
       bannerIcon = Icons.info_outline;
-      bannerText = 'UNKNOWN STATUS';
+      bannerText = context.l10n.bannerUnknown;
       bannerSubtext = '';
     }
 
@@ -218,8 +249,8 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                 const SizedBox(height: 4),
                 Text(
                   bannerSubtext,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                  style: const TextStyle(
+                    color: Colors.white70,
                     fontSize: 14,
                   ),
                 ),
@@ -236,68 +267,70 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              _documentType?.name ?? 'Document',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                const Icon(Icons.info_outline),
+                const SizedBox(width: 8),
+                Text(
+                  context.l10n.docInformation,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            _buildInfoRow(Icons.calendar_today, 'Created',
-                DateFormat('MMM d, y').format(document.createdAt)),
-            if (document.expiryDate != null)
+            const Divider(height: 24),
+            _buildInfoRow(context.l10n.colDocumentType, _documentType?.name ?? context.l10n.unknown),
+            _buildInfoRow(context.l10n.created, DateFormat('MMM d, y • h:mm a').format(document.createdAt)),
+            _buildInfoRow(context.l10n.lastUpdated, DateFormat('MMM d, y • h:mm a').format(document.updatedAt)),
+            if (document.effectiveExpiryDate != null)
               _buildInfoRow(
-                Icons.event_busy,
-                'Expires',
-                DateFormat('MMM d, y').format(document.expiryDate!),
-                isError: document.isExpired,
+                context.l10n.expiryDateTitle,
+                DateFormat('MMM d, y').format(document.effectiveExpiryDate!),
+                valueColor: document.isExpired ? Colors.red : null,
               ),
-            _buildInfoRow(Icons.update, 'Last Updated',
-                DateFormat('MMM d, y').format(document.updatedAt)),
             if (document.specification != null && document.specification!.isNotEmpty)
-              _buildInfoRow(Icons.description, 'Specification',
-                  document.specification!),
+              _buildInfoRow(context.l10n.specification, document.specification!),
+            _buildInfoRow(
+              context.l10n.colStatus,
+              document.status.toString().split('.').last,
+              valueWidget: StatusBadge(status: document.status),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value, {bool isError = false}) {
+  Widget _buildInfoRow(String label, String value, {Color? valueColor, Widget? valueWidget}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: isError ? Colors.red : Colors.grey.shade600),
-          const SizedBox(width: 12),
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 14,
+              ),
+            ),
+          ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: isError ? Colors.red : Colors.black87,
-                  ),
-                ),
-              ],
+            child: valueWidget ?? Text(
+              value,
+              style: TextStyle(
+                color: valueColor ?? Colors.black87,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -306,154 +339,168 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   }
 
   Widget _buildActionButtons(DocumentModel document, bool isAdmin, AuthProvider authProvider) {
-    final bool needsAction = document.isExpired || document.status == DocumentStatus.REJECTED;
-    final bool canResubmit = needsAction && !isAdmin;
-    final bool allowsMultiple = _documentType?.allowMultipleDocuments ?? false;
+    // "Expiring soon" = has an expiry within 30 days and not yet expired, so
+    // users can proactively upload a new version instead of waiting for expiry.
+    final expiringSoon = document.effectiveExpiryDate != null &&
+        !document.isExpired &&
+        document.effectiveExpiryDate!
+            .isBefore(DateTime.now().add(const Duration(days: 30)));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // PRIMARY UPLOAD/UPDATE BUTTON - Always visible
-        ElevatedButton.icon(
-          onPressed: () {
-            Navigator.of(context).pushNamed(
-              RouteConstants.documentUpload,
-              arguments: {
-                'categoryId': document.categoryId,
-                'documentTypeId': document.documentTypeId,
-                'existingDocumentId': document.id, // Pass existing ID to update/replace
-              },
-            );
-          },
-          icon: const Icon(Icons.upload_file, size: 20),
-          label: Text(
-            needsAction
-                ? 'UPLOAD NEW DOCUMENT (REPLACE)'
-                : 'UPLOAD NEW VERSION',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: needsAction ? Colors.red.shade600 : Theme.of(context).primaryColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+    // Only hide actions for approved docs that are NOT expired and NOT expiring
+    // soon (and viewer isn't an admin).
+    if (document.status == DocumentStatus.APPROVED &&
+        !document.isExpired &&
+        !expiringSoon &&
+        !isAdmin) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.flash_on, color: Colors.orange),
+                const SizedBox(width: 8),
+                Text(
+                  context.l10n.actions,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-          ),
+            const SizedBox(height: 16),
+
+            // Upload-new-version for rejected, expired, OR expiring-soon docs
+            if (document.isRejected || document.isExpired || expiringSoon)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(
+                      RouteConstants.documentUpload,
+                      arguments: {
+                        'categoryId': document.categoryId,
+                        'documentTypeId': document.documentTypeId,
+                        'existingDocumentId': document.id,
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: Text(document.isRejected
+                      ? context.l10n.resubmitDocCaps
+                      : context.l10n.uploadNewVersionCaps),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+
+            // Sign button if signatures required and not complete
+            if (_documentType != null &&
+                _documentType!.requiresSignature &&
+                document.signatures.length < _documentType!.signatureCount &&
+                document.status != DocumentStatus.REJECTED) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _showSignatureDialog(context, document),
+                  icon: const Icon(Icons.draw),
+                  label: Text(
+                    context.l10n.addSignatureCaps(document.signatures.length, _documentType!.signatureCount),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
-
-        // ADD ANOTHER DOCUMENT BUTTON - Only if multiple documents allowed
-        if (allowsMultiple && !needsAction) ...[
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.of(context).pushNamed(
-                RouteConstants.documentUpload,
-                arguments: {
-                  'categoryId': document.categoryId,
-                  'documentTypeId': document.documentTypeId,
-                  // NO existingDocumentId = creates new document
-                },
-              );
-            },
-            icon: const Icon(Icons.add, size: 20),
-            label: const Text('ADD ANOTHER DOCUMENT'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: BorderSide(color: Theme.of(context).primaryColor),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ],
-
-        // SIGNATURE BUTTON
-        if (_documentType?.requiresSignature == true &&
-            document.signatures.length < (_documentType?.signatureCount ?? 0)) ...[
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => _showSignatureDialog(context, document),
-            icon: const Icon(Icons.draw, size: 20),
-            label: const Text('ADD SIGNATURE'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: BorderSide(color: Theme.of(context).primaryColor),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ],
-      ],
+      ),
     );
   }
 
   Widget _buildFilesSection(DocumentModel document) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.folder_open, color: Theme.of(context).primaryColor),
-            const SizedBox(width: 8),
-            const Text(
-              'Document Files',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                const Icon(Icons.folder_open),
+                const SizedBox(width: 8),
+                Text(
+                  context.l10n.docFilesCount(document.fileUrls.length + document.pendingFiles.length),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (document.fileUrls.isNotEmpty)
-          Card(
-            elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: DocumentViewer(document: document),
-            ),
-          )
-        else
-          Card(
-            elevation: 1,
-            color: Colors.grey.shade50,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Center(
+            const Divider(height: 24),
+
+            // Files saved offline that are still waiting to upload.
+            PendingFilesPanel(document: document),
+
+            if (document.fileUrls.isEmpty && document.hasPendingFiles)
+              const SizedBox.shrink()
+            else if (document.fileUrls.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(24),
+                alignment: Alignment.center,
                 child: Column(
                   children: [
-                    Icon(Icons.folder_off, size: 48, color: Colors.grey.shade400),
-                    const SizedBox(height: 12),
+                    Icon(Icons.cloud_off, size: 48, color: Colors.grey.shade400),
+                    const SizedBox(height: 8),
                     Text(
-                      'No files uploaded yet',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                      context.l10n.noFilesUploaded,
+                      style: TextStyle(color: Colors.grey.shade600),
                     ),
                   ],
                 ),
-              ),
-            ),
-          ),
-      ],
+              )
+            else
+            // Use DocumentViewer widget which handles file viewing internally
+              DocumentViewer(document: document),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildCommentsSection(DocumentModel document, bool isAdmin) {
-    final hasComments = document.comments.isNotEmpty;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(Icons.comment, color: Theme.of(context).primaryColor),
+            const Icon(Icons.comment),
             const SizedBox(width: 8),
-            const Text(
-              'Comments & History',
-              style: TextStyle(
+            Text(
+              context.l10n.commentsHistoryCount(document.comments.length),
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -461,15 +508,11 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
           ],
         ),
         const SizedBox(height: 16),
-
-        if (hasComments)
-          ...document.comments.map((comment) => Card(
-            margin: const EdgeInsets.only(bottom: 12),
+        if (document.comments.isNotEmpty)
+          ...document.comments.reversed.map((comment) => Card(
             elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: BorderSide(color: Colors.grey.shade200),
-            ),
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -481,7 +524,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                         radius: 16,
                         backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
                         child: Text(
-                          comment.userName[0].toUpperCase(),
+                          comment.userName.substring(0, 1).toUpperCase(),
                           style: TextStyle(
                             color: Theme.of(context).primaryColor,
                             fontWeight: FontWeight.bold,
@@ -501,7 +544,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                               ),
                             ),
                             Text(
-                              DateFormat('MMM d, y â€¢ h:mm a').format(comment.createdAt),
+                              DateFormat('MMM d, y • h:mm a').format(comment.createdAt),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,
@@ -530,7 +573,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
               padding: const EdgeInsets.all(24),
               child: Center(
                 child: Text(
-                  'No comments yet',
+                  context.l10n.noCommentsYet,
                   style: TextStyle(color: Colors.grey.shade600),
                 ),
               ),
@@ -556,8 +599,8 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
               children: [
                 Icon(Icons.admin_panel_settings, color: Theme.of(context).primaryColor),
                 const SizedBox(width: 8),
-                const Text(
-                  'Admin Review',
+                Text(
+                  context.l10n.adminReview,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -567,17 +610,128 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
             ),
             const SizedBox(height: 16),
 
-            // COMMENT INPUT
+            // NEW: SPECIFICATION INPUT
             TextField(
-              controller: _commentController,
-              maxLines: 3,
+              controller: _specificationController,
+              maxLines: 2,
               decoration: InputDecoration(
-                hintText: 'Add a comment (required for rejection)...',
+                labelText: context.l10n.specification,
+                hintText: context.l10n.editSpecHint,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
                 filled: true,
                 fillColor: Colors.grey.shade50,
+                prefixIcon: const Icon(Icons.description_outlined),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // EXPIRY DATE PICKER — only for document types that use an expiry
+            // date. A date sitting on a type that doesn't use one (stray data)
+            // is still shown, with a note, so an admin can clear it.
+            if (_showsExpiryField) ...[
+            if (_documentType != null && !_documentType!.hasExpiryDate)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline,
+                        size: 16, color: Theme.of(context).primaryColor),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        context.l10n.strayExpiryNote,
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            InkWell(
+              onTap: () => _selectExpiryDate(context),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: context.l10n.expiryDateTitle,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  prefixIcon: const Icon(Icons.calendar_today),
+                  suffixIcon: _selectedExpiryDate != null
+                      ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      setState(() {
+                        _selectedExpiryDate = null;
+                      });
+                    },
+                  )
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _selectedExpiryDate != null
+                          ? DateFormat('MMM d, yyyy').format(_selectedExpiryDate!)
+                          : context.l10n.selectExpiryOptional,
+                      style: TextStyle(
+                        color: _selectedExpiryDate != null
+                            ? Colors.black87
+                            : Colors.grey.shade600,
+                      ),
+                    ),
+                    if (_selectedExpiryDate == null)
+                      Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ],
+
+            // COMMENT INPUT
+            TextField(
+              controller: _commentController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: context.l10n.comment,
+                hintText: context.l10n.commentHintReject,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                prefixIcon: const Icon(Icons.comment_outlined),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Info text about what will be updated
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      context.l10n.reviewSaveNote,
+                      style: TextStyle(
+                        color: Colors.blue.shade700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -628,6 +782,32 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     );
   }
 
+  /// Whether the admin review panel should offer an expiry date: for types that
+  /// use one (or when the type isn't known yet), or whenever a date is already
+  /// set — so a stray date on a no-expiry type can be seen and cleared.
+  bool get _showsExpiryField =>
+      (_documentType?.hasExpiryDate ?? true) || _selectedExpiryDate != null;
+
+  // NEW: Date picker for expiry date
+  Future<void> _selectExpiryDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedExpiryDate ?? DateTime.now().add(const Duration(days: 365)),
+      // Allow past dates: an already-expired document has a past expiry, and
+      // opening the picker on it must not fail.
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 3650)), // 10 years
+      helpText: context.l10n.selectExpiryDate,
+      cancelText: context.l10n.commonCancel,
+      confirmText: context.l10n.actionSelect,
+    );
+    if (picked != null && picked != _selectedExpiryDate) {
+      setState(() {
+        _selectedExpiryDate = picked;
+      });
+    }
+  }
+
   Future<void> _showSignatureDialog(BuildContext context, DocumentModel document) async {
     showDialog(
       context: context,
@@ -638,7 +818,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Add Your Signature',
+                context.l10n.addYourSignature,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
@@ -657,8 +837,8 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
 
                     if (success && mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Signature added successfully'),
+                        SnackBar(
+                          content: Text(context.l10n.signatureAdded),
                           backgroundColor: Colors.green,
                         ),
                       );
@@ -680,8 +860,8 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
   Future<void> _updateDocumentStatus(DocumentModel document, DocumentStatus status) async {
     if (_commentController.text.isEmpty && status == DocumentStatus.REJECTED) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please provide a reason for rejection'),
+        SnackBar(
+          content: Text(context.l10n.rejectReasonRequired),
           backgroundColor: Colors.red,
         ),
       );
@@ -692,21 +872,32 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     if (authProvider.currentUser != null) {
+      // NEW: Get the edited specification and expiry date
+      final newSpecification = _specificationController.text.trim().isNotEmpty
+          ? _specificationController.text.trim()
+          : null;
+
       final success = await documentProvider.updateDocumentStatus(
         document.id,
         status,
         _commentController.text.isNotEmpty ? _commentController.text : null,
         authProvider.currentUser!,
+        specification: newSpecification,
+        expiryDate: _selectedExpiryDate,
+        // The admin cleared a date that was there — actually remove it.
+        clearExpiryDate: _selectedExpiryDate == null && document.expiryDate != null,
       );
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Document ${status == DocumentStatus.APPROVED ? 'approved' : 'rejected'} successfully'),
+            content: Text(status == DocumentStatus.APPROVED ? context.l10n.docApprovedOk : context.l10n.docRejectedOk),
             backgroundColor: Colors.green,
           ),
         );
         _commentController.clear();
+        // Reset admin fields initialized flag so they reload on next view
+        _adminFieldsInitialized = false;
         setState(() {
           _documentFuture = null;
           _loadDocument();

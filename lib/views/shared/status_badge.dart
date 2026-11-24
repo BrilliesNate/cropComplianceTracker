@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/enums.dart';
 import '../../theme/theme_constants.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class StatusBadge extends StatelessWidget {
   final DocumentStatus status;
@@ -22,28 +23,28 @@ class StatusBadge extends StatelessWidget {
 
     if (isExpired) {
       color = ThemeConstants.expiredColor;
-      label = 'Expired';
+      label = context.l10n.statusExpired;
       icon = Icons.warning;
     } else if (isExpiringSoon && status == DocumentStatus.APPROVED) {
       // For approved documents that are expiring soon
       color = Colors.deepOrange; // More orange color
-      label = 'Expires Soon';
+      label = context.l10n.statusExpiresSoon;
       icon = Icons.schedule;
     } else {
       switch (status) {
         case DocumentStatus.PENDING:
           color = ThemeConstants.pendingColor;
-          label = 'Pending';
+          label = context.l10n.statusPending;
           icon = Icons.hourglass_empty;
           break;
         case DocumentStatus.APPROVED:
           color = ThemeConstants.approvedColor;
-          label = 'Approved';
+          label = context.l10n.statusApproved;
           icon = Icons.check_circle;
           break;
         case DocumentStatus.REJECTED:
           color = ThemeConstants.rejectedColor;
-          label = 'Rejected';
+          label = context.l10n.statusRejected;
           icon = Icons.cancel;
           break;
       }

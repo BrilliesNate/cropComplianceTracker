@@ -1,0 +1,15 @@
+# Files whose texts still need to move into lib/l10n (shrinks to nothing).
+company_document_override_screen.dart
+fairtrade_seed_data.dart
+globalgap_seed_data.dart
+ipw_seed_data.dart
+views/admin/category_management_screen.dart
+views/admin/company_managment_screen.dart
+views/admin/data_fix_utility_screen.dart
+views/admin/form_config_management_screen.dart
+views/admin/user_management_screen.dart
+views/admin/widgets/docuement_type_form.dart
+views/admin/widgets/document_types_table.dart
+views/farmable/farmable_console_screen.dart
+views/farmable/farmable_link_dialog.dart
+siza_environmental_seed_data.dart

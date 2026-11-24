@@ -188,7 +188,7 @@ void main() {
     test('truly missing → missingEmployee with a fix-oriented reason', () {
       final plan = BankPaymentExport.plan([orphan()], emps);
       expect(plan.skipped.single.kind, SkipKind.missingEmployee);
-      expect(_reason([orphan()], emps), contains('aren\'t linked'));
+      expect(_reason([orphan()], emps), contains('aren’t linked'));
     });
   });
 }

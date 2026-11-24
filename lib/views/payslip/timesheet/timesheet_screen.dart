@@ -1,3 +1,4 @@
+import 'package:cropCompliance/views/shared/admin_farm_chip.dart';
 import 'package:cropCompliance/core/constants/route_constants.dart';
 import 'package:cropCompliance/models/employee_model.dart';
 import 'package:cropCompliance/models/payslip_model.dart';
@@ -12,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'timesheet_calc.dart';
 import 'timesheet_payslips.dart';
 import 'timesheet_service.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 /// Payslip Manager · Timesheet.
 ///
@@ -38,8 +40,8 @@ enum _Sheet { normal, overtime, piece }
 
 class _TimesheetScreenState extends State<TimesheetScreen> {
   static const _green = Color(0xFF2E7D32);
-  static final _rangeFmt = DateFormat('d MMM yyyy');
-  static final _dayName = DateFormat('EEE');
+  static DateFormat get _rangeFmt => DateFormat('d MMM yyyy'); // follows the app language
+  static DateFormat get _dayName => DateFormat('EEE'); // follows the app language
 
   final _service = TimesheetService();
 
@@ -132,7 +134,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     try {
       await _loadPeriod(p);
     } catch (e) {
-      _toast('Could not load that period: $e');
+      _toast(context.l10n.tsLoadPeriodFailed('$e'));
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -142,16 +144,16 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Unsaved changes'),
-        content: const Text(
-            'You have changes on this timesheet that are not saved yet.'),
+        title: Text(context.l10n.unsavedChanges),
+        content: Text(
+            context.l10n.tsUnsavedBody),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Keep editing')),
+              child: Text(context.l10n.keepEditing)),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Discard changes')),
+              child: Text(context.l10n.discardChanges)),
         ],
       ),
     );
@@ -189,8 +191,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
 
   Future<bool> _save({bool quiet = false}) async {
     if (_badCells.isNotEmpty) {
-      _toast('Fix the ${_badCells.length} red cell${_badCells.length == 1 ? '' : 's'} first '
-          '(hours like 9 or 7.5, codes SL / AL / PH / A, finish times like 21:30).');
+      _toast(context.l10n.tsFixRedCells(_badCells.length));
       return false;
     }
     setState(() => _saving = true);
@@ -221,19 +222,19 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       await _service.audit(widget.companyId, _period.id, 'save',
           actorId: auth.currentUser?.id,
           actorName: auth.currentUser?.name,
-          detail: '$recalculated payslip(s) recalculated');
+          detail: '$recalculated payslip(s) recalculated'); // l10n-ignore: audit log
 
       _dirty = false;
       if (!quiet) {
         final skipped = _notRecalculated.length;
         _toast(skipped == 0
-            ? 'Saved · $recalculated payslip${recalculated == 1 ? '' : 's'} updated'
-            : 'Saved · $recalculated payslip${recalculated == 1 ? '' : 's'} updated, '
-                '$skipped waiting for rates (see the banner)');
+            ? context.l10n.tsSavedUpdated(recalculated)
+            : '${context.l10n.tsSavedUpdated(recalculated)}, '
+                '${context.l10n.tsSavedSkipped(skipped)}');
       }
       return true;
     } catch (e) {
-      _toast('Save failed: $e');
+      _toast(context.l10n.saveFailedError('$e'));
       return false;
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -336,19 +337,17 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Finalise period?'),
-        content: Text(
-            'This saves the timesheet, locks all three sheets for '
-            '${_rangeFmt.format(_period.start)} – ${_rangeFmt.format(_period.end)} '
-            'and finalises the payslips. You can unlock it again if something needs fixing.'),
+        title: Text(context.l10n.tsFinaliseTitle),
+        content: Text(context.l10n.tsFinaliseBody(
+            _rangeFmt.format(_period.start), _rangeFmt.format(_period.end))),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.commonCancel)),
           FilledButton(
               style: FilledButton.styleFrom(backgroundColor: _green),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Finalise period')),
+              child: Text(context.l10n.tsFinalisePeriod)),
         ],
       ),
     );
@@ -365,17 +364,15 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Unlock this period?'),
-        content: const Text(
-            'The sheets become editable again and the payslips go back to Draft '
-            'until you finalise again. This is recorded in the audit log.'),
+        title: Text(context.l10n.tsUnlockTitle),
+        content: Text(context.l10n.tsUnlockBody),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.commonCancel)),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Unlock')),
+              child: Text(context.l10n.actionUnlock)),
         ],
       ),
     );
@@ -407,10 +404,10 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           finalised ? 'finalise' : 'unfinalise',
           actorId: auth.currentUser?.id, actorName: auth.currentUser?.name);
       _toast(finalised
-          ? 'Period finalised — sheets locked, payslips finalised'
-          : 'Period unlocked — payslips are Draft again');
+          ? context.l10n.tsFinalisedToast
+          : context.l10n.tsUnlockedToast);
     } catch (e) {
-      _toast('Could not update the period: $e');
+      _toast(context.l10n.tsPeriodUpdateFailed('$e'));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -427,26 +424,26 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Some payslips need rates first'),
-        content: Text(
-            '${names.length} payslip${names.length == 1 ? '' : 's'} (${names.values.take(5).join(', ')}'
-            '${names.length > 5 ? '…' : ''}) can\'t be calculated until these are set: '
-            '${missing.join(', ')}.'),
+        title: Text(context.l10n.tsNeedRatesTitle),
+        content: Text(context.l10n.tsNeedRatesBody(
+            names.length,
+            '${names.values.take(5).join(', ')}${names.length > 5 ? '…' : ''}', // l10n-ignore: names list
+            _missingLabels(missing))),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Later')),
+              child: Text(context.l10n.later)),
           FilledButton(
               onPressed: () {
                 Navigator.pop(ctx);
-                if (missing.contains('piece rate') && _pieceRate == null) {
+                if (missing.contains(missingPieceRate) && _pieceRate == null) {
                   setState(() => _sheet = _Sheet.piece);
                   _addPieceRate();
                 } else {
                   _editRates();
                 }
               },
-              child: const Text('Set them now')),
+              child: Text(context.l10n.setThemNow)),
         ],
       ),
     );
@@ -461,10 +458,10 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     try {
       await _service.saveRates(widget.companyId, result);
       setState(() => _rates = result);
-      _toast('Rates saved — press Save to update the payslips');
+      _toast(context.l10n.tsRatesSaved);
       _dirty = true;
     } catch (e) {
-      _toast('Could not save rates: $e');
+      _toast(context.l10n.tsRatesSaveFailed('$e'));
     }
   }
 
@@ -484,7 +481,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         _dirty = true;
       });
     } catch (e) {
-      _toast('Could not add the piece rate: $e');
+      _toast(context.l10n.tsPieceRateAddFailed('$e'));
     }
   }
 
@@ -505,7 +502,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     final picked = await showDialog<Object>(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: Text('${_type.label} pay period'),
+        title: Text(context.l10n.tsPayPeriodTitle(_type.label)),
         children: [
           for (final p in options)
             SimpleDialogOption(
@@ -527,10 +524,10 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           const Divider(),
           SimpleDialogOption(
             onPressed: () => Navigator.pop(ctx, 'pick'),
-            child: const Row(children: [
-              Icon(Icons.calendar_month_outlined, size: 18),
-              SizedBox(width: 8),
-              Text('Choose a start date…'),
+            child: Row(children: [
+              const Icon(Icons.calendar_month_outlined, size: 18),
+              const SizedBox(width: 8),
+              Text(context.l10n.tsChooseStartDate),
             ]),
           ),
         ],
@@ -545,7 +542,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         initialDate: _period.start,
         firstDate: DateTime(2020),
         lastDate: DateTime(now.year + 1, 12, 31),
-        helpText: 'First day of the pay period',
+        helpText: context.l10n.tsFirstDayHelp,
       );
       if (d == null) return;
       final id = PayPeriodRecord.idFor(widget.companyId, _type, d);
@@ -577,15 +574,16 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF6F7F5),
         appBar: AppBar(
+          bottom: adminFarmAppBarBottom(context),
           backgroundColor: Theme.of(context).primaryColor,
           iconTheme: const IconThemeData(color: Colors.white),
-          title: Text('Timesheet – ${widget.companyName}',
+          title: Text(context.l10n.tsTitle(widget.companyName),
               style: const TextStyle(color: Colors.white)),
           actions: [
             TextButton.icon(
               onPressed: _loading ? null : _editRates,
               icon: const Icon(Icons.tune, color: Colors.white, size: 18),
-              label: const Text('Rates',
+              label: Text(context.l10n.tsRates,
                   style: TextStyle(color: Colors.white)),
             ),
             const SizedBox(width: 8),
@@ -614,7 +612,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('The timesheet could not be loaded.',
+            Text(context.l10n.tsLoadFailed,
                 style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
             Text(_loadError!,
@@ -629,7 +627,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                 });
                 _bootstrap();
               },
-              child: const Text('Try again'),
+              child: Text(context.l10n.commonRetry),
             ),
           ]),
         ),
@@ -659,9 +657,9 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(children: [
-        tab(_Sheet.normal, 'Normal hours'),
-        tab(_Sheet.overtime, 'Overtime'),
-        tab(_Sheet.piece, 'Piecework'),
+        tab(_Sheet.normal, context.l10n.tsNormalHours),
+        tab(_Sheet.overtime, context.l10n.tsOvertime),
+        tab(_Sheet.piece, context.l10n.tsPiecework),
       ]),
     );
   }
@@ -676,7 +674,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         runSpacing: 8,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          const Text('Pay period', style: TextStyle(fontSize: 13)),
+          Text(context.l10n.tsPayPeriod, style: const TextStyle(fontSize: 13)),
           DropdownButton<PeriodType>(
             value: _type,
             isDense: true,
@@ -698,11 +696,11 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                 '${_rangeFmt.format(_period.start)} – ${_rangeFmt.format(_period.end)}'),
           ),
           Text(
-              '${_period.days.length} days · ${_workers.length} worker${_workers.length == 1 ? '' : 's'}',
+              context.l10n.tsDaysWorkers(_workers.length, _period.days.length),
               style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
           if (_sheet == _Sheet.piece) _pieceRatePicker(locked),
           if (_sheet == _Sheet.overtime)
-            Text('NS = night work (finish after 20:00, before 04:00)',
+            Text(context.l10n.tsNsLegend,
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
           const SizedBox(width: 12),
           if (_saving)
@@ -714,22 +712,24 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
             Chip(
               avatar: const Icon(Icons.lock_outline, size: 16),
               label: Text(
-                  'Finalised${_period.finalisedBy != null ? ' by ${_period.finalisedBy}' : ''}'),
+                  _period.finalisedBy != null
+                      ? context.l10n.tsFinalisedBy(_period.finalisedBy!)
+                      : context.l10n.tsFinalised),
             ),
-            TextButton(onPressed: _unlock, child: const Text('Unlock')),
+            TextButton(onPressed: _unlock, child: Text(context.l10n.actionUnlock)),
           ] else ...[
             FilledButton(
               onPressed: () => _save(),
               style: FilledButton.styleFrom(backgroundColor: _green),
-              child: const Text('Save'),
+              child: Text(context.l10n.actionSave),
             ),
             OutlinedButton(
               onPressed: _finalise,
-              child: const Text('Finalise period'),
+              child: Text(context.l10n.tsFinalisePeriod),
             ),
           ],
           if (_dirty && !locked)
-            Text('Unsaved changes',
+            Text(context.l10n.unsavedChanges,
                 style: TextStyle(
                     fontSize: 12, color: Colors.orange.shade800)),
         ],
@@ -740,19 +740,19 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
   Widget _pieceRatePicker(bool locked) {
     final current = _pieceRate;
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      const Text('Piece rate', style: TextStyle(fontSize: 13)),
+      Text(context.l10n.tsPieceRate, style: const TextStyle(fontSize: 13)),
       const SizedBox(width: 8),
       DropdownButton<String>(
         value: current?.id,
         isDense: true,
-        hint: const Text('Choose…'),
+        hint: Text(context.l10n.chooseEllipsis),
         underline: const SizedBox.shrink(),
         items: [
           for (final r in _pieceRates)
             DropdownMenuItem(
                 value: r.id,
                 child: Text('${r.label} · R ${r.rate.toStringAsFixed(2)}')),
-          const DropdownMenuItem(value: '__add', child: Text('+ Add piece rate…')),
+          DropdownMenuItem(value: '__add', child: Text(context.l10n.tsAddPieceRateMenu)),
         ],
         onChanged: locked
             ? null
@@ -782,10 +782,10 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-              '$n payslip${n == 1 ? '' : 's'} not updated yet — set: ${missing.join(', ')}.',
+              context.l10n.tsNotUpdatedBanner(n, _missingLabels(missing)),
               style: TextStyle(fontSize: 13, color: Colors.amber.shade900)),
         ),
-        TextButton(onPressed: _ratesNeededDialog, child: const Text('Set them now')),
+        TextButton(onPressed: _ratesNeededDialog, child: Text(context.l10n.setThemNow)),
       ]),
     );
   }
@@ -793,6 +793,22 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
   // ── Grid ──────────────────────────────────────────────────────────────────
 
   static const double _nameW = 190;
+  /// Missing-rate ids (from the calculation) as words, joined.
+  String _missingLabels(Iterable<String> ids) {
+    final l10n = context.l10n;
+    return ids
+        .map((id) => switch (id) {
+              missingOvertime => l10n.missOvertime,
+              missingNight => l10n.missNight,
+              missingPieceRate => l10n.missPieceRate,
+              missingMinWage => l10n.missMinWage,
+              missingTopUpPeriod => l10n.missTopUp,
+              missingWorkDays => l10n.missWorkDays,
+              _ => id,
+            })
+        .join(', ');
+  }
+
   double get _dayW => _sheet == _Sheet.normal ? 48 : 70;
   double get _rowH => _sheet == _Sheet.normal ? 42 : 56;
 
@@ -800,23 +816,23 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     switch (_sheet) {
       case _Sheet.normal:
         return [
-          (label: 'Hours', width: 60),
-          (label: 'Leave', width: 90),
-          (label: 'Comment', width: 170),
+          (label: context.l10n.colHours, width: 60),
+          (label: context.l10n.colLeave, width: 90),
+          (label: context.l10n.colComment, width: 170),
           (label: '', width: 100),
         ];
       case _Sheet.overtime:
         return [
-          (label: 'OT hours', width: 70),
-          (label: 'NS days', width: 64),
+          (label: context.l10n.colOtHours, width: 70),
+          (label: context.l10n.colNsDays, width: 64),
           (label: '', width: 100),
         ];
       case _Sheet.piece:
         return [
-          (label: 'Hours', width: 60),
-          (label: 'Units', width: 64),
-          (label: 'Piece pay', width: 90),
-          (label: 'Top-up', width: 80),
+          (label: context.l10n.colHours, width: 60),
+          (label: context.l10n.colUnits, width: 64),
+          (label: context.l10n.colPiecePay, width: 90),
+          (label: context.l10n.colTopUp, width: 80),
           (label: '', width: 100),
         ];
     }
@@ -827,11 +843,11 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     if (workers.isEmpty) {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('No employees yet.'),
+          Text(context.l10n.tsNoEmployees),
           const SizedBox(height: 8),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Add employees in the Payslip Manager'),
+            child: Text(context.l10n.tsAddEmployeesHint),
           ),
         ]),
       );
@@ -840,7 +856,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     const headerH = 44.0;
 
     final nameCol = Column(children: [
-      _headerCell('Worker', _nameW, headerH, align: Alignment.centerLeft),
+      _headerCell(context.l10n.colWorker, _nameW, headerH, align: Alignment.centerLeft),
       for (final e in workers) _nameCell(e),
     ]);
 
@@ -849,8 +865,22 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       children: [
         Row(children: [
           for (final d in days)
-            _headerCell('${_dayName.format(d)}\n${d.day}', _dayW, headerH,
-                weekend: d.weekday >= 6),
+            isSaPublicHoliday(d)
+                ? Tooltip(
+                    message: context.l10n.tsPhTooltip,
+                    child: _headerCell('PH\n${d.day}', _dayW, headerH, // l10n-ignore: sheet code
+                        holiday: true),
+                  )
+                : d.weekday == DateTime.sunday
+                    ? Tooltip(
+                        message: context.l10n.tsSundayTooltip,
+                        child: _headerCell(
+                            '${_dayName.format(d)} 2×\n${d.day}', _dayW, headerH,
+                            weekend: true),
+                      )
+                    : _headerCell('${_dayName.format(d)}\n${d.day}', _dayW,
+                        headerH,
+                        weekend: d.weekday >= 6),
           for (final c in _totalCols) _headerCell(c.label, c.width, headerH),
         ]),
         for (final e in workers) _dataRow(e, days),
@@ -878,14 +908,20 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
   }
 
   Widget _headerCell(String text, double w, double h,
-          {bool weekend = false, Alignment align = Alignment.center}) =>
+          {bool weekend = false,
+          bool holiday = false,
+          Alignment align = Alignment.center}) =>
       Container(
         width: w,
         height: h,
         alignment: align,
         padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
-          color: weekend ? const Color(0xFFF1EDE4) : const Color(0xFFEAF3EA),
+          color: holiday
+              ? const Color(0xFFFDE2E1)
+              : weekend
+                  ? const Color(0xFFF1EDE4)
+                  : const Color(0xFFEAF3EA),
           border: Border.all(color: Colors.grey.shade300, width: 0.5),
         ),
         child: Text(text,
@@ -903,19 +939,43 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           final warnings = s == null
               ? const <String>[]
               : warningsFor(s, _rates, days: _period.dayKeys);
+          // Piecework below the minimum wage → this worker shows in red.
+          final below = s != null &&
+              s.piece.isNotEmpty &&
+              payslipFiguresFor(
+                      sheets: s,
+                      days: _period.dayKeys,
+                      hourlyRate: e.normalHourlyRate,
+                      rates: _rates,
+                      pieceRate: _pieceRate)
+                  .belowMinimumWage;
           return Container(
             width: _nameW,
             height: _rowH,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade200, width: 0.5),
+              color: below ? Colors.red.shade50 : null,
+              border: Border.all(
+                  color: below ? Colors.red.shade400 : Colors.grey.shade200,
+                  width: below ? 1.2 : 0.5),
             ),
             child: Row(children: [
               Expanded(
-                child: Text(e.name,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13)),
+                child: Tooltip(
+                  message: below
+                      ? context.l10n.tsBelowMinTooltip
+                      : '',
+                  child: Text(e.name,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: below ? FontWeight.w700 : null,
+                          color: below ? Colors.red.shade800 : null)),
+                ),
               ),
+              if (below)
+                Icon(Icons.trending_down,
+                    size: 18, color: Colors.red.shade700),
               if (warnings.isNotEmpty)
                 Tooltip(
                   message: warnings.join('\n'),
@@ -1248,7 +1308,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                                 : Colors.green.shade50,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Text(top > 0 ? 'Top-up' : 'OK',
+                          child: Text(top > 0 ? context.l10n.colTopUp : context.l10n.tsOk,
                               style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
@@ -1277,7 +1337,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           arguments: {'payslipId': p.id},
         ),
         child: Text(
-          p.isFinalised ? 'View payslip' : 'View draft',
+          p.isFinalised ? context.l10n.viewPayslip : context.l10n.viewDraft,
           style: const TextStyle(
               fontSize: 12,
               color: _green,
@@ -1305,16 +1365,14 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           final String text;
           switch (_sheet) {
             case _Sheet.normal:
-              text =
-                  'Normal hours · All workers · Hours ${formatHours(hours)} · Leave / absent $leave day${leave == 1 ? '' : 's'}';
+              text = context.l10n.tsSummaryNormal(leave, formatHours(hours));
               break;
             case _Sheet.overtime:
-              text =
-                  'Overtime · All workers · OT hours ${formatHours(ot)} · Night-shift days $ns';
+              text = context.l10n.tsSummaryOvertime(formatHours(ot), ns);
               break;
             case _Sheet.piece:
-              text =
-                  'Piecework · All workers · Units ${formatHours(units)}${_pieceRate == null ? ' · choose a piece rate' : ''}';
+              text = context.l10n.tsSummaryPiece(formatHours(units)) +
+                  (_pieceRate == null ? context.l10n.tsChoosePieceRateSuffix : '');
               break;
           }
           return Container(
@@ -1331,16 +1389,13 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     final String text;
     switch (_sheet) {
       case _Sheet.normal:
-        text =
-            'Type hours (9, 7.5…) or a code: SL sick leave · AL annual leave · PH public holiday · A absent (unpaid). Overtime and piecework go on their own sheets.';
+        text = context.l10n.tsHelpNormal;
         break;
       case _Sheet.overtime:
-        text =
-            'Each day: overtime hours + finish time. NS is marked automatically when the finish time is after 20:00 or before 04:00 (SD13 cl 17) and adds a night-shift allowance line to the payslip.';
+        text = context.l10n.tsHelpOvertime;
         break;
       case _Sheet.piece:
-        text =
-            'Each day: hours worked + units. Piece pay = units × the piece rate. Top-up is flagged when piece pay is below the minimum wage for the hours worked.';
+        text = context.l10n.tsHelpPiece;
         break;
     }
     return Padding(
@@ -1374,6 +1429,8 @@ class _RatesDialogState extends State<_RatesDialog> {
       text: widget.initial.weeklyOvertimeLimit.toString());
   late final _daily = TextEditingController(
       text: widget.initial.dailyHoursLimit.toString());
+  late String? _topUp = widget.initial.topUpPeriod;
+  late final Set<int> _workDays = {...?widget.initial.ordinaryWorkDays};
 
   @override
   void dispose() {
@@ -1386,6 +1443,8 @@ class _RatesDialogState extends State<_RatesDialog> {
   double? _num(TextEditingController c) =>
       double.tryParse(c.text.trim().replaceAll(',', '.'));
 
+  // Confirmed with the client (13 Nov 2026). The minimum wage changes every
+  // March; top-up period and work days differ per farm, so they're not filled.
   void _fillDefaults() => setState(() {
         _ot.text = '1.5';
         _ns.text = '10';
@@ -1414,7 +1473,7 @@ class _RatesDialogState extends State<_RatesDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Timesheet rates'),
+      title: Text(context.l10n.tsRatesTitle),
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(
@@ -1431,31 +1490,60 @@ class _RatesDialogState extends State<_RatesDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                        'Statutory figures must be confirmed (Patrick) before use. '
-                        'Leave a field blank and the payslips that need it show "R —" until it\'s set.',
+                    Text(context.l10n.tsRatesConfirmedNote,
                         style: TextStyle(
                             fontSize: 12, color: Colors.amber.shade900)),
                     TextButton(
                       onPressed: _fillDefaults,
-                      child: const Text(
-                          'Fill in SD13 / NMW 2026 figures to confirm'),
+                      child: Text(context.l10n.tsFillConfirmed),
                     ),
                   ],
                 ),
               ),
-              _field(_ot, 'Overtime multiplier',
-                  'SD13 cl 14: at least 1.5 × the wage.'),
-              _field(_ns, 'Night-shift allowance (% of ordinary daily wage)',
-                  'SD13 cl 17: at least 10%, per day with night work.'),
-              _field(_min, 'Minimum wage per ordinary hour (R)',
-                  'Farm-worker NMW from 1 March 2026: R30.23 — check the current gazette.'),
-              _field(_day, 'Ordinary hours per day',
-                  'Used for leave days (SL / AL / PH) and the daily wage.'),
-              _field(_week, 'Warn above overtime hours per week',
-                  'SD13 cl 13: max 15 h overtime a week (warning only).'),
-              _field(_daily, 'Warn above total hours per day',
-                  'SD13 cl 13: max 12 h a day including overtime (warning only).'),
+              _field(_ot, context.l10n.tsOtMultiplier,
+                  context.l10n.tsOtMultiplierHelp),
+              _field(_ns, context.l10n.tsNightAllowance,
+                  context.l10n.tsNightAllowanceHelp),
+              _field(_min, context.l10n.tsMinWage, context.l10n.tsMinWageHelp),
+              _field(_day, context.l10n.tsDayHours, context.l10n.tsDayHoursHelp),
+              _field(_week, context.l10n.tsWarnWeekLabel,
+                  context.l10n.tsWarnWeekHelp),
+              _field(_daily, context.l10n.tsWarnDayLabel,
+                  context.l10n.tsWarnDayHelp),
+              const SizedBox(height: 4),
+              Text(context.l10n.tsTopUpTitle,
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                  context.l10n.tsTopUpHelp,
+                  style: TextStyle(fontSize: 12, color: Colors.black54)),
+              const SizedBox(height: 6),
+              SegmentedButton<String>(
+                emptySelectionAllowed: true,
+                segments: [
+                  ButtonSegment(value: 'day', label: Text(context.l10n.perDay)),
+                  ButtonSegment(value: 'week', label: Text(context.l10n.perWeek)),
+                ],
+                selected: {if (_topUp != null) _topUp!},
+                onSelectionChanged: (v) =>
+                    setState(() => _topUp = v.isEmpty ? null : v.first),
+              ),
+              const SizedBox(height: 16),
+              Text(context.l10n.tsWorkDaysTitle,
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                  context.l10n.tsWorkDaysHelp,
+                  style: TextStyle(fontSize: 12, color: Colors.black54)),
+              const SizedBox(height: 6),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                for (var wd = 1; wd <= 7; wd++)
+                  FilterChip(
+                    label: Text(DateFormat.E()
+                        .format(DateTime(2023, 1, 1 + wd))),
+                    selected: _workDays.contains(wd),
+                    onSelected: (on) => setState(() =>
+                        on ? _workDays.add(wd) : _workDays.remove(wd)),
+                  ),
+              ]),
             ],
           ),
         ),
@@ -1463,7 +1551,7 @@ class _RatesDialogState extends State<_RatesDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')),
+            child: Text(context.l10n.commonCancel)),
         FilledButton(
           onPressed: () => Navigator.pop(
             context,
@@ -1474,9 +1562,13 @@ class _RatesDialogState extends State<_RatesDialog> {
               ordinaryDayHours: _num(_day) ?? 8,
               weeklyOvertimeLimit: _num(_week) ?? 15,
               dailyHoursLimit: _num(_daily) ?? 12,
+              topUpPeriod: _topUp,
+              ordinaryWorkDays: _workDays.isEmpty
+                  ? null
+                  : (_workDays.toList()..sort()),
             ),
           ),
-          child: const Text('Save rates'),
+          child: Text(context.l10n.tsSaveRates),
         ),
       ],
     );
@@ -1494,7 +1586,8 @@ class _PieceRateDialog extends StatefulWidget {
 
 class _PieceRateDialogState extends State<_PieceRateDialog> {
   final _task = TextEditingController();
-  final _unit = TextEditingController(text: 'bins');
+  final _unit =
+      TextEditingController(text: LocaleProvider.instance.l10n.tsUnitDefault);
   final _rate = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
@@ -1509,7 +1602,7 @@ class _PieceRateDialogState extends State<_PieceRateDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add piece rate'),
+      title: Text(context.l10n.tsAddPieceRate),
       content: SizedBox(
         width: 380,
         child: Form(
@@ -1517,28 +1610,28 @@ class _PieceRateDialogState extends State<_PieceRateDialog> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             TextFormField(
               controller: _task,
-              decoration: const InputDecoration(
-                  labelText: 'Task or crop', hintText: 'e.g. Harvest'),
+              decoration: InputDecoration(
+                  labelText: context.l10n.tsTaskOrCrop, hintText: context.l10n.tsTaskHint),
               validator: (v) =>
-                  (v ?? '').trim().isEmpty ? 'Enter the task or crop' : null,
+                  (v ?? '').trim().isEmpty ? context.l10n.tsTaskRequired : null,
             ),
             TextFormField(
               controller: _unit,
-              decoration: const InputDecoration(
-                  labelText: 'Unit', hintText: 'bins, crates, …'),
+              decoration: InputDecoration(
+                  labelText: context.l10n.tsUnit, hintText: context.l10n.tsUnitHint),
               validator: (v) =>
-                  (v ?? '').trim().isEmpty ? 'Enter the unit' : null,
+                  (v ?? '').trim().isEmpty ? context.l10n.tsUnitRequired : null,
             ),
             TextFormField(
               controller: _rate,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                  labelText: 'Rate per unit (R)',
-                  helperText: 'From your configured tariff — not an example figure.'),
+              decoration: InputDecoration(
+                  labelText: context.l10n.tsRatePerUnit,
+                  helperText: context.l10n.tsRatePerUnitHelp),
               validator: (v) {
                 final r = double.tryParse((v ?? '').replaceAll(',', '.'));
-                return r == null || r <= 0 ? 'Enter the rate per unit' : null;
+                return r == null || r <= 0 ? context.l10n.tsRateRequired : null;
               },
             ),
           ]),
@@ -1547,7 +1640,7 @@ class _PieceRateDialogState extends State<_PieceRateDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')),
+            child: Text(context.l10n.commonCancel)),
         FilledButton(
           onPressed: () {
             if (!_formKey.currentState!.validate()) return;
@@ -1557,7 +1650,7 @@ class _PieceRateDialogState extends State<_PieceRateDialog> {
               double.parse(_rate.text.replaceAll(',', '.')),
             ));
           },
-          child: const Text('Add'),
+          child: Text(context.l10n.actionAdd),
         ),
       ],
     );

@@ -6,6 +6,7 @@ import 'package:cropCompliance/providers/auth_provider.dart';
 import 'package:cropCompliance/providers/document_provider.dart';
 import 'package:cropCompliance/theme/theme_constants.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DashboardEmployeesCard extends StatefulWidget {
   final AuthProvider authProvider;
@@ -23,6 +24,34 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
   String _searchQuery = '';
   int _currentPage = 1;
   static const int _usersPerPage = 5;
+
+  // The team list is fetched once per company and reused across rebuilds.
+  // (It used to be re-requested on EVERY rebuild, which meant a spinner and a
+  // fresh network round trip each time anything on the dashboard changed.)
+  String? _usersCompanyId;
+  Future<List<UserModel>>? _usersFuture;
+
+  /// Admins already hold every user in memory, so their team list needs no
+  /// query (and no loading state) at all. Null = has to be fetched.
+  List<UserModel>? _teamInMemory(String? companyId, AuthProvider auth) {
+    if (companyId == null) return const <UserModel>[];
+    if (auth.isAdmin && auth.allUsers.isNotEmpty) {
+      return auth.allUsers
+          .where((u) =>
+              u.companyId == companyId ||
+              u.additionalCompanyIds.contains(companyId))
+          .toList();
+    }
+    return null;
+  }
+
+  Future<List<UserModel>> _teamFuture(String companyId) {
+    if (_usersFuture == null || _usersCompanyId != companyId) {
+      _usersCompanyId = companyId;
+      _usersFuture = _fetchUsersForCompany(companyId);
+    }
+    return _usersFuture!;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,10 +73,10 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
                 Expanded(
                   child: Text(
                     widget.authProvider.isAdmin && widget.authProvider.selectedUser != null
-                        ? 'All Users (Managing: ${widget.authProvider.selectedUser!.name})'
+                        ? context.l10n.teamAllUsersManaging(widget.authProvider.selectedUser!.name)
                         : widget.authProvider.isAdmin
-                        ? 'All Users'
-                        : 'Team Members',
+                        ? context.l10n.teamAllUsers
+                        : context.l10n.teamMembers,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -61,7 +90,7 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
                       Navigator.of(context).pushNamed(RouteConstants.userManagement);
                     },
                     icon: const Icon(Icons.add_circle_outline, size: 20),
-                    tooltip: 'Add User',
+                    tooltip: context.l10n.teamAddUser,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -95,7 +124,8 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
             const SizedBox(height: 12),
 
             // User List - NO SCROLLING, just Column with list items
-            widget.authProvider.isAdmin
+            // When admin is managing a specific company, show that company's users only
+            widget.authProvider.isAdmin && !widget.authProvider.isManagingCompany
                 ? _buildAllUsersView(context, widget.authProvider)
                 : _buildCompanyUsersView(context, widget.authProvider),
 
@@ -125,7 +155,7 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Page $_currentPage of $totalPages',
+            context.l10n.pageOf(_currentPage, totalPages),
             style: TextStyle(fontSize: 11, color: Colors.grey[600]),
           ),
           Row(
@@ -161,7 +191,7 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
           children: [
             Icon(Icons.people_outline, size: 40, color: Colors.grey[400]),
             const SizedBox(height: 8),
-            Text('No users found', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+            Text(context.l10n.teamNoUsers, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
           ],
         ),
       );
@@ -181,7 +211,7 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
           children: [
             Icon(Icons.search_off, size: 40, color: Colors.grey[400]),
             const SizedBox(height: 8),
-            Text('No matches', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+            Text(context.l10n.noMatches, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
           ],
         ),
       );
@@ -216,10 +246,16 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
   }
 
   Widget _buildCompanyUsersView(BuildContext context, AuthProvider authProvider) {
-    final currentCompanyId = authProvider.currentUser?.companyId;
+    // Use selected company ID when admin is managing a company, otherwise use logged-in user's company
+    final currentCompanyId = authProvider.isManagingCompany
+        ? authProvider.selectedCompany!.id
+        : authProvider.currentUser?.companyId;
+
+    final inMemory = _teamInMemory(currentCompanyId, authProvider);
+    if (inMemory != null) return _companyUsersList(inMemory);
 
     return FutureBuilder<List<UserModel>>(
-      future: _fetchUsersForCompany(currentCompanyId),
+      future: _teamFuture(currentCompanyId!),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -232,72 +268,75 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
               children: [
                 Icon(Icons.error_outline, size: 40, color: Colors.red[300]),
                 const SizedBox(height: 8),
-                Text('Error loading team', style: TextStyle(color: Colors.red[600], fontSize: 13)),
+                Text(context.l10n.teamLoadError, style: TextStyle(color: Colors.red[600], fontSize: 13)),
               ],
             ),
           );
         }
 
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.people_outline, size: 40, color: Colors.grey[400]),
-                const SizedBox(height: 8),
-                Text('No team members', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-              ],
-            ),
-          );
-        }
-
-        final filteredUsers = snapshot.data!.where((user) {
-          if (_searchQuery.isEmpty) return true;
-          return user.name.toLowerCase().contains(_searchQuery) ||
-              user.email.toLowerCase().contains(_searchQuery) ||
-              user.role.name.toLowerCase().contains(_searchQuery);
-        }).toList();
-
-        if (filteredUsers.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.search_off, size: 40, color: Colors.grey[400]),
-                const SizedBox(height: 8),
-                Text('No matches', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-              ],
-            ),
-          );
-        }
-
-        // Pagination
-        final totalPages = (filteredUsers.length / _usersPerPage).ceil();
-        if (_currentPage > totalPages && totalPages > 0) {
-          _currentPage = totalPages;
-        }
-        final startIndex = (_currentPage - 1) * _usersPerPage;
-        final endIndex = (startIndex + _usersPerPage > filteredUsers.length)
-            ? filteredUsers.length
-            : startIndex + _usersPerPage;
-        final paginatedUsers = filteredUsers.sublist(startIndex, endIndex);
-
-        // CHANGED: Use Column instead of ListView to remove scrolling
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (int i = 0; i < paginatedUsers.length; i++) ...[
-              if (i > 0) Divider(height: 1, color: Colors.grey[200]),
-              _buildUserListItem(
-                context,
-                paginatedUsers[i],
-                isSelected: false,
-                onTap: null,
-              ),
-            ],
-          ],
-        );
+        return _companyUsersList(snapshot.data ?? const <UserModel>[]);
       },
+    );
+  }
+
+  Widget _companyUsersList(List<UserModel> users) {
+    if (users.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people_outline, size: 40, color: Colors.grey[400]),
+            const SizedBox(height: 8),
+            Text(context.l10n.teamNoMembers, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    final filteredUsers = users.where((user) {
+      if (_searchQuery.isEmpty) return true;
+      return user.name.toLowerCase().contains(_searchQuery) ||
+          user.email.toLowerCase().contains(_searchQuery) ||
+          user.role.name.toLowerCase().contains(_searchQuery);
+    }).toList();
+
+    if (filteredUsers.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 40, color: Colors.grey[400]),
+            const SizedBox(height: 8),
+            Text(context.l10n.noMatches, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          ],
+        ),
+      );
+    }
+
+    // Pagination
+    final totalPages = (filteredUsers.length / _usersPerPage).ceil();
+    if (_currentPage > totalPages && totalPages > 0) {
+      _currentPage = totalPages;
+    }
+    final startIndex = (_currentPage - 1) * _usersPerPage;
+    final endIndex = (startIndex + _usersPerPage > filteredUsers.length)
+        ? filteredUsers.length
+        : startIndex + _usersPerPage;
+    final paginatedUsers = filteredUsers.sublist(startIndex, endIndex);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (int i = 0; i < paginatedUsers.length; i++) ...[
+          if (i > 0) Divider(height: 1, color: Colors.grey[200]),
+          _buildUserListItem(
+            context,
+            paginatedUsers[i],
+            isSelected: false,
+            onTap: null,
+          ),
+        ],
+      ],
     );
   }
 
@@ -398,7 +437,7 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Loading ${user.name}\'s documents...'),
+        content: Text(context.l10n.teamLoadingDocsFor(user.name)),
         duration: const Duration(seconds: 1),
       ),
     );
@@ -410,11 +449,12 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Now managing: ${user.name}'),
+            content: Text(context.l10n.teamNowManaging(user.name)),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
+            persist: false, // with an action it would otherwise never time out
             action: SnackBarAction(
-              label: 'Switch Back',
+              label: context.l10n.actionSwitchBack,
               textColor: Colors.white,
               onPressed: () async {
                 authProvider.clearUserSelection();
@@ -429,7 +469,7 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(context.l10n.errorWithDetail('$e')),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -460,6 +500,17 @@ class _DashboardEmployeesCardState extends State<DashboardEmployeesCard> {
   }
 
   int _getTotalPages() {
+    final auth = widget.authProvider;
+    if (auth.isAdmin && auth.isManagingCompany) {
+      final team = _teamInMemory(auth.selectedCompany?.id, auth) ?? const <UserModel>[];
+      final count = team.where((user) {
+        if (_searchQuery.isEmpty) return true;
+        return user.name.toLowerCase().contains(_searchQuery) ||
+            user.email.toLowerCase().contains(_searchQuery) ||
+            user.role.name.toLowerCase().contains(_searchQuery);
+      }).length;
+      return count > 0 ? (count / _usersPerPage).ceil() : 1;
+    }
     if (widget.authProvider.isAdmin) {
       final userCount = widget.authProvider.allUsers.where((user) {
         if (_searchQuery.isEmpty) return true;

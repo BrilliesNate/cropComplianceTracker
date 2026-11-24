@@ -1,3 +1,4 @@
+import '../offline/offline_write.dart';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,38 +14,77 @@ import '../../models/company_model.dart';
 import '../../models/enums.dart';
 import '../constants/app_constants.dart';
 
+// ── PERF LOGGING ──────────────────────────────────────────────────────────────
+// Flip to `true` to see every Firestore call. Off by default so the console
+// stays clean and timing logs are easy to read.
+const bool _kFirestoreVerbose = false;
+void _log(String msg) {
+  if (_kFirestoreVerbose) developer.log(msg);
+}
+
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // ── Reference data cache ───────────────────────────────────────────────────
+  // Categories and document types are global and change rarely, yet every
+  // screen used to download them again on each visit (and DocumentProvider and
+  // CategoryProvider each did it separately). They are now fetched once per
+  // session, shared by everyone, and de-duplicated while a request is in flight.
+  // Admin screens that edit them call [invalidateReferenceData].
+  static const Duration _referenceTtl = Duration(minutes: 10);
+  static List<CategoryModel>? _categoriesCache;
+  static DateTime? _categoriesAt;
+  static Future<List<CategoryModel>>? _categoriesFlight;
+  static List<DocumentTypeModel>? _docTypesCache;
+  static DateTime? _docTypesAt;
+  static Future<List<DocumentTypeModel>>? _docTypesFlight;
+
+  static bool _fresh(DateTime? at) =>
+      at != null && DateTime.now().difference(at) < _referenceTtl;
+
+  /// Forget cached categories / document types (call after editing them, and on
+  /// sign-out so the next user never sees the previous session's data).
+  static void invalidateReferenceData() {
+    _categoriesCache = null;
+    _categoriesAt = null;
+    _docTypesCache = null;
+    _docTypesAt = null;
+  }
+
   // Categories
   Future<List<CategoryModel>> getCategories() async {
-    final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getCategories');
+    final cached = _categoriesCache;
+    if (cached != null && _fresh(_categoriesAt)) return List.of(cached);
 
+    try {
+      final result = await (_categoriesFlight ??= _loadCategories());
+      return List.of(result);
+    } catch (e) {
+      _log('FirestoreService - Error getting categories: $e');
+      return [];
+    }
+  }
+
+  Future<List<CategoryModel>> _loadCategories() async {
     try {
       final snapshot = await _firestore
           .collection(AppConstants.categoriesCollection)
           .orderBy('order')
           .get();
-
       final categories = snapshot.docs
           .map((doc) => CategoryModel.fromMap(doc.data(), doc.id))
           .toList();
-
-      stopwatch.stop();
-      developer.log('FirestoreService - getCategories completed: ${stopwatch.elapsedMilliseconds}ms - Retrieved ${categories.length} categories');
-
+      _categoriesCache = categories;
+      _categoriesAt = DateTime.now();
       return categories;
-    } catch (e) {
-      stopwatch.stop();
-      developer.log('FirestoreService - Error getting categories: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
-      return [];
+    } finally {
+      _categoriesFlight = null;
     }
   }
 
   Future<CategoryModel?> getCategory(String categoryId) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getCategory: $categoryId');
+    _log('FirestoreService - Starting getCategory: $categoryId');
 
     try {
       final doc = await _firestore
@@ -53,7 +93,7 @@ class FirestoreService {
           .get();
 
       stopwatch.stop();
-      developer.log('FirestoreService - getCategory completed: ${stopwatch.elapsedMilliseconds}ms - Found: ${doc.exists}');
+      _log('FirestoreService - getCategory completed: ${stopwatch.elapsedMilliseconds}ms - Found: ${doc.exists}');
 
       if (doc.exists) {
         return CategoryModel.fromMap(doc.data()!, doc.id);
@@ -61,15 +101,46 @@ class FirestoreService {
       return null;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error getting category: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error getting category: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return null;
+    }
+  }
+
+  // Document Types — fetch ALL in a single query (cached, see above).
+  // Use this instead of looping getDocumentTypes(categoryId) per category.
+  Future<List<DocumentTypeModel>> getAllDocumentTypes() async {
+    final cached = _docTypesCache;
+    if (cached != null && _fresh(_docTypesAt)) return List.of(cached);
+
+    try {
+      final result = await (_docTypesFlight ??= _loadAllDocumentTypes());
+      return List.of(result);
+    } catch (e) {
+      _log('FirestoreService - Error getting all document types: $e');
+      return [];
+    }
+  }
+
+  Future<List<DocumentTypeModel>> _loadAllDocumentTypes() async {
+    try {
+      final snapshot = await _firestore
+          .collection(AppConstants.documentTypesCollection)
+          .get();
+      final docTypes = snapshot.docs
+          .map((doc) => DocumentTypeModel.fromMap(doc.data(), doc.id))
+          .toList();
+      _docTypesCache = docTypes;
+      _docTypesAt = DateTime.now();
+      return docTypes;
+    } finally {
+      _docTypesFlight = null;
     }
   }
 
   // Document Types
   Future<List<DocumentTypeModel>> getDocumentTypes(String categoryId) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getDocumentTypes for category: $categoryId');
+    _log('FirestoreService - Starting getDocumentTypes for category: $categoryId');
 
     try {
       final snapshot = await _firestore
@@ -82,19 +153,19 @@ class FirestoreService {
           .toList();
 
       stopwatch.stop();
-      developer.log('FirestoreService - getDocumentTypes completed: ${stopwatch.elapsedMilliseconds}ms - Retrieved ${docTypes.length} document types for category: $categoryId');
+      _log('FirestoreService - getDocumentTypes completed: ${stopwatch.elapsedMilliseconds}ms - Retrieved ${docTypes.length} document types for category: $categoryId');
 
       return docTypes;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error getting document types: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error getting document types: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return [];
     }
   }
 
   Future<DocumentTypeModel?> getDocumentType(String documentTypeId) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getDocumentType: $documentTypeId');
+    _log('FirestoreService - Starting getDocumentType: $documentTypeId');
 
     try {
       final doc = await _firestore
@@ -103,7 +174,7 @@ class FirestoreService {
           .get();
 
       stopwatch.stop();
-      developer.log('FirestoreService - getDocumentType completed: ${stopwatch.elapsedMilliseconds}ms - Found: ${doc.exists}');
+      _log('FirestoreService - getDocumentType completed: ${stopwatch.elapsedMilliseconds}ms - Found: ${doc.exists}');
 
       if (doc.exists) {
         return DocumentTypeModel.fromMap(doc.data()!, doc.id);
@@ -111,20 +182,36 @@ class FirestoreService {
       return null;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error getting document type: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error getting document type: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return null;
     }
   }
 
   // Documents - OPTIMIZED
+  /// [approvedOnly] is the auditor mode: only APPROVED documents are requested
+  /// (the Firestore rules refuse anything else for auditors, and a rules-checked
+  /// query must itself be constrained to what is allowed) and internal review
+  /// comments are not fetched at all.
+  ///
+  /// [signatureTypeIds]: when given, signatures are only looked up for documents
+  /// of those types (the only ones that can carry signatures), which removes the
+  /// bulk of the follow-up queries.
   Future<List<DocumentModel>> getDocuments({
     String? companyId,
     String? userId,
     String? categoryId,
     DocumentStatus? status,
+    bool approvedOnly = false,
+    Set<String>? signatureTypeIds,
   }) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getDocuments - companyId: $companyId, categoryId: $categoryId, status: $status');
+    _log('FirestoreService - Starting getDocuments - companyId: $companyId, categoryId: $categoryId, status: $status, approvedOnly: $approvedOnly');
+
+    // An auditor asking for a non-approved status gets nothing, by design.
+    if (approvedOnly && status != null && status != DocumentStatus.APPROVED) {
+      return [];
+    }
+    if (approvedOnly) status = DocumentStatus.APPROVED;
 
     try {
       // 1. Build the base query
@@ -150,74 +237,65 @@ class FirestoreService {
       }
 
       // 2. Execute the main query
-      developer.log('FirestoreService - Executing main documents query');
+      _log('FirestoreService - Executing main documents query');
       final queryStopwatch = Stopwatch()..start();
 
       final snapshot = await query.get();
 
       queryStopwatch.stop();
-      developer.log('FirestoreService - Main documents query completed: ${queryStopwatch.elapsedMilliseconds}ms - Retrieved ${snapshot.docs.length} documents');
+      _log('FirestoreService - Main documents query completed: ${queryStopwatch.elapsedMilliseconds}ms - Retrieved ${snapshot.docs.length} documents');
 
       if (snapshot.docs.isEmpty) {
         stopwatch.stop();
-        developer.log('FirestoreService - getDocuments completed: ${stopwatch.elapsedMilliseconds}ms - No documents found');
+        _log('FirestoreService - getDocuments completed: ${stopwatch.elapsedMilliseconds}ms - No documents found');
         return [];
       }
 
       // 3. Extract document IDs
-      final documentIds = snapshot.docs.map((doc) => doc.id).toList();
+      final allIds = snapshot.docs.map((doc) => doc.id).toList();
+      final signatureIds = signatureTypeIds == null
+          ? allIds
+          : snapshot.docs
+              .where((doc) => signatureTypeIds.contains(
+                  (doc.data() as Map<String, dynamic>)['documentTypeId']))
+              .map((doc) => doc.id)
+              .toList();
 
-      // 4. Batch fetch all signatures and comments
-      developer.log('FirestoreService - Batch fetching signatures and comments');
+      // 4. Batch fetch signatures and comments — all chunks, all at once.
+      // whereIn accepts up to 30 values, so 30 per query keeps the number of
+      // round trips to a third of what it was.
+      _log('FirestoreService - Batch fetching signatures and comments');
+      final signatureChunks = _chunkList(signatureIds, 30);
+      // Auditors never see internal review comments — don't even request them
+      // (the rules would refuse the query and sink the whole load).
+      final commentChunks = approvedOnly ? <List<String>>[] : _chunkList(allIds, 30);
 
-      // Firestore whereIn has a limit of 10 items, so we need to chunk the documents
-      final chunks = _chunkList(documentIds, 10);
-      final signaturesQueryStopwatch = Stopwatch()..start();
-      final commentsQueryStopwatch = Stopwatch()..start();
-
-      // Lists to hold all signatures and comments
-      List<SignatureModel> allSignatures = [];
-      List<CommentModel> allComments = [];
-
-      // Create parallel queries for each chunk
-      final signaturesFutures = chunks.map((chunk) =>
+      final results = await Future.wait<QuerySnapshot<Map<String, dynamic>>>([
+        for (final chunk in signatureChunks)
           _firestore
               .collection(AppConstants.signaturesCollection)
               .where('documentId', whereIn: chunk)
-              .get()
-      ).toList();
-
-      final commentsFutures = chunks.map((chunk) =>
+              .get(),
+        for (final chunk in commentChunks)
           _firestore
               .collection(AppConstants.commentsCollection)
               .where('documentId', whereIn: chunk)
               .orderBy('createdAt', descending: true)
-              .get()
-      ).toList();
+              .get(),
+      ]);
 
-      // Execute all queries in parallel
-      final signaturesResults = await Future.wait(signaturesFutures);
-      signaturesQueryStopwatch.stop();
-
-      final commentsResults = await Future.wait(commentsFutures);
-      commentsQueryStopwatch.stop();
-
-      // Process signatures results
-      for (var snapshot in signaturesResults) {
-        for (var doc in snapshot.docs) {
-          allSignatures.add(SignatureModel.fromMap(doc.data(), doc.id));
+      final allSignatures = <SignatureModel>[];
+      final allComments = <CommentModel>[];
+      for (var i = 0; i < results.length; i++) {
+        final isSignature = i < signatureChunks.length;
+        for (var doc in results[i].docs) {
+          if (isSignature) {
+            allSignatures.add(SignatureModel.fromMap(doc.data(), doc.id));
+          } else {
+            allComments.add(CommentModel.fromMap(doc.data(), doc.id));
+          }
         }
       }
-
-      // Process comments results
-      for (var snapshot in commentsResults) {
-        for (var doc in snapshot.docs) {
-          allComments.add(CommentModel.fromMap(doc.data(), doc.id));
-        }
-      }
-
-      developer.log('FirestoreService - Signatures fetched: ${signaturesQueryStopwatch.elapsedMilliseconds}ms - ${allSignatures.length} total');
-      developer.log('FirestoreService - Comments fetched: ${commentsQueryStopwatch.elapsedMilliseconds}ms - ${allComments.length} total');
 
       // 5. Group signatures and comments by document ID for easy access
       final signaturesMap = <String, List<SignatureModel>>{};
@@ -249,12 +327,12 @@ class FirestoreService {
       }).toList();
 
       stopwatch.stop();
-      developer.log('FirestoreService - getDocuments completed: ${stopwatch.elapsedMilliseconds}ms - Total documents processed: ${documents.length}');
+      _log('FirestoreService - getDocuments completed: ${stopwatch.elapsedMilliseconds}ms - Total documents processed: ${documents.length}');
 
       return documents;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error getting documents: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error getting documents: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return [];
     }
   }
@@ -270,9 +348,12 @@ class FirestoreService {
   }
 
   // Get a single document - OPTIMIZED
-  Future<DocumentModel?> getDocument(String documentId) async {
+  /// [approvedOnly] is the auditor mode: a document that isn't APPROVED is
+  /// treated as not found, and internal review comments are not fetched.
+  Future<DocumentModel?> getDocument(String documentId,
+      {bool approvedOnly = false}) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getDocument: $documentId');
+    _log('FirestoreService - Starting getDocument: $documentId');
 
     try {
       // Fetch document, signatures, and comments in parallel
@@ -286,23 +367,35 @@ class FirestoreService {
           .where('documentId', isEqualTo: documentId)
           .get();
 
-      final commentsFuture = _firestore
-          .collection(AppConstants.commentsCollection)
-          .where('documentId', isEqualTo: documentId)
-          .orderBy('createdAt', descending: true)
-          .get();
+      final Future<QuerySnapshot>? commentsFuture = approvedOnly
+          ? null
+          : _firestore
+              .collection(AppConstants.commentsCollection)
+              .where('documentId', isEqualTo: documentId)
+              .orderBy('createdAt', descending: true)
+              .get();
 
       // Wait for all futures to complete in parallel
-      final results = await Future.wait([docFuture, signaturesFuture, commentsFuture]);
+      final results = await Future.wait<Object?>([
+        docFuture,
+        signaturesFuture,
+        if (commentsFuture != null) commentsFuture,
+      ]);
 
       final docSnapshot = results[0] as DocumentSnapshot;
       final signaturesSnapshot = results[1] as QuerySnapshot;
-      final commentsSnapshot = results[2] as QuerySnapshot;
+      final commentsSnapshot =
+          commentsFuture != null ? results[2] as QuerySnapshot : null;
 
       if (!docSnapshot.exists) {
         stopwatch.stop();
-        developer.log('FirestoreService - Document not found: ${stopwatch.elapsedMilliseconds}ms');
+        _log('FirestoreService - Document not found: ${stopwatch.elapsedMilliseconds}ms');
         return null;
+      }
+
+      if (approvedOnly) {
+        final status = (docSnapshot.data() as Map<String, dynamic>?)?['status'];
+        if (status != 'APPROVED') return null;
       }
 
       // Convert signatures and comments
@@ -310,7 +403,7 @@ class FirestoreService {
           .map((doc) => SignatureModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
 
-      final comments = commentsSnapshot.docs
+      final comments = (commentsSnapshot?.docs ?? [])
           .map((doc) => CommentModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
 
@@ -323,12 +416,12 @@ class FirestoreService {
       );
 
       stopwatch.stop();
-      developer.log('FirestoreService - getDocument completed: ${stopwatch.elapsedMilliseconds}ms - Signatures: ${signatures.length}, Comments: ${comments.length}');
+      _log('FirestoreService - getDocument completed: ${stopwatch.elapsedMilliseconds}ms - Signatures: ${signatures.length}, Comments: ${comments.length}');
 
       return document;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error getting document: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error getting document: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return null;
     }
   }
@@ -339,12 +432,12 @@ class FirestoreService {
 // Add deletion record for audit trail
   Future<bool> addDeletionRecord(Map<String, dynamic> deletionData) async {
     try {
-      await _firestore
-          .collection('deleted_documents')
-          .add({
-        ...deletionData,
-        'deletionDate': Timestamp.fromDate(deletionData['deletionDate']),
-      });
+      await commitWrite(
+          _firestore.collection('deleted_documents').doc().set({
+            ...deletionData,
+            'deletionDate': Timestamp.fromDate(deletionData['deletionDate']),
+          }),
+          label: 'deletion record'); // l10n-ignore: log label
       return true;
     } catch (e) {
       print('Error adding deletion record: $e');
@@ -353,7 +446,7 @@ class FirestoreService {
   }
   Future<FormConfig?> getFormConfig(String documentTypeId) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getFormConfig: $documentTypeId');
+    _log('FirestoreService - Starting getFormConfig: $documentTypeId');
 
     try {
       // First try to fetch from formConfigurations collection
@@ -363,7 +456,7 @@ class FirestoreService {
           .get();
 
       stopwatch.stop();
-      developer.log('FirestoreService - getFormConfig completed: ${stopwatch.elapsedMilliseconds}ms - Found: ${doc.exists}');
+      _log('FirestoreService - getFormConfig completed: ${stopwatch.elapsedMilliseconds}ms - Found: ${doc.exists}');
 
       if (doc.exists) {
         return FormConfig.fromMap(doc.data()!);
@@ -372,7 +465,7 @@ class FirestoreService {
       return null;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error getting form config: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error getting form config: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return null;
     }
   }
@@ -380,7 +473,7 @@ class FirestoreService {
   // Add to FirestoreService class
   Future<String?> addFormConfig(FormConfig formConfig) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting addFormConfig for documentTypeId: ${formConfig.documentTypeId}');
+    _log('FirestoreService - Starting addFormConfig for documentTypeId: ${formConfig.documentTypeId}');
 
     try {
       // Check if a config already exists for this document type
@@ -400,7 +493,7 @@ class FirestoreService {
         });
 
         stopwatch.stop();
-        developer.log('FirestoreService - Updated existing form config: ${stopwatch.elapsedMilliseconds}ms');
+        _log('FirestoreService - Updated existing form config: ${stopwatch.elapsedMilliseconds}ms');
 
         return formConfig.documentTypeId;
       } else {
@@ -408,13 +501,13 @@ class FirestoreService {
         final docRef = await _firestore.collection('formConfigs').add(formConfig.toMap());
 
         stopwatch.stop();
-        developer.log('FirestoreService - Added new form config: ${stopwatch.elapsedMilliseconds}ms');
+        _log('FirestoreService - Added new form config: ${stopwatch.elapsedMilliseconds}ms');
 
         return docRef.id;
       }
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error adding form config: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error adding form config: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return null;
     }
   }
@@ -523,7 +616,9 @@ class FirestoreService {
       }
 
       // Add to Firestore
-      await _firestore.collection('documents').doc(document.id).set(data);
+      await commitWrite(
+          _firestore.collection('documents').doc(document.id).set(data),
+          label: 'create document'); // l10n-ignore: log label
 
       return document.id;
     } catch (e) {
@@ -534,42 +629,50 @@ class FirestoreService {
 
   Future<bool> updateDocument(DocumentModel document) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting updateDocument: ${document.id}');
+    _log('FirestoreService - Starting updateDocument: ${document.id}');
 
     try {
-      await _firestore
-          .collection(AppConstants.documentsCollection)
-          .doc(document.id)
-          .update(document.toMap());
+      // While files from the phone are still uploading, the outbox owns
+      // fileUrls / pendingFiles — never overwrite them from a copy in memory.
+      final data = document.toMap()..remove('pendingFiles');
+      if (document.hasPendingFiles) data.remove('fileUrls');
+      await commitWrite(
+          _firestore
+              .collection(AppConstants.documentsCollection)
+              .doc(document.id)
+              .update(data),
+          label: 'update document'); // l10n-ignore: log label
 
       stopwatch.stop();
-      developer.log('FirestoreService - updateDocument completed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - updateDocument completed: ${stopwatch.elapsedMilliseconds}ms');
 
       return true;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error updating document: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error updating document: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return false;
     }
   }
 
   Future<bool> deleteDocument(String documentId) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting deleteDocument: $documentId');
+    _log('FirestoreService - Starting deleteDocument: $documentId');
 
     try {
-      await _firestore
-          .collection(AppConstants.documentsCollection)
-          .doc(documentId)
-          .delete();
+      await commitWrite(
+          _firestore
+              .collection(AppConstants.documentsCollection)
+              .doc(documentId)
+              .delete(),
+          label: 'delete document'); // l10n-ignore: log label
 
       stopwatch.stop();
-      developer.log('FirestoreService - deleteDocument completed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - deleteDocument completed: ${stopwatch.elapsedMilliseconds}ms');
 
       return true;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error deleting document: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error deleting document: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return false;
     }
   }
@@ -577,7 +680,7 @@ class FirestoreService {
   // Signatures
   Future<List<SignatureModel>> getSignatures(String documentId) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getSignatures for document: $documentId');
+    _log('FirestoreService - Starting getSignatures for document: $documentId');
 
     try {
       final snapshot = await _firestore
@@ -590,32 +693,34 @@ class FirestoreService {
           .toList();
 
       stopwatch.stop();
-      developer.log('FirestoreService - getSignatures completed: ${stopwatch.elapsedMilliseconds}ms - Retrieved ${signatures.length} signatures');
+      _log('FirestoreService - getSignatures completed: ${stopwatch.elapsedMilliseconds}ms - Retrieved ${signatures.length} signatures');
 
       return signatures;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error getting signatures: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error getting signatures: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return [];
     }
   }
 
   Future<String?> addSignature(SignatureModel signature) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting addSignature');
+    _log('FirestoreService - Starting addSignature');
 
     try {
-      final docRef = await _firestore
-          .collection(AppConstants.signaturesCollection)
-          .add(signature.toMap());
+      // doc().set() rather than add(): add() only returns once the server
+      // replies, which never happens offline.
+      final docRef =
+          _firestore.collection(AppConstants.signaturesCollection).doc();
+      await commitWrite(docRef.set(signature.toMap()), label: 'signature'); // l10n-ignore: log label
 
       stopwatch.stop();
-      developer.log('FirestoreService - addSignature completed: ${stopwatch.elapsedMilliseconds}ms - New ID: ${docRef.id}');
+      _log('FirestoreService - addSignature completed: ${stopwatch.elapsedMilliseconds}ms - New ID: ${docRef.id}');
 
       return docRef.id;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error adding signature: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error adding signature: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return null;
     }
   }
@@ -623,7 +728,7 @@ class FirestoreService {
   // Comments
   Future<List<CommentModel>> getComments(String documentId) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getComments for document: $documentId');
+    _log('FirestoreService - Starting getComments for document: $documentId');
 
     try {
       final snapshot = await _firestore
@@ -637,32 +742,32 @@ class FirestoreService {
           .toList();
 
       stopwatch.stop();
-      developer.log('FirestoreService - getComments completed: ${stopwatch.elapsedMilliseconds}ms - Retrieved ${comments.length} comments');
+      _log('FirestoreService - getComments completed: ${stopwatch.elapsedMilliseconds}ms - Retrieved ${comments.length} comments');
 
       return comments;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error getting comments: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error getting comments: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return [];
     }
   }
 
   Future<String?> addComment(CommentModel comment) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting addComment');
+    _log('FirestoreService - Starting addComment');
 
     try {
-      final docRef = await _firestore
-          .collection(AppConstants.commentsCollection)
-          .add(comment.toMap());
+      final docRef =
+          _firestore.collection(AppConstants.commentsCollection).doc();
+      await commitWrite(docRef.set(comment.toMap()), label: 'comment'); // l10n-ignore: log label
 
       stopwatch.stop();
-      developer.log('FirestoreService - addComment completed: ${stopwatch.elapsedMilliseconds}ms - New ID: ${docRef.id}');
+      _log('FirestoreService - addComment completed: ${stopwatch.elapsedMilliseconds}ms - New ID: ${docRef.id}');
 
       return docRef.id;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error adding comment: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error adding comment: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return null;
     }
   }
@@ -670,7 +775,7 @@ class FirestoreService {
   // Companies
   Future<List<CompanyModel>> getCompanies() async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getCompanies');
+    _log('FirestoreService - Starting getCompanies');
 
     try {
       final snapshot = await _firestore
@@ -682,19 +787,19 @@ class FirestoreService {
           .toList();
 
       stopwatch.stop();
-      developer.log('FirestoreService - getCompanies completed: ${stopwatch.elapsedMilliseconds}ms - Retrieved ${companies.length} companies');
+      _log('FirestoreService - getCompanies completed: ${stopwatch.elapsedMilliseconds}ms - Retrieved ${companies.length} companies');
 
       return companies;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error getting companies: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error getting companies: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return [];
     }
   }
 
   Future<CompanyModel?> getCompany(String companyId) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getCompany: $companyId');
+    _log('FirestoreService - Starting getCompany: $companyId');
 
     try {
       final doc = await _firestore
@@ -703,7 +808,7 @@ class FirestoreService {
           .get();
 
       stopwatch.stop();
-      developer.log('FirestoreService - getCompany completed: ${stopwatch.elapsedMilliseconds}ms - Found: ${doc.exists}');
+      _log('FirestoreService - getCompany completed: ${stopwatch.elapsedMilliseconds}ms - Found: ${doc.exists}');
 
       if (doc.exists) {
         return CompanyModel.fromMap(doc.data()!, doc.id);
@@ -711,14 +816,14 @@ class FirestoreService {
       return null;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error getting company: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error getting company: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return null;
     }
   }
 
   Future<String?> addCompany(CompanyModel company) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting addCompany');
+    _log('FirestoreService - Starting addCompany');
 
     try {
       final docRef = await _firestore
@@ -726,12 +831,12 @@ class FirestoreService {
           .add(company.toMap());
 
       stopwatch.stop();
-      developer.log('FirestoreService - addCompany completed: ${stopwatch.elapsedMilliseconds}ms - New ID: ${docRef.id}');
+      _log('FirestoreService - addCompany completed: ${stopwatch.elapsedMilliseconds}ms - New ID: ${docRef.id}');
 
       return docRef.id;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error adding company: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error adding company: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return null;
     }
   }
@@ -739,7 +844,7 @@ class FirestoreService {
   // Users
   Future<List<UserModel>> getUsers({String? companyId}) async {
     final stopwatch = Stopwatch()..start();
-    developer.log('FirestoreService - Starting getUsers - companyId: $companyId');
+    _log('FirestoreService - Starting getUsers - companyId: $companyId');
 
     try {
       Query query = _firestore.collection(AppConstants.usersCollection);
@@ -755,12 +860,12 @@ class FirestoreService {
           .toList();
 
       stopwatch.stop();
-      developer.log('FirestoreService - getUsers completed: ${stopwatch.elapsedMilliseconds}ms - Retrieved ${users.length} users');
+      _log('FirestoreService - getUsers completed: ${stopwatch.elapsedMilliseconds}ms - Retrieved ${users.length} users');
 
       return users;
     } catch (e) {
       stopwatch.stop();
-      developer.log('FirestoreService - Error getting users: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
+      _log('FirestoreService - Error getting users: $e - Elapsed: ${stopwatch.elapsedMilliseconds}ms');
       return [];
     }
   }

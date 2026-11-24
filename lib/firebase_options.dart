@@ -42,17 +42,17 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyA7NWG0s-9Z8M5WeQgJq1mRuVY-6W8mVUw',
-    appId: '1:854876175061:web:fce454e395448d9503805c',
+    appId: '1:854876175061:web:80af2ffbf87036c903805c',
     messagingSenderId: '854876175061',
     projectId: 'cropcompliance',
     authDomain: 'cropcompliance.firebaseapp.com',
     storageBucket: 'cropcompliance.firebasestorage.app',
-    measurementId: 'G-WYCB8SGGQ8',
+    measurementId: 'G-SKJ8N05RNV',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBKWlUuRI_a1DXx-j9GZ2106kGmWGrg87Q',
-    appId: '1:854876175061:android:a826d41714b6b6ab03805c',
+    appId: '1:854876175061:android:f76d202298a219f903805c',
     messagingSenderId: '854876175061',
     projectId: 'cropcompliance',
     storageBucket: 'cropcompliance.firebasestorage.app',
@@ -78,12 +78,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyA7NWG0s-9Z8M5WeQgJq1mRuVY-6W8mVUw',
-    appId: '1:854876175061:web:80af2ffbf87036c903805c',
+    appId: '1:854876175061:web:24ff4d91948e5d0e03805c',
     messagingSenderId: '854876175061',
     projectId: 'cropcompliance',
     authDomain: 'cropcompliance.firebaseapp.com',
     storageBucket: 'cropcompliance.firebasestorage.app',
-    measurementId: 'G-SKJ8N05RNV',
+    measurementId: 'G-YMQLQW8CQH',
   );
 
 }

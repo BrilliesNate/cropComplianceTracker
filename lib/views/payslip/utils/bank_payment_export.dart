@@ -6,13 +6,14 @@ import 'package:cropCompliance/models/employee_model.dart';
 import 'package:cropCompliance/models/payslip_model.dart';
 import 'package:cropCompliance/views/payslip/utils/pdf_downloader.dart';
 import 'package:intl/intl.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 /// Bulk bank-payment file for a set of payslips: works out who can be paid,
 /// then writes the file in the chosen bank's [BankExportTemplate] layout.
 class BankPaymentExport {
   BankPaymentExport._();
 
-  static final _monthStamp = DateFormat('MMM-yyyy');
+  static DateFormat get _monthStamp => DateFormat('MMM-yyyy'); // follows the app language
 
   /// Finds the employee a payslip belongs to.
   ///
@@ -82,9 +83,9 @@ class BankPaymentExport {
       if (emp == null) {
         skipped.add(BankPaymentSkip(
           name: slips.first.employeeName.trim().isEmpty
-              ? 'Unnamed employee'
+              ? LocaleProvider.instance.l10n.unnamedEmployee
               : slips.first.employeeName,
-          reason: 'employee record no longer exists',
+          reason: LocaleProvider.instance.l10n.skipEmployeeGone,
           kind: SkipKind.missingEmployee,
           payslips: slips,
         ));
@@ -93,7 +94,7 @@ class BankPaymentExport {
       if (!emp.hasAnyBankingDetails) {
         skipped.add(BankPaymentSkip(
           name: emp.name,
-          reason: 'no banking details',
+          reason: LocaleProvider.instance.l10n.bankIssueNone,
           kind: SkipKind.noBankingDetails,
           employee: emp,
           payslips: slips,
@@ -103,7 +104,7 @@ class BankPaymentExport {
       if (cents <= 0) {
         skipped.add(BankPaymentSkip(
           name: emp.name,
-          reason: 'net pay is R 0.00 or less',
+          reason: LocaleProvider.instance.l10n.bankIssueNetZero,
           kind: SkipKind.nonPositivePay,
           employee: emp,
           payslips: slips,
@@ -152,7 +153,7 @@ class BankPaymentExport {
         branchCode: e.branchCode,
         bankName: e.bankName,
         accountTypeCode: e.accountType.acbCode,
-        accountTypeLabel: e.accountType.label,
+        accountTypeLabel: e.accountType.bankValue,
         idNumber: e.idNumber,
         amountCents: amountCents,
       );
@@ -167,27 +168,23 @@ class BankPaymentExport {
     required DraftChoice draftChoice,
     required BankPaymentPlan plan,
   }) {
-    if (selectedCount == 0) return 'No payslips selected.';
-    if (!bankChosen) return 'Choose the bank the farm pays from.';
+    if (selectedCount == 0) return LocaleProvider.instance.l10n.bankNoneSelected;
+    if (!bankChosen) return LocaleProvider.instance.l10n.bankChooseBank;
     if (draftCount > 0 && draftChoice == DraftChoice.undecided) {
-      return '$draftCount draft payslip${draftCount == 1 ? '' : 's'} '
-          'selected — remove ${draftCount == 1 ? 'it' : 'them'} or include '
-          '${draftCount == 1 ? 'it' : 'them'} anyway.';
+      return LocaleProvider.instance.l10n.bankDraftsSelected(draftCount);
     }
     if (draftChoice == DraftChoice.remove && selectedCount == draftCount) {
-      return 'All selected payslips are drafts — include them anyway or '
-          'select finalised payslips.';
+      return LocaleProvider.instance.l10n.bankAllDrafts;
     }
     if (plan.ready.isEmpty) {
       final kinds = plan.skipped.map((s) => s.kind).toSet();
       if (kinds.every((k) => k.isBankingFix)) {
-        return 'Nobody has banking details yet — add them to continue.';
+        return LocaleProvider.instance.l10n.bankNobodyBanking;
       }
       if (kinds.every((k) => k == SkipKind.missingEmployee)) {
-        return 'These payslips aren\'t linked to an employee — fix them to '
-            'continue.';
+        return LocaleProvider.instance.l10n.bankNotLinked;
       }
-      return 'Nobody can be paid yet — fix the employees listed below.';
+      return LocaleProvider.instance.l10n.bankNobodyPayableFix;
     }
     return null;
   }
@@ -200,7 +197,7 @@ class BankPaymentExport {
     String referencePrefix = BankExportTemplate.defaultReferencePrefix,
   }) async {
     if (plan.ready.isEmpty) {
-      throw StateError('No payable employees — nothing to export.');
+      throw StateError('No payable employees — nothing to export.'); // l10n-ignore: guarded by the dialog
     }
     final ctx = BankExportContext(
         payerName: companyName, referencePrefix: referencePrefix);

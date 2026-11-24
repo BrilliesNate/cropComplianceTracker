@@ -5,9 +5,14 @@ import '../../providers/auth_provider.dart';
 import '../../providers/document_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../core/constants/route_constants.dart';
+import '../../core/constants/app_constants.dart';
+import '../../core/utils/data_bootstrap.dart';
+import '../../models/document_model.dart';
 import '../shared/loading_indicator.dart';
 import '../shared/error_display.dart';
 import '../shared/app_scaffold_wrapper.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
+import 'package:cropCompliance/models/enums.dart';
 
 class AuditIndexScreen extends StatefulWidget {
   const AuditIndexScreen({Key? key}) : super(key: key);
@@ -19,30 +24,34 @@ class AuditIndexScreen extends StatefulWidget {
 class _AuditIndexScreenState extends State<AuditIndexScreen> {
   String _selectedPackage = 'siza_wieta'; // Default package
 
+  late bool _ready; // see DashboardScreen: one loader, then the finished page
+
   @override
   void initState() {
     super.initState();
+    _ready = isCompanyDataWarm(context, withOverrides: false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
     });
   }
 
   Future<void> _initializeData() async {
+    if (!mounted) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
-    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+    if (authProvider.currentUser == null) return;
 
-    if (authProvider.currentUser != null) {
-      await categoryProvider.initialize();
+    // Set initial package filter based on company's available packages
+    final packages = authProvider.effectivePackages;
+    if (packages.isNotEmpty) _selectedPackage = packages.first;
 
-      // Set initial package filter based on company's available packages
-      final packages = authProvider.effectivePackages;
-      if (packages.isNotEmpty) {
-        _selectedPackage = packages.first;
-        categoryProvider.setPackageFilter([_selectedPackage]);
-      }
-
-      await documentProvider.refreshForUserContext(context);
+    try {
+      await loadCompanyData(
+        context,
+        packages: packages.isNotEmpty ? [_selectedPackage] : null,
+        withOverrides: false,
+      );
+    } finally {
+      if (mounted) setState(() => _ready = true);
     }
   }
 
@@ -63,24 +72,27 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
     final documentProvider = Provider.of<DocumentProvider>(context);
 
     if (authProvider.currentUser == null) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: Text('Please log in to continue'),
+          child: Text(context.l10n.pleaseLogIn),
         ),
       );
     }
 
-    final isLoading = categoryProvider.isLoading || documentProvider.isLoading;
+    final isLoading = !_ready || categoryProvider.isLoading || documentProvider.isLoading;
     final hasError = categoryProvider.error != null || documentProvider.error != null;
     final error = categoryProvider.error ?? documentProvider.error ?? '';
 
     Widget content;
     if (isLoading) {
-      content = const LoadingIndicator(message: 'Loading categories...');
+      content = LoadingIndicator(message: context.l10n.categoriesLoading);
     } else if (hasError) {
       content = ErrorDisplay(
         error: error,
-        onRetry: _initializeData,
+        onRetry: () {
+          setState(() => _ready = false);
+          _initializeData();
+        },
       );
     } else {
       content = Column(
@@ -98,34 +110,49 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
     }
 
     return AppScaffoldWrapper(
-      title: 'Audit Index',
+      title: context.l10n.menuAuditIndex,
       backgroundColor: Colors.grey[100],
       child: content,
     );
   }
 
+  IconData _packageIcon(String id) {
+    switch (id) {
+      case 'globalgap':
+        return Icons.eco;
+      case 'ipw':
+        return Icons.wine_bar;
+      case 'fairtrade':
+        return Icons.handshake_outlined;
+      case 'siza_environmental':
+        return Icons.forest_outlined;
+      default:
+        return Icons.people;
+    }
+  }
+
   Widget _buildPackageToggle(AuthProvider authProvider) {
+    // Only show toggles for packages this company actually has enabled.
+    final enabled = AppConstants.auditPackages
+        .where((p) => authProvider.effectivePackages.contains(p.id))
+        .toList();
+    if (enabled.length < 2) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          Expanded(
-            child: _buildPackageButton(
-              packageId: 'siza_wieta',
-              label: 'SIZA/WIETA',
-              icon: Icons.people,
-              isSelected: _selectedPackage == 'siza_wieta',
+          for (int i = 0; i < enabled.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            Expanded(
+              child: _buildPackageButton(
+                packageId: enabled[i].id,
+                label: enabled[i].label,
+                icon: _packageIcon(enabled[i].id),
+                isSelected: _selectedPackage == enabled[i].id,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildPackageButton(
-              packageId: 'globalgap',
-              label: 'GlobalG.A.P.',
-              icon: Icons.eco,
-              isSelected: _selectedPackage == 'globalgap',
-            ),
-          ),
+          ],
         ],
       ),
     );
@@ -173,6 +200,9 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
   }
 
   Widget _buildCategoryList(CategoryProvider categoryProvider, DocumentProvider documentProvider) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isAdmin = authProvider.isAdmin;
+
     // Filter out duplicates by creating a unique list of category IDs
     final categories = categoryProvider.categories;
     final uniqueIds = <String>{};
@@ -181,8 +211,8 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
     ).toList();
 
     if (uniqueCategories.isEmpty) {
-      return const Center(
-        child: Text('No categories found'),
+      return Center(
+        child: Text(context.l10n.categoriesNoneFound),
       );
     }
 
@@ -225,13 +255,50 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
               children: [
                 if (documentCount > 0)
                   Text(
-                    '$documentCount doc${documentCount == 1 ? '' : 's'}',
+                    context.l10n.docCountShort(documentCount),
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 12,
                     ),
                   ),
-                const SizedBox(width: 8),
+                // Admin delete menu
+                if (isAdmin && documentCount > 0) ...[
+                  const SizedBox(width: 4),
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: Colors.grey[600], size: 20),
+                    padding: EdgeInsets.zero,
+                    onSelected: (value) {
+                      if (value == 'delete_all') {
+                        _showDeleteAllConfirmation(category.id, category.name, documentsInCategory);
+                      } else if (value == 'delete_selected') {
+                        _showSelectDocumentsDialog(category.id, category.name, documentsInCategory);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'delete_selected',
+                        child: Row(
+                          children: [
+                            Icon(Icons.checklist, color: Colors.orange.shade700, size: 20),
+                            const SizedBox(width: 8),
+                            Text(context.l10n.deleteSelectedEllipsis),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete_all',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_sweep, color: Colors.red.shade700, size: 20),
+                            const SizedBox(width: 8),
+                            Text(context.l10n.deleteAllCount(documentCount)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else
+                  const SizedBox(width: 8),
                 const Icon(Icons.chevron_right),
               ],
             ),
@@ -285,7 +352,7 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
       return Icons.people;
     } else if (name.contains('child') || name.contains('young')) {
       return Icons.child_care;
-    } else if (name.contains('forced') || name.contains('labor prevention')) {
+    } else if (name.contains('forced') || name.contains('labor prevention')) { // l10n-ignore: matches stored names
       return Icons.security;
     } else if (name.contains('wages') || name.contains('working')) {
       return Icons.payments;
@@ -304,5 +371,321 @@ class _AuditIndexScreenState extends State<AuditIndexScreen> {
     }
 
     return Icons.folder;
+  }
+
+  // Show confirmation dialog to delete ALL documents in a category
+  void _showDeleteAllConfirmation(String categoryId, String categoryName, List<DocumentModel> documents) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red.shade600, size: 28),
+            const SizedBox(width: 12),
+            Expanded(child: Text(context.l10n.deleteAllDocsTitle)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.deleteAllDocsIn(documents.length),
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.folder, color: Colors.red.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      categoryName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              context.l10n.cannotBeUndone,
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _performBulkDelete(documents.map((d) => d.id).toList(), authProvider);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(context.l10n.deleteAllCaps(documents.length)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show dialog to select which documents to delete
+  void _showSelectDocumentsDialog(String categoryId, String categoryName, List<DocumentModel> documents) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+    final selectedIds = <String>{};
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.checklist, color: Colors.orange.shade700, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(context.l10n.selectDocsToDelete),
+                      Text(
+                        categoryName,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: Column(
+                children: [
+                  // Select all / Deselect all buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        context.l10n.selectedOfTotal(selectedIds.length, documents.length),
+                        style: TextStyle(
+                          color: selectedIds.isNotEmpty ? Colors.red : Colors.grey,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedIds.addAll(documents.map((d) => d.id));
+                              });
+                            },
+                            child: Text(context.l10n.actionSelectAll),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedIds.clear();
+                              });
+                            },
+                            child: Text(context.l10n.actionClear),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  // Document list
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: documents.length,
+                      itemBuilder: (context, index) {
+                        final doc = documents[index];
+                        final isSelected = selectedIds.contains(doc.id);
+                        final docType = documentProvider.getDocumentTypeById(doc.documentTypeId);
+                        final docTypeName = docType?.name ?? context.l10n.unknownType;
+
+                        return CheckboxListTile(
+                          value: isSelected,
+                          onChanged: (value) {
+                            setDialogState(() {
+                              if (value == true) {
+                                selectedIds.add(doc.id);
+                              } else {
+                                selectedIds.remove(doc.id);
+                              }
+                            });
+                          },
+                          title: Text(
+                            docTypeName,
+                            style: const TextStyle(fontSize: 14),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            context.l10n.docDeleteLine(
+                                doc.status.label(context.l10n),
+                                doc.fileUrls.length,
+                                doc.createdAt.toString().substring(0, 10)),
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          isThreeLine: true,
+                          dense: true,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          activeColor: Colors.red,
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('CANCEL'),
+              ),
+              ElevatedButton(
+                onPressed: selectedIds.isEmpty
+                    ? null
+                    : () {
+                  Navigator.of(context).pop();
+                  _confirmSelectedDelete(selectedIds.toList(), authProvider);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey[300],
+                ),
+                child: Text(context.l10n.deleteCaps(selectedIds.length)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // Confirm deletion of selected documents
+  void _confirmSelectedDelete(List<String> documentIds, AuthProvider authProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red.shade600, size: 28),
+            const SizedBox(width: 12),
+            Text(context.l10n.confirmDeleteTitle),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(context.l10n.confirmDeleteDocs(documentIds.length)),
+            const SizedBox(height: 16),
+            Text(
+              context.l10n.cannotBeUndone,
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _performBulkDelete(documentIds, authProvider);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('DELETE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Perform the actual bulk delete
+  Future<void> _performBulkDelete(List<String> documentIds, AuthProvider authProvider) async {
+    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 24),
+            Text(context.l10n.deletingDocs(documentIds.length)),
+          ],
+        ),
+      ),
+    );
+
+    int successCount = 0;
+    int failCount = 0;
+
+    try {
+      for (String docId in documentIds) {
+        final result = await documentProvider.deleteDocument(
+          documentId: docId,
+          user: authProvider.currentUser!,
+          reason: 'Bulk delete from Audit Index', // l10n-ignore: stored audit log
+        );
+
+        if (result) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+    } catch (e) {
+      print('Error during bulk delete: $e');
+    }
+
+    // Close loading dialog
+    if (mounted) Navigator.of(context).pop();
+
+    // Show result
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            failCount == 0
+                ? context.l10n.deletedDocsOk(successCount)
+                : context.l10n.deletedSomeFailed(successCount, failCount),
+          ),
+          backgroundColor: failCount == 0 ? Colors.green : Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      // Refresh the data
+      await documentProvider.refreshForUserContext(context);
+    }
   }
 }

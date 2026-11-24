@@ -1,3 +1,4 @@
+import 'package:cropCompliance/views/shared/admin_farm_chip.dart';
 import 'package:cropCompliance/core/bank_export/bank_export_registry.dart';
 import 'package:cropCompliance/models/payslip_model.dart';
 import 'package:cropCompliance/providers/payslip_provider.dart';
@@ -8,6 +9,7 @@ import 'package:cropCompliance/views/payslip/widgets/bank_export_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 /// Browse, filter, bulk-export and bulk-delete a company's payslips.
 /// Filter by pay period (presets or a custom range), tick the ones you want,
@@ -30,7 +32,7 @@ class PayslipRecordsScreen extends StatefulWidget {
 enum _Preset { thisWeek, lastWeek, thisMonth, lastMonth, all, custom }
 
 class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
-  static final _dateFmt = DateFormat('d MMM yyyy');
+  static DateFormat get _dateFmt => DateFormat('d MMM yyyy'); // follows the app language
   static final _currency =
       NumberFormat.currency(locale: 'en_ZA', symbol: 'R ', decimalDigits: 2);
 
@@ -123,7 +125,7 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('$label failed: $e'),
+            content: Text(context.l10n.actionFailed(label, '$e')),
             backgroundColor: Colors.grey.shade800));
       }
     } finally {
@@ -136,24 +138,24 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Delete Payslips'),
+        title: Text(context.l10n.deletePayslipsTitle),
         content: Text(
-            'Permanently delete ${items.length} payslip${items.length == 1 ? '' : 's'}? This cannot be undone.'),
+            context.l10n.deletePayslipsBody(items.length)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.commonCancel)),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600),
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete ${items.length}'),
+            child: Text(context.l10n.deleteCount(items.length)),
           ),
         ],
       ),
     );
     if (ok != true) return;
     final prov = Provider.of<PayslipProvider>(context, listen: false);
-    await _run('Delete', () async {
+    await _run(context.l10n.actionDelete, () async {
       for (final p in items) {
         await prov.deletePayslip(p.id);
       }
@@ -161,7 +163,7 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('${items.length} payslip${items.length == 1 ? '' : 's'} deleted'),
+          content: Text(context.l10n.payslipsDeleted(items.length)),
           backgroundColor: Colors.green.shade700));
     }
   }
@@ -192,7 +194,7 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
     }
 
     await _run(
-        'Bank file',
+        context.l10n.bankFile,
         () => BankPaymentExport.download(
             result.plan, result.template, widget.companyName,
             referencePrefix: result.referencePrefix));
@@ -204,12 +206,13 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7F5),
       appBar: AppBar(
+        bottom: adminFarmAppBarBottom(context),
         backgroundColor: Theme.of(context).primaryColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text('Payslip Records – ${widget.companyName}',
+        title: Text(context.l10n.payslipRecordsTitle(widget.companyName),
             style: const TextStyle(color: Colors.white)),
       ),
       body: Consumer<PayslipProvider>(
@@ -270,15 +273,15 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Wrap(spacing: 8, runSpacing: 8, children: [
-            chip('This week', _Preset.thisWeek),
-            chip('Last week', _Preset.lastWeek),
-            chip('This month', _Preset.thisMonth),
-            chip('Last month', _Preset.lastMonth),
-            chip('All', _Preset.all),
+            chip(context.l10n.presetThisWeek, _Preset.thisWeek),
+            chip(context.l10n.presetLastWeek, _Preset.lastWeek),
+            chip(context.l10n.presetThisMonth, _Preset.thisMonth),
+            chip(context.l10n.presetLastMonth, _Preset.lastMonth),
+            chip(context.l10n.filterAll, _Preset.all),
           ]),
           const SizedBox(height: 10),
           Row(children: [
-            _datePill('From', _from, (d) {
+            _datePill(context.l10n.dateFrom, _from, (d) {
               setState(() {
                 _from = d;
                 _preset = _Preset.custom;
@@ -286,7 +289,7 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
               });
             }),
             const SizedBox(width: 8),
-            _datePill('To', _to, (d) {
+            _datePill(context.l10n.dateTo, _to, (d) {
               setState(() {
                 _to = d;
                 _preset = _Preset.custom;
@@ -318,7 +321,7 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Text('$label  ',
               style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-          Text(_preset == _Preset.all ? 'Any' : _dateFmt.format(date),
+          Text(_preset == _Preset.all ? context.l10n.any : _dateFmt.format(date),
               style:
                   const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(width: 6),
@@ -352,7 +355,7 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
                   }),
         ),
         Text(
-          count > 0 ? '$count selected' : '${items.length} payslips',
+          count > 0 ? context.l10n.selectedCount(count) : context.l10n.payslipsCount(items.length),
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
         if (_busy) ...[
@@ -365,7 +368,7 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
                   height: 14,
                   child: CircularProgressIndicator(strokeWidth: 2)),
               const SizedBox(width: 8),
-              Text('${_busyLabel ?? ''}…',
+              Text('${_busyLabel ?? ''}…', // l10n-ignore: label only
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
             ]),
           ),
@@ -377,9 +380,9 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
              child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(children: [
-                _barBtn(Icons.grid_on, 'Excel',
+                _barBtn(Icons.grid_on, 'Excel', // l10n-ignore: product name
                     enabled: count > 0,
-                    onTap: () => _run('Excel',
+                    onTap: () => _run('Excel', // l10n-ignore: product name
                         () => PayslipBulkExport.downloadExcel(selList, widget.companyName))),
                 const SizedBox(width: 8),
                 _barBtn(Icons.folder_zip_outlined, 'ZIP',
@@ -387,11 +390,11 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
                     onTap: () => _run('ZIP',
                         () => PayslipBulkExport.downloadZip(selList, widget.companyName))),
                 const SizedBox(width: 8),
-                _barBtn(Icons.account_balance_outlined, 'Bank CSV',
+                _barBtn(Icons.account_balance_outlined, context.l10n.bankCsv,
                     enabled: count > 0,
                     onTap: () => _bankCsv(prov, selList)),
                 const SizedBox(width: 8),
-                _barBtn(Icons.delete_outline, 'Delete',
+                _barBtn(Icons.delete_outline, context.l10n.actionDelete,
                     enabled: count > 0,
                     danger: true,
                     onTap: () => _bulkDelete(selList)),
@@ -473,7 +476,7 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
           ),
           const SizedBox(width: 8),
           IconButton(
-            tooltip: 'Download PDF',
+            tooltip: context.l10n.actionDownloadPdf,
             icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
             color: _green,
             visualDensity: VisualDensity.compact,
@@ -483,13 +486,13 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('PDF error: $e')));
+                      SnackBar(content: Text(context.l10n.pdfError('$e'))));
                 }
               }
             },
           ),
           IconButton(
-            tooltip: 'Delete',
+            tooltip: context.l10n.actionDelete,
             icon: const Icon(Icons.delete_outline, size: 18),
             color: Colors.red.shade400,
             visualDensity: VisualDensity.compact,
@@ -504,7 +507,7 @@ class _PayslipRecordsScreenState extends State<PayslipRecordsScreen> {
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey.shade300),
           const SizedBox(height: 12),
-          Text('No payslips in this date range.',
+          Text(context.l10n.noPayslipsInRange,
               style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
         ]),
       );

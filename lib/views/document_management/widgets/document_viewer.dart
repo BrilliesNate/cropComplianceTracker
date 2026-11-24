@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../models/document_model.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DocumentViewer extends StatefulWidget {
   final DocumentModel document;
@@ -31,7 +32,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Text(
-            'Document Files',
+            context.l10n.docFilesTitle,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w500,
@@ -176,7 +177,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Image Preview',
+                context.l10n.imagePreview,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
@@ -220,8 +221,8 @@ class _DocumentViewerState extends State<DocumentViewer> {
                   }
                 });
 
-                return const Center(
-                  child: Text('Opening in browser...',
+                return Center(
+                  child: Text(context.l10n.openingInBrowser,
                     style: TextStyle(color: Colors.blue, fontSize: 12),
                   ),
                 );
@@ -237,7 +238,8 @@ class _DocumentViewerState extends State<DocumentViewer> {
   String _getFileNameFromUrl(String url) {
     try {
       // Extract the filename from the URL
-      if (url.contains('WhatsApp') && (url.contains('.jpeg') || url.contains('.jpg'))) {
+      if (url.contains('WhatsApp') && // l10n-ignore: file name match
+           (url.contains('.jpeg') || url.contains('.jpg'))) {
         return 'WhatsApp_Image.jpg';
       }
 
@@ -370,7 +372,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
 
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Error viewing file: $e';
+        _errorMessage = context.l10n.fileViewError('$e');
       });
     }
   }
@@ -390,14 +392,14 @@ class _DocumentViewerState extends State<DocumentViewer> {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        throw Exception('Could not launch $displayUrl');
+        throw Exception('Could not launch $displayUrl'); // l10n-ignore: caught below
       }
     } catch (e) {
       print("Error opening URL: $e");
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error opening URL: $e'),
+          content: Text(context.l10n.urlOpenError('$e')),
           backgroundColor: Colors.red,
         ),
       );

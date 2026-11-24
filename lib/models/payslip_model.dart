@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cropCompliance/models/employee_model.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class AdditionalDeduction {
   final String description;
@@ -31,23 +32,32 @@ class AdditionalEarning {
   final String description;
   final double amount;
 
-  AdditionalEarning({required this.description, required this.amount});
+  /// Added by the timesheet (night-shift, piecework, top-up, Sunday / public
+  /// holiday pay). A recalculation replaces these and keeps lines typed by
+  /// hand — whatever language the description was written in.
+  final bool generated;
+
+  AdditionalEarning(
+      {required this.description, required this.amount, this.generated = false});
 
   Map<String, dynamic> toMap() => {
         'description': description,
         'amount': amount,
+        if (generated) 'generated': true,
       };
 
   factory AdditionalEarning.fromMap(Map<String, dynamic> map) =>
       AdditionalEarning(
         description: map['description'] ?? '',
         amount: (map['amount'] ?? 0.0).toDouble(),
+        generated: map['generated'] == true,
       );
 
   AdditionalEarning copyWith({String? description, double? amount}) =>
       AdditionalEarning(
         description: description ?? this.description,
         amount: amount ?? this.amount,
+        generated: generated,
       );
 }
 
@@ -55,7 +65,8 @@ enum PayslipStatus { draft, finalised }
 
 extension PayslipStatusExtension on PayslipStatus {
   String get value => this == PayslipStatus.draft ? 'draft' : 'final';
-  String get displayName => this == PayslipStatus.draft ? 'Draft' : 'Final';
+  String get displayName =>
+      this == PayslipStatus.draft ? LocaleProvider.instance.l10n.statusDraft : LocaleProvider.instance.l10n.statusFinal;
 
   static PayslipStatus fromString(String? s) {
     if (s == 'final') return PayslipStatus.finalised;

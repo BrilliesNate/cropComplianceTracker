@@ -1,6 +1,7 @@
 import 'dart:math' show min, max;
 
 import 'package:cropCompliance/core/constants/route_constants.dart';
+import 'package:cropCompliance/core/utils/data_bootstrap.dart';
 import 'package:cropCompliance/models/document_model.dart';
 import 'package:cropCompliance/models/enums.dart';
 import 'package:cropCompliance/models/user_model.dart';
@@ -8,8 +9,9 @@ import 'package:cropCompliance/providers/auth_provider.dart';
 import 'package:cropCompliance/providers/category_provider.dart';
 import 'package:cropCompliance/providers/document_provider.dart';
 import 'package:cropCompliance/theme/theme_constants.dart';
+import 'package:cropCompliance/views/dashboard/mobile_dashboard_screen.dart';
 import 'package:cropCompliance/views/dashboard/widgets/ashboard_documents_table.dart';
-import 'package:cropCompliance/views/dashboard/widgets/dashboard_calendar_card.dart';
+import 'package:cropCompliance/views/farmable/farmable_dashboard_card.dart';
 import 'package:cropCompliance/views/dashboard/widgets/dashboard_comments_card.dart';
 import 'package:cropCompliance/views/dashboard/widgets/dashboard_compliance_card.dart';
 import 'package:cropCompliance/views/dashboard/widgets/dashboard_employees_card.dart';
@@ -19,6 +21,7 @@ import 'package:cropCompliance/views/shared/loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 
 class DashboardScreen extends StatefulWidget {
@@ -31,28 +34,35 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   String? _selectedDocumentId;
 
+  // False until the first load has finished, so the screen shows ONE loading
+  // indicator and then the finished page — never half-filled placeholders.
+  // Starts true when the data is already in memory (e.g. coming back to it).
+  late bool _ready;
+
   @override
   void initState() {
     super.initState();
+    _ready = isCompanyDataWarm(context);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.isAdmin && !authProvider.isManagingCompany) {
+        Navigator.of(context).pushReplacementNamed(RouteConstants.adminDashboard);
+        return;
+      }
       _initializeData();
     });
   }
 
   Future<void> _initializeData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
-    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    if (authProvider.currentUser == null) return;
 
-    if (authProvider.currentUser != null) {
-      await categoryProvider.initialize();
-
-      // Set package filter based on company packages
-      if (authProvider.effectiveCompany != null) {
-        categoryProvider.setPackageFilter(authProvider.effectiveCompany!.packages);
-      }
-
-      await documentProvider.refreshForUserContext(context);
+    try {
+      // Categories, documents and company overrides load together.
+      await loadCompanyData(context);
+    } finally {
+      if (mounted) setState(() => _ready = true);
     }
   }
 
@@ -63,14 +73,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final categoryProvider = Provider.of<CategoryProvider>(context);
 
     if (authProvider.currentUser == null) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: Text('Please log in to continue'),
+          child: Text(context.l10n.pleaseLogIn),
         ),
       );
     }
 
-    final isLoading = documentProvider.isLoading || categoryProvider.isLoading;
+    // TODO: re-enable once mobile_dashboard_screen is complete
+    // final isMobileCheck = MediaQuery.of(context).size.width < 650;
+    // if (isMobileCheck) return const MobileDashboardScreen();
+
+    final isLoading = !_ready || documentProvider.isLoading || categoryProvider.isLoading;
     final hasError = documentProvider.error != null || categoryProvider.error != null;
     final error = documentProvider.error ?? categoryProvider.error ?? '';
 
@@ -91,18 +105,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final rejectedDocs = complianceStats['rejectedDocs'] as int;
     final completionPercentage = complianceStats['completionPercentage'] as String;
 
-    // Debug logging
-    print('DashboardScreen: Company packages: $companyPackages');
-    print('DashboardScreen: Filtered stats - Total: $totalDocTypes, Approved: $approvedDocs, Completion: $completionPercentage%');
-
     // Figure out what content to show
     Widget content;
     if (isLoading) {
-      content = const LoadingIndicator(message: 'Loading dashboard data...');
+      content = LoadingIndicator(message: context.l10n.dashboardLoading);
     } else if (hasError) {
       content = ErrorDisplay(
         error: error,
-        onRetry: _initializeData,
+        onRetry: () {
+          setState(() => _ready = false);
+          _initializeData();
+        },
       );
     } else {
       // THIS IS THE KEY: Column with fixed items and ONE Expanded
@@ -131,7 +144,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return AppScaffoldWrapper(
-      title: 'Dashboard',
+      title: context.l10n.dashboardTitle,
       backgroundColor: ThemeConstants.lightBackgroundColor,
       child: content,
     );
@@ -180,8 +193,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   authProvider.selectedCompany != null
-                      ? 'ADMIN MODE: Managing Company'
-                      : 'ADMIN MODE: Managing User',
+                      ? context.l10n.adminModeManagingCompany
+                      : context.l10n.adminModeManagingUser,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -202,7 +215,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 if (authProvider.selectedCompany != null)
                   Text(
-                    'via ${selectedUser.name}',
+                    context.l10n.viaUser(selectedUser.name),
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),
                       fontSize: 14,
@@ -217,7 +230,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               await documentProvider.refreshForUserContext(context);
             },
             icon: const Icon(Icons.close, color: Colors.white),
-            tooltip: 'Switch back to your own account',
+            tooltip: context.l10n.switchBackOwnAccount,
           ),
         ],
       ),
@@ -235,60 +248,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       int rejectedDocs,
       int totalDocTypes,
       ) {
-    // Check if mobile
-    final isMobile = MediaQuery.of(context).size.width < 650;
-
-    if (isMobile) {
-      // Mobile layout - single column, specific order
-      return ListView(
-        padding: EdgeInsets.zero,  // <-- NO PADDING ON LISTVIEW
-        children: [
-          // 1. Compliance card - NO PADDING (full width)
-          DashboardComplianceCard(
-            authProvider: authProvider,
-            completionPercentage: completionPercentage,
-            approvedDocs: approvedDocs,
-            uploadedDocs: uploadedDocs,
-            pendingDocs: pendingDocs,
-            rejectedDocs: rejectedDocs,
-            totalDocTypes: totalDocTypes,
-          ),
-          const SizedBox(height: 16),
-
-          // 2. Comments card - ADD PADDING
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: DashboardCommentsCard(
-              selectedDocumentId: _selectedDocumentId,
-              documentProvider: documentProvider,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // 3. Documents table - ADD PADDING
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: DashboardDocumentsTable(
-              documentProvider: documentProvider,
-              selectedDocumentId: _selectedDocumentId,
-              onDocumentSelected: (docId) {
-                setState(() {
-                  _selectedDocumentId = docId;
-                });
-              },
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // 4. Users/Employees card - ADD PADDING
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: DashboardEmployeesCard(authProvider: authProvider),
-          ),
-        ],
-      );
-    }
-
     // Desktop layout - two columns
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -337,6 +296,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       });
                     },
                   ),
+                  // Farmable card — only shown if this company has a linked farm
+                  if (authProvider.effectiveCompany?.hasFarmable == true) ...[
+                    const SizedBox(height: 16),
+                    FarmableDashboardCard(
+                        company: authProvider.effectiveCompany!),
+                  ],
                 ],
               ),
             ),

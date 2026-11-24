@@ -1,0 +1,3333 @@
+{
+  "@@locale": "en",
+  "languageName": "English",
+  "@languageName": {
+    "description": "Name of this language, shown in the language picker"
+  },
+  "language": "Language",
+  "languageEnglish": "English",
+  "languageAfrikaans": "Afrikaans",
+  "appTitle": "Crop Compliance",
+  "commonCancel": "Cancel",
+  "commonClose": "Close",
+  "commonOpen": "Open",
+  "commonSwitch": "Switch",
+  "commonRetry": "Try again",
+  "navHome": "Home",
+  "navAuditChecklist": "Audit checklist",
+  "navPayslips": "Payslips",
+  "navProfile": "Profile",
+  "notificationsTitle": "Notifications",
+  "signOut": "Sign out",
+  "farm": "Farm",
+  "farmOpenLabel": "Farm open",
+  "farmNoneViewingAll": "None — viewing all farms",
+  "farmOpenAFarm": "Open a farm",
+  "farmSwitchFarm": "Switch farm",
+  "farmChooseAFarm": "Choose a farm",
+  "farmBackToAll": "Back to all farms",
+  "farmViewing": "Viewing farm {name}",
+  "@farmViewing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "unreadCountNew": "{count} new",
+  "@unreadCountNew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncOffline": "Offline — your work is saved on this phone",
+  "syncFilesWaiting": "{count, plural, =1{1 file waiting to upload} other{{count} files waiting to upload}}",
+  "@syncFilesWaiting": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncAllSynced": "Everything is synced",
+  "syncUploadNow": "Upload now",
+  "signOutConfirmTitle": "Sign out?",
+  "signOutPendingFiles": "{count, plural, =1{1 file is still waiting to upload.} other{{count} files are still waiting to upload.}} They stay on this phone and upload next time someone signs in here with signal.",
+  "@signOutPendingFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "signOutCanSignInAgain": "You can sign in again any time.",
+  "languageHint": "Choose the language for the app, your notifications and downloads.",
+  "farmWhichFarm": "Which farm?",
+  "farmPickForChecklist": "Pick the farm whose audit checklist you want to see.",
+  "farmPickForPayslips": "Pick the farm whose payslips you want to manage.",
+  "farmSearchHint": "Search farms…",
+  "farmLoadFailed": "Could not load the farms. Check your signal and try again.",
+  "farmNoSearchMatch": "No farms match your search.",
+  "offlineWithFiles": "{count, plural, =1{You’re offline — your work is saved on this phone. 1 file will upload when you’re back online.} other{You’re offline — your work is saved on this phone. {count} files will upload when you’re back online.}}",
+  "@offlineWithFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineNoFiles": "You’re offline — your work is saved on this phone and will sync when you’re back online.",
+  "offlineUploading": "{count, plural, =1{Back online — uploading 1 file…} other{Back online — uploading {count} files…}}",
+  "@offlineUploading": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineRetrying": "{count, plural, =1{1 file waiting to upload — retrying shortly.} other{{count} files waiting to upload — retrying shortly.}}",
+  "@offlineRetrying": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineRetryNow": "Retry now",
+  "pendingSavedOfflineTooltip": "{count, plural, =1{Saved offline — 1 file will upload automatically when the phone is back online.} other{Saved offline — {count} files will upload automatically when the phone is back online.}}",
+  "@pendingSavedOfflineTooltip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pendingWaitingToUpload": "Waiting to upload",
+  "pendingSavedOnThisPhone": "{count, plural, =1{1 file saved on this phone — uploading automatically when you’re online.} other{{count} files saved on this phone — uploading automatically when you’re online.}}",
+  "@pendingSavedOnThisPhone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pendingUploadingFromOtherPhone": "{count, plural, =1{1 file still uploading from the phone it was saved on.} other{{count} files still uploading from the phone they were saved on.}}",
+  "@pendingUploadingFromOtherPhone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminSortMostPending": "Most pending first",
+  "adminSortName": "Name (A–Z)",
+  "adminSortLowest": "Lowest progress first",
+  "adminSortHighest": "Highest progress first",
+  "adminDashboardTitle": "Admin Dashboard",
+  "adminTools": "Admin tools",
+  "commonSearchHint": "Search…",
+  "adminShowTwoPerRow": "Show two farms per row",
+  "adminShowOnePerRow": "Show one farm per row",
+  "adminSortAndFilter": "Sort and filter",
+  "adminLoadFailed": "Could not load the farms. If you are offline, connect and try again.",
+  "adminNoFarmsYet": "There are no farms yet.",
+  "adminNoFarmsMatch": "No farms match your search or filters.",
+  "adminAddFarm": "Add a farm",
+  "adminClearSearchFilters": "Clear search and filters",
+  "commonReset": "Reset",
+  "adminSortBy": "Sort by",
+  "adminStandards": "Standards",
+  "adminOnlyPending": "Only farms with pending documents",
+  "adminShowFarms": "{count, plural, =1{Show 1 farm} other{Show {count} farms}}",
+  "@adminShowFarms": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menuCompanyManagement": "Company Management",
+  "menuUserManagement": "User Management",
+  "menuCategoryManagement": "Category Management",
+  "menuDocumentSettings": "Document Settings",
+  "menuDataFixUtility": "Data Fix Utility",
+  "menuFarmableConsole": "Farmable API Console",
+  "adminFarmCardSemantics": "{name}, {pending} pending documents, {percent} percent complete",
+  "@adminFarmCardSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "pending": {
+        "type": "int"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "farmNoAddress": "No address yet",
+  "pendingDocumentsLabel": "{count, plural, =1{Pending Document} other{Pending Documents}}",
+  "@pendingDocumentsLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "employeeCount": "{count, plural, =1{1 Employee} other{{count} Employees}}",
+  "@employeeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statusApproved": "Approved",
+  "statusInReview": "In review",
+  "statusRejected": "Rejected",
+  "statusExpired": "Expired",
+  "statusNotApplicable": "N/A",
+  "statusToUpload": "To upload",
+  "trackerTitle": "Compliance Tracker",
+  "trackerNoStandards": "No audit standards are switched on for this farm yet.",
+  "trackerAskAdmin": "Ask your Crop Compliance administrator to turn on SIZA/WIETA, GlobalG.A.P., IPW, Fairtrade or SIZA Environmental for your farm.",
+  "trackerOpenChecklist": "Open audit checklist",
+  "trackerOverallProgress": "Overall progress",
+  "trackerYouAreHere": "You are here",
+  "trackerBehindYou": "Behind you",
+  "trackerDoneCount": "{count} done",
+  "@trackerDoneCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trackerFirstUploadHere": "Your first upload will show here",
+  "trackerAndMore": "…and {count} more",
+  "@trackerAndMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trackerAllCaughtUp": "All caught up — every requirement has been submitted.",
+  "statusRequired": "Required",
+  "trackerHintRejectedReason": "It was rejected: {reason}. Upload a corrected version.",
+  "@trackerHintRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "trackerHintRejected": "It was rejected. Upload a corrected version.",
+  "trackerHintExpired": "It has expired. Upload the renewed document.",
+  "trackerHintUpload": "Upload the {type} for {category}.",
+  "@trackerHintUpload": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "trackerRightNow": "Right now",
+  "trackerInFront": "In front of you",
+  "trackerToGo": "{count} to go",
+  "@trackerToGo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trackerNothingLeft": "Nothing left",
+  "trackerLastOne": "This is the last one",
+  "actionResubmitType": "Resubmit {type}",
+  "@actionResubmitType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "actionRenewType": "Renew {type}",
+  "@actionRenewType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "actionUploadType": "Upload {type}",
+  "@actionUploadType": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "checklistTitle": "Audit Checklist",
+  "checklistAskAdmin": "Ask your Crop Compliance administrator to turn one on for your farm.",
+  "checklistNothingInCategory": "Nothing to upload in this category.",
+  "checklistSeeAllUploaded": "See all uploaded documents",
+  "ruleMultipleAllowed": "Multiple documents allowed",
+  "ruleHasExpiry": "Has an expiry date",
+  "ruleFilledInApp": "Filled in on the app",
+  "actionUpload": "Upload",
+  "actionFillIn": "Fill in",
+  "actionFix": "Fix",
+  "actionRenew": "Renew",
+  "uploadTakePhoto": "Take a photo",
+  "uploadChooseFileTypes": "Choose a file (PDF, Word, photo)",
+  "commonLoading": "Loading…",
+  "uploadNeedFileFirst": "Choose a file or take a photo first.",
+  "uploadNeedExpiry": "Tap the expiry date on the calendar.",
+  "uploadNeedReviewed": "Choose the date it was last reviewed.",
+  "uploadNeedSpec": "Add a specification — what does this upload cover?",
+  "uploadNoFarm": "No farm selected — open the dashboard and try again.",
+  "errorSomethingWrong": "Something went wrong: {error}",
+  "@errorSomethingWrong": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadFailed": "The upload didn’t go through — please try again.",
+  "uploadSavedOffline": "Saved on your phone — it will upload automatically when you’re online.",
+  "uploadDoneWaitingReview": "Uploaded — it’s now waiting for review.",
+  "uploadTapExpiry": "Tap the expiry date",
+  "uploadSubtitleWithExpiry": "Upload the document and set its expiry date",
+  "uploadSubtitle": "Upload the document",
+  "uploadSpecRequired": "Specification (required)",
+  "uploadSpecOptional": "Specification (optional)",
+  "uploadSpecHint": "What does it cover? e.g. site, period",
+  "uploadChooseFileOrPhoto": "Choose a file or photo",
+  "uploadTypeLoadFailed": "This document type couldn’t be loaded.",
+  "expiryDate": "Expiry date",
+  "uploadNoFileYet": "No file chosen yet",
+  "uploadFileAndMore": "{name} + {count} more",
+  "@uploadFileAndMore": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "actionChange": "Change",
+  "uploadExpiryLabel": "Expiry date: ",
+  "uploadNotSet": "not set",
+  "uploadSelectedDocs": "Selected documents ({count})",
+  "@uploadSelectedDocs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "actionPreview": "Preview",
+  "dateLastReviewed": "Date last reviewed",
+  "dateLastReviewedRequired": "Date last reviewed (required)",
+  "lastReviewedOn": "Last reviewed: {date}",
+  "@lastReviewedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "hoursTabRate": "Rate\n(R/hr)",
+  "hoursTabNormal": "Norm\nhrs",
+  "hoursTabOvertime": "OT\nhrs",
+  "hoursTabDouble": "DT\nhrs",
+  "hoursTabPublicHoliday": "PH\nhrs",
+  "hoursTabSick": "SL\nhrs",
+  "hoursTabHoliday": "HL\nhrs",
+  "hoursTabFamily": "FL\nhrs",
+  "hoursTypeNumber": "Type a number, e.g. 8 or 7.5",
+  "hoursSetRateFirst": "Set {name}’s hourly rate first.",
+  "@hoursSetRateFirst": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hoursEnterFirst": "Enter the hours worked first.",
+  "payslipReplaceTitle": "Replace this payslip?",
+  "payslipReplaceBody": "{name} already has a payslip for {start} – {end}. Replace it with these hours?",
+  "@payslipReplaceBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "actionReplace": "Replace",
+  "payslipSaveFailed": "The payslip couldn’t be saved — please try again.",
+  "payslipSavedFor": "Payslip saved for {name} — net {amount}",
+  "@payslipSavedFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "periodStart": "Period start",
+  "periodEnd": "Period end",
+  "payslipsHeaderTitle": "{farm} – Payslips",
+  "@payslipsHeaderTitle": {
+    "placeholders": {
+      "farm": {
+        "type": "String"
+      }
+    }
+  },
+  "employeesLabel": "Employees",
+  "chooseFarmFirst": "Choose a farm first.",
+  "employeeLabel": "Employee",
+  "actionViewAll": "View All",
+  "hoursWorked": "Hours Worked",
+  "payslipNoneYetFor": "No payslip yet for {name}. Enter the hours below and save.",
+  "@payslipNoneYetFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "payslipNormalPayHours": "Normal Pay ({hours} h)",
+  "@payslipNormalPayHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "payslipOvertimePayHours": "Overtime Pay ({hours} h)",
+  "@payslipOvertimePayHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "payslipDoubleTimeHours": "Double Time ({hours} h)",
+  "@payslipDoubleTimeHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "payslipPublicHolidayHours": "Public Holiday ({hours} h)",
+  "@payslipPublicHolidayHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "payslipSickLeaveHours": "Sick Leave ({hours} h)",
+  "@payslipSickLeaveHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "payslipAnnualLeaveHours": "Annual Leave ({hours} h)",
+  "@payslipAnnualLeaveHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "payslipFamilyLeaveHours": "Family Responsibility Leave ({hours} h)",
+  "@payslipFamilyLeaveHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "payslipTitle": "PAYSLIP",
+  "payslipName": "Name",
+  "payslipIdNumber": "ID Number",
+  "payslipPeriod": "Period",
+  "payslipPayDate": "Pay Date",
+  "payslipEarnings": "EARNINGS",
+  "payslipTotalEarnings": "TOTAL EARNINGS",
+  "payslipDeductions": "DEDUCTIONS",
+  "payslipUifEmployee": "UIF Employee (1%)",
+  "payslipPayeTax": "PAYE Tax",
+  "payslipTotalDeductions": "TOTAL DEDUCTIONS",
+  "payslipNetSalary": "Net Salary",
+  "actionDownloadPdf": "Download PDF",
+  "pdfOpenFailed": "Could not open the PDF: {error}",
+  "@pdfOpenFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "employeesNoneYetTapAdd": "No employees yet — tap to add your first one.",
+  "employeeNoId": "No ID",
+  "employeeIdShort": "ID {id}",
+  "@employeeIdShort": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "employeeSearchHint": "Search name or ID",
+  "employeeAdd": "Add employee",
+  "actionEdit": "Edit",
+  "saveFailedReason": "Could not save: {reason}",
+  "@saveFailedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "errorUnknown": "unknown error",
+  "hoursLeft": "{hours} h left",
+  "@hoursLeft": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "hoursHelpRate": "Employee’s base hourly wage in Rand, used to calculate all earnings",
+  "hoursHelpNormal": "Ordinary hours worked in this period",
+  "hoursHelpOvertime": "Overtime hours — paid at 1.5 × the rate",
+  "hoursHelpDouble": "Double-time hours (e.g. Sundays) — paid at 2 × the rate",
+  "hoursHelpPublicHoliday": "Paid public-holiday hours",
+  "hoursHelpSick": "Sick leave taken · {balance}",
+  "@hoursHelpSick": {
+    "placeholders": {
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "hoursHelpHoliday": "Annual leave taken · {balance}",
+  "@hoursHelpHoliday": {
+    "placeholders": {
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "hoursHelpFamily": "Family responsibility leave · {balance}",
+  "@hoursHelpFamily": {
+    "placeholders": {
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "employeeIdLabel": "ID: {id}",
+  "@employeeIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "dateStart": "Start",
+  "dateEnd": "End",
+  "actionSetDone": "Set ✓",
+  "actionSet": "Set",
+  "hoursEntered": "Entered: {list}",
+  "@hoursEntered": {
+    "placeholders": {
+      "list": {
+        "type": "String"
+      }
+    }
+  },
+  "payslipSaveFor": "Save payslip for {name}",
+  "@payslipSaveFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardTitle": "Dashboard",
+  "kpiCompletionRate": "Completion Rate",
+  "kpiApprovalRate": "Approval Rate",
+  "kpiPendingReview": "Pending Review",
+  "docsNoneYet": "No documents yet.",
+  "documentsTitle": "Documents",
+  "documentLabel": "Document",
+  "statusPending": "Pending",
+  "dashboardDocumentComments": "Document Comments",
+  "dashboardAllGood": "All documents in good standing",
+  "rejectedOnDate": "Rejected - {date}",
+  "@rejectedOnDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "actionResubmit": "Resubmit",
+  "farmPickForPage": "This page shows one farm. Pick the farm you want to work on.",
+  "menuComplianceReport": "Compliance Report",
+  "menuAuditIndex": "Audit Index",
+  "menuPayslipManager": "Payslip Manager",
+  "menuMyFarms": "My Farms",
+  "menuFarmRegister": "Farm Register",
+  "menuSprayRecords": "Spray Records",
+  "menuFarmableSection": "FARMABLE",
+  "logout": "Logout",
+  "menuCollapse": "Collapse",
+  "farmSelect": "Select farm",
+  "farmSwitchTooltip": "Switch farm — {name}",
+  "@farmSwitchTooltip": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "farmSwitchFailed": "Could not switch farm. Please try again.",
+  "adminModeManagingFor": "ADMIN MODE: Managing documents for ",
+  "adminModeOwnDocs": "Admin Mode: Managing your own documents",
+  "actionSwitchBack": "Switch Back",
+  "selectUserToManage": "Select User to Manage",
+  "selectUserToManageHint": "Choose a user to manage their documents and compliance status.",
+  "you": "You",
+  "manageOwnDocs": "Manage your own documents",
+  "farmTapToSwitch": "Tap to switch farm",
+  "farmAccessCount": "{count, plural, =1{You have access to 1 farm.} other{You have access to {count} farms.}}",
+  "@farmAccessCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "farmNoMatchQuery": "No farms match “{query}”",
+  "@farmNoMatchQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "errorTitle": "Error",
+  "actionRetry": "Retry",
+  "statusExpiresSoon": "Expires Soon",
+  "roleAdmin": "Admin",
+  "roleAuditor": "Auditor",
+  "roleUser": "User",
+  "loginTagline1": "Simplified Compliance,",
+  "loginTagline2": "Guaranteed Success",
+  "loginFeature1": "Streamlined document management",
+  "loginFeature2": "Real-time compliance tracking",
+  "loginFeature3": "Effortless audit preparation",
+  "loginFeature4": "Comprehensive compliance reports",
+  "loginCopyright": "© {year} Crop Compliance. All rights reserved.",
+  "@loginCopyright": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "loginWelcomeBack": "Welcome back!",
+  "loginEnterCredentials": "Enter your credentials to access your account",
+  "fieldEmail": "Email",
+  "fieldEmailHint": "Enter your email",
+  "validationEmailRequired": "Please enter your email",
+  "validationEmailInvalid": "Please enter a valid email",
+  "fieldPassword": "Password",
+  "fieldPasswordHint": "Enter your password",
+  "validationPasswordRequired": "Please enter your password",
+  "loginRememberMe": "Remember me",
+  "loginForgotPassword": "Forgot Password?",
+  "signIn": "Sign In",
+  "loginNoAccount": "Don’t have an account? ",
+  "loginContactSupport": "Contact Support",
+  "resetPasswordTitle": "Reset Password",
+  "resetPasswordBody": "Enter your account email. We’ll send a reset link if an account exists.",
+  "resetPasswordSpamHint": "If it doesn’t arrive within a few minutes, check your spam folder — or contact your admin, who can set a new password for you directly.",
+  "validationEmailValidAddress": "Enter a valid email address",
+  "resetPasswordSent": "If an account exists for {email}, a reset email is on its way. Check spam if it doesn’t arrive soon.",
+  "@resetPasswordSent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "resetPasswordFailed": "Something went wrong. Please contact your admin for help resetting your password.",
+  "resetPasswordSend": "Send Reset Link",
+  "authSignedOut": "You have been signed out. Please sign in again.",
+  "authOtherAccount": "This browser is now signed in as a different account. Please sign in again.",
+  "authInitFailed": "Failed to initialize user: {error}",
+  "@authInitFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "authLoadUsersFailed": "Failed to load users: {error}",
+  "@authLoadUsersFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "authAdminView": "{name} (Admin View)",
+  "@authAdminView": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "unknownUser": "Unknown User",
+  "authManaging": "Managing {name}",
+  "@authManaging": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "authPersonalAccount": "Personal account",
+  "authInvalidLogin": "Invalid email or password",
+  "authLoginFailed": "Login failed: {error}",
+  "@authLoginFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "authRegisterFailed": "Registration failed",
+  "authRegisterFailedReason": "Registration failed: {error}",
+  "@authRegisterFailedReason": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "authLogoutFailed": "Logout failed: {error}",
+  "@authLogoutFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "authResetFailed": "Password reset failed: {error}",
+  "@authResetFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "authDeactivated": "This account has been deactivated. Please contact your administrator.",
+  "pleaseLogIn": "Please log in to continue",
+  "dashboardLoading": "Loading dashboard data...",
+  "adminModeManagingCompany": "ADMIN MODE: Managing Company",
+  "adminModeManagingUser": "ADMIN MODE: Managing User",
+  "viaUser": "via {name}",
+  "@viaUser": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "switchBackOwnAccount": "Switch back to your own account",
+  "userFallbackName": "User",
+  "dashboardManagingName": "Managing: {name}",
+  "@dashboardManagingName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardHiName": "Hi, {name}",
+  "@dashboardHiName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardOverview": "Document compliance overview",
+  "dashboardWelcomeBackShort": "Welcome back.",
+  "kpiActionNeeded": "Action Needed",
+  "kpiRejectedItem": "Rejected Item",
+  "kpiNeedsAttention": "Needs Attention",
+  "teamAllUsersManaging": "All Users (Managing: {name})",
+  "@teamAllUsersManaging": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "teamAllUsers": "All Users",
+  "teamMembers": "Team Members",
+  "teamAddUser": "Add User",
+  "pageOf": "Page {page} of {total}",
+  "@pageOf": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "teamNoUsers": "No users found",
+  "noMatches": "No matches",
+  "teamLoadError": "Error loading team",
+  "teamNoMembers": "No team members",
+  "teamLoadingDocsFor": "Loading {name}’s documents...",
+  "@teamLoadingDocsFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "teamNowManaging": "Now managing: {name}",
+  "@teamNowManaging": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errorWithDetail": "Error: {error}",
+  "@errorWithDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "docsTotalCount": "{count} total",
+  "@docsTotalCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "colDocumentType": "Document Type",
+  "colStatus": "Status",
+  "colUpdated": "Updated",
+  "colExpires": "Expires",
+  "docsNoneFound": "No documents found",
+  "commentsCardTitle": "Document Comment",
+  "commentsNoRejected": "No rejected documents with comments",
+  "commentsAllGood": "All documents are in good standing",
+  "unknownDocument": "Unknown Document",
+  "commentsActionRequired": "Action required: Update and resubmit",
+  "actionDetails": "Details",
+  "adminDashLoadFailed": "Could not load the dashboard.",
+  "somethingWentWrong": "Something went wrong",
+  "kpiCompanies": "Companies",
+  "kpiUsers": "Users",
+  "adminSearchCompanies": "Search companies...",
+  "actionRefresh": "Refresh",
+  "adminNoCompanies": "No companies found",
+  "categoriesLoading": "Loading categories...",
+  "categoriesNoneFound": "No categories found",
+  "docCountShort": "{count, plural, =1{1 doc} other{{count} docs}}",
+  "@docCountShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedEllipsis": "Delete Selected...",
+  "deleteAllCount": "Delete All ({count})",
+  "@deleteAllCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteAllDocsTitle": "Delete All Documents?",
+  "deleteAllDocsIn": "You are about to delete ALL {count} documents in:",
+  "@deleteAllDocsIn": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cannotBeUndone": "⚠️ This action CANNOT be undone!",
+  "deleteAllCaps": "DELETE ALL ({count})",
+  "@deleteAllCaps": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectDocsToDelete": "Select Documents to Delete",
+  "selectedOfTotal": "{selected} of {total} selected",
+  "@selectedOfTotal": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "actionSelectAll": "Select All",
+  "actionClear": "Clear",
+  "unknownType": "Unknown Type",
+  "docDeleteLine": "Status: {status} | Files: {files}\nCreated: {date}",
+  "@docDeleteLine": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "files": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteCaps": "DELETE ({count})",
+  "@deleteCaps": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "confirmDeleteTitle": "Confirm Delete",
+  "confirmDeleteDocs": "{count, plural, =1{Are you sure you want to delete 1 document?} other{Are you sure you want to delete {count} documents?}}",
+  "@confirmDeleteDocs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deletingDocs": "{count, plural, =1{Deleting 1 document...} other{Deleting {count} documents...}}",
+  "@deletingDocs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deletedDocsOk": "{count, plural, =1{✓ Deleted 1 document} other{✓ Deleted {count} documents}}",
+  "@deletedDocsOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deletedSomeFailed": "Deleted {ok}, failed {failed}",
+  "@deletedSomeFailed": {
+    "placeholders": {
+      "ok": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "docsLoading": "Loading documents...",
+  "filterLabel": "Filter",
+  "filterAll": "All",
+  "docsSearchHint": "Search documents...",
+  "docsTryAdjusting": "Try adjusting your filters or search criteria",
+  "documentCount": "{count, plural, =1{1 document} other{{count} documents}}",
+  "@documentCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unknownDocumentType": "Unknown Document Type",
+  "specification": "Specification",
+  "specNone": "No specification provided",
+  "lastReviewedShort": "Last reviewed {date}",
+  "@lastReviewedShort": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "reviewedSuffix": " · reviewed {date}",
+  "@reviewedSuffix": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadedBy": "Uploaded By",
+  "uploadDate": "Upload Date",
+  "expiryDateTitle": "Expiry Date",
+  "expiryNone": "No expiry date",
+  "statusLabelColon": "Status: ",
+  "actionViewDetails": "View Details",
+  "filterDocsTitle": "Filter Documents",
+  "category": "Category",
+  "allCategories": "All Categories",
+  "allStatuses": "All Statuses",
+  "notApplicable": "Not Applicable",
+  "searchLabel": "Search",
+  "searchByDocType": "Search by document type",
+  "unknownCategory": "Unknown Category",
+  "categoryWithName": "Category: {name}",
+  "@categoryWithName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "previousVersion": "Previous version",
+  "lastUpdated": "Last Updated",
+  "files": "Files",
+  "signatures": "Signatures",
+  "comments": "Comments",
+  "rejectionComment": "Rejection Comment:",
+  "photoDefaultName": "Photo",
+  "trackerLoading": "Loading audit data...",
+  "kpiApproval": "Approval",
+  "kpiAllClear": "All clear",
+  "kpiFixRequired": "Fix required",
+  "kpiRejectedItems": "Rejected Items",
+  "trackerNoApproved": "No approved documents",
+  "trackerNoActionItems": "No action items found",
+  "filterColon": "Filter: ",
+  "trackerActionItems": "Action Items",
+  "trackerApprovedCurrent": "Approved & Current",
+  "unknown": "Unknown",
+  "percentOverall": "{percent}% overall",
+  "@percentOverall": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "trackerNoApprovedCurrent": "No approved documents that are current and not expiring soon",
+  "expiredCaps": "EXPIRED",
+  "expiresSoonCaps": "EXPIRES SOON",
+  "daysLeft": "{count, plural, =1{1 day left} other{{count} days left}}",
+  "@daysLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "expiresToday": "Expires today",
+  "docExpiredRenew": "This document has expired and needs to be renewed",
+  "docExpiresSoonRenew": "This document expires soon and may need renewal",
+  "commentsColon": "Comments:",
+  "uploadNewVersion": "Upload New Version",
+  "actionDelete": "Delete",
+  "deleteDocTitle": "Delete Document",
+  "deleteDocConfirm": "Are you sure you want to delete this document?",
+  "deleteDocWarning": "This action cannot be undone. The document and all its files will be permanently deleted.",
+  "deletingDoc": "Deleting document...",
+  "docDeleted": "Document deleted successfully",
+  "docDeleteFailed": "Failed to delete document",
+  "docDeleteError": "Error deleting document: {error}",
+  "@docDeleteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "expiresOn": "Expires: {date}",
+  "@expiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "noExpiryDate": "No Expiry Date",
+  "docTypesNoneInCategory": "No document types found for this category",
+  "docsUploadedCount": "{count, plural, =1{1 document uploaded} other{{count} documents uploaded}}",
+  "@docsUploadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewDocuments": "View Documents",
+  "specNoneShort": "No specification",
+  "uploadedOn": "Uploaded: {date}",
+  "@uploadedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "addAnotherDocument": "Add Another Document",
+  "addAnotherForm": "Add Another Form",
+  "actionFillForm": "Fill Form",
+  "actionAddMore": "Add More",
+  "actionAddForm": "Add Form",
+  "actionUpdateForm": "Update Form",
+  "statusNotUploaded": "Not Uploaded",
+  "ruleRequiresExpiry": "Requires expiry date",
+  "ruleRequiresSignature": "Requires signature",
+  "ruleCanBeNa": "Can be marked N/A",
+  "catNoDocsAvailable": "No documents available",
+  "catCompletedStatus": "Completed: {done} / {total} ({percent}%)",
+  "@catCompletedStatus": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "catProgress": "Category Progress",
+  "statusCompleted": "Completed",
+  "viewDocument": "View Document",
+  "markNotApplicable": "Mark as Not Applicable",
+  "rejectionReason": "Rejection Reason:",
+  "ruleRequiresSignatures": "{count, plural, =1{Requires 1 signature} other{Requires {count} signatures}}",
+  "@ruleRequiresSignatures": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewedPolicyHelp": "Date this policy was last reviewed",
+  "actionDismiss": "Dismiss",
+  "uploadSelectFilesError": "Error selecting files: {error}",
+  "@uploadSelectFilesError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadSelectFilesFirst": "Please select files to upload",
+  "uploadSelectExpiryAll": "Please select an expiry date for all documents",
+  "uploadNeedSpecPlease": "Please add a specification — what does this upload cover?",
+  "uploadNeedReviewedPlease": "Please enter the date this was last reviewed",
+  "uploadNoContext": "Error: No user or company context",
+  "uploadedFileOk": "Successfully uploaded: {name}",
+  "@uploadedFileOk": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadedFileFailed": "Failed to upload: {name}",
+  "@uploadedFileFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadedFileError": "Error uploading: {name}",
+  "@uploadedFileError": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadAllOk": "All documents uploaded successfully!",
+  "uploadSomeFailed": "{ok} uploaded, {failed} failed",
+  "@uploadSomeFailed": {
+    "placeholders": {
+      "ok": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadAllFailed": "All uploads failed",
+  "uploadDocsError": "Error uploading documents: {error}",
+  "@uploadDocsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadCardSubtitleExpiry": "Upload documents and set expiry dates for each",
+  "uploadCardSubtitle": "Upload documents for this category",
+  "uploadSpecHintLong": "What does this cover? e.g. site, period, worker group",
+  "uploadSpecHintOptional": "Enter document specification (optional)",
+  "uploadChooseReviewDate": "Choose the review date",
+  "uploadTapToSelect": "Tap to select files",
+  "uploadSupportedFormats": "Supported formats: PDF, JPG, JPEG, PNG, DOC, DOCX",
+  "uploadSelectedDocsTitle": "Selected Documents ({count})",
+  "@uploadSelectedDocsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "actionSetDate": "Set Date",
+  "uploadingDocs": "Uploading Documents...",
+  "uploadingDoc": "Uploading Document...",
+  "uploadNDocs": "Upload {count} Documents",
+  "@uploadNDocs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadOneDoc": "Upload Document",
+  "uploadSelectAndUpload": "Select and Upload Documents",
+  "docDetailsTitle": "Document Details",
+  "docLoading": "Loading document...",
+  "docLoadError": "Error loading document: {error}",
+  "@docLoadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "docNotAvailable": "This document is not available.",
+  "docNotFound": "Document not found",
+  "bannerExpired": "DOCUMENT EXPIRED",
+  "bannerExpiredSub": "This document has expired and needs to be updated",
+  "bannerRejected": "DOCUMENT REJECTED",
+  "bannerRejectedSub": "Please review the feedback and resubmit",
+  "bannerPending": "PENDING REVIEW",
+  "bannerAwaitingYou": "Awaiting your review",
+  "bannerAwaitingAdmin": "Awaiting admin review",
+  "bannerValidUntil": "Valid until {date}",
+  "@bannerValidUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "bannerApproved": "Document is approved",
+  "bannerApprovedCaps": "APPROVED",
+  "bannerUnknown": "UNKNOWN STATUS",
+  "docInformation": "Document Information",
+  "created": "Created",
+  "actions": "Actions",
+  "resubmitDocCaps": "RESUBMIT DOCUMENT",
+  "uploadNewVersionCaps": "UPLOAD NEW VERSION",
+  "addSignatureCaps": "ADD SIGNATURE ({done}/{total})",
+  "@addSignatureCaps": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "docFilesCount": "Document Files ({count})",
+  "@docFilesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noFilesUploaded": "No files uploaded",
+  "commentsHistoryCount": "Comments & History ({count})",
+  "@commentsHistoryCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noCommentsYet": "No comments yet",
+  "adminReview": "Admin Review",
+  "editSpecHint": "Edit document specification (optional)...",
+  "strayExpiryNote": "This document type does not use an expiry date. Clear it so the document never shows as expired.",
+  "selectExpiryOptional": "Select expiry date (optional)",
+  "comment": "Comment",
+  "commentHintReject": "Add a comment (required for rejection)...",
+  "reviewSaveNote": "Changes to specification and expiry date will be saved when you approve or reject.",
+  "selectExpiryDate": "Select Expiry Date",
+  "actionSelect": "Select",
+  "addYourSignature": "Add Your Signature",
+  "signatureAdded": "Signature added successfully",
+  "rejectReasonRequired": "Please provide a reason for rejection",
+  "docApprovedOk": "Document approved",
+  "docRejectedOk": "Document rejected",
+  "docTypeLoading": "Loading document type...",
+  "docTypeNotFound": "Document type not found",
+  "selectExpiryPlease": "Please select an expiry date",
+  "docCreated": "Document created successfully",
+  "formSubmitError": "Error submitting form: {error}",
+  "@formSubmitError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "fillDocForm": "Fill Document Form",
+  "fillTypeName": "Fill {type}",
+  "@fillTypeName": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "selectExpiryDateLower": "Select expiry date",
+  "submitForm": "Submit Form",
+  "reportLoading": "Loading compliance data...",
+  "reportComplete": "Complete",
+  "updatedOn": "Updated: {date}",
+  "@updatedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notifUnreadCount": "{count} unread",
+  "@notifUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notifAllCaughtUp": "All caught up",
+  "notifMarkAllRead": "Mark all read",
+  "notifNoneYet": "No notifications yet",
+  "notifEmptyHint": "You’ll be notified about rejections and expiring documents.",
+  "timeJustNow": "Just now",
+  "timeMinutesAgo": "{count}m ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{count}h ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "{count, plural, =1{1 day ago} other{{count} days ago}}",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "farmsLoadFailed": "Could not load your farms.",
+  "farmOpenFailed": "Could not open this farm. Please try again.",
+  "farmsAuditorCount": "{count, plural, =1{You can review approved documents for 1 farm.} other{You can review approved documents for {count} farms.}}",
+  "@farmsAuditorCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "farmsSearchHint": "Search farms...",
+  "farmsNoneFound": "No farms found",
+  "farmCurrent": "Current",
+  "docFilesTitle": "Document Files",
+  "imagePreview": "Image Preview",
+  "openingInBrowser": "Opening in browser...",
+  "fileViewError": "Error viewing file: {error}",
+  "@fileViewError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "urlOpenError": "Error opening URL: {error}",
+  "@urlOpenError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "actionSave": "Save",
+  "signFirst": "Please sign before saving",
+  "signatureSaveError": "Error saving signature: {error}",
+  "@signatureSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "psEnterHoursFirst": "Enter hours for at least one employee first.",
+  "psSaveFailedShort": "Save failed",
+  "psSavedCount": "{count, plural, =1{1 payslip saved} other{{count} payslips saved}}",
+  "@psSavedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "psSavedSomeFailed": "{ok} saved, {failed} failed",
+  "@psSavedSomeFailed": {
+    "placeholders": {
+      "ok": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "psFamilyLeaveNeedsStart": "Family leave starts once an employment start date is set — add it via Edit employee if it should apply.",
+  "psDeleteTitle": "Delete Payslip",
+  "psNetAmount": "Net: {amount}",
+  "@psNetAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotUndo": "This cannot be undone.",
+  "employeeAdded": "Employee added",
+  "employeeUpdated": "Employee updated",
+  "couldNotSave": "Could not save",
+  "employeeRemoveTitle": "Remove Employee",
+  "employeeRemoveBody": "Remove {name}? Their payslips are kept. If you add them again later, use the same ID number so old payslips link back to them (e.g. for bank payments).",
+  "@employeeRemoveBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "actionRemove": "Remove",
+  "companyFallback": "Company",
+  "psAllPdfName": "{company} Payslips.pdf",
+  "@psAllPdfName": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      }
+    }
+  },
+  "payeTax": "PAYE (Tax)",
+  "freqWeekly": "weekly",
+  "freqFortnightly": "fortnightly",
+  "freqMonthly": "monthly",
+  "payeAutoAmount": "Auto ({freq}): {amount}",
+  "@payeAutoAmount": {
+    "placeholders": {
+      "freq": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payeAmountLabel": "PAYE amount (R)",
+  "payeBlankAuto": "Leave blank to use auto",
+  "payeUseAuto": "Use auto",
+  "payeManualNote": "Manual PAYE — this exact amount will be used.",
+  "payeAutoNote": "Auto PAYE is calculated on the taxable gross for this {freq} period.",
+  "@payeAutoNote": {
+    "placeholders": {
+      "freq": {
+        "type": "String"
+      }
+    }
+  },
+  "additionalDeductions": "Additional Deductions",
+  "noDeductionsYet": "No deductions yet",
+  "fieldReason": "Reason",
+  "fieldAmountR": "Amount (R)",
+  "totalAmount": "Total: {amount}",
+  "@totalAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "addDeduction": "Add Deduction",
+  "actionDone": "Done",
+  "additionalIncome": "Additional Income",
+  "noAdditionsYet": "No additions yet",
+  "fieldDescription": "Description",
+  "addIncome": "Add Income",
+  "uifSummary": "UIF Summary",
+  "noPayslipsForPeriod": "No payslips for this period.",
+  "pdfError": "PDF error: {error}",
+  "@pdfError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadUifPdf": "Download UIF Summary PDF",
+  "colEmployee": "Employee",
+  "colEarnings": "Earnings",
+  "colTotalDed": "Total Ded",
+  "companyColon": "Company:",
+  "selectCompany": "Select a company",
+  "defaultStart": "Default Start",
+  "defaultEnd": "Default End",
+  "fillsAllRows": "fills all rows",
+  "payDate": "Pay Date",
+  "companyAddressOnPayslip": "Company Address (on payslip)",
+  "companyAddress": "Company Address",
+  "tapToSet": "Tap to set",
+  "employerUifRegNr": "Employer UIF Reg Nr",
+  "saving": "Saving…",
+  "saveChangesCount": "Save Changes ({count})",
+  "@saveChangesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveAllCount": "Save All ({count})",
+  "@saveAllCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "savePayslipsCount": "Save Payslips ({count})",
+  "@savePayslipsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "savePayslips": "Save Payslips",
+  "timesheet": "Timesheet",
+  "leaveRecords": "Leave Records",
+  "payslipRecords": "Payslip Records",
+  "actionDownload": "Download",
+  "noEmployeesFound": "No employees found",
+  "colIdNumber": "ID Number",
+  "colNetPay": "Net Pay",
+  "colPayslipPeriod": "Payslip Period",
+  "employeePermanent": "Permanent employee",
+  "employeeSeasonal": "Seasonal worker",
+  "bankingOnFile": "Banking details on file — included in Bank CSV",
+  "bankingIncomplete": "Banking details incomplete ({issues}) — not included in Bank CSV",
+  "@bankingIncomplete": {
+    "placeholders": {
+      "issues": {
+        "type": "String"
+      }
+    }
+  },
+  "editEmployeeDetails": "Edit employee details",
+  "removeEmployee": "Remove employee",
+  "editThisPayslip": "Edit this payslip",
+  "cancelEdit": "Cancel edit",
+  "addIncomeLower": "Add income",
+  "additionsCount": "{count, plural, =1{1 addition} other{{count} additions}}",
+  "@additionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noAdditionsEditToAdd": "No additions (edit to add)",
+  "additionsEditToChange": "{count, plural, =1{1 addition (edit to change)} other{{count} additions (edit to change)}}",
+  "@additionsEditToChange": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addDeductionsLower": "Add deductions",
+  "deductionsCount": "{count, plural, =1{1 deduction} other{{count} deductions}}",
+  "@deductionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDeductionsEditToAdd": "No deductions (edit to add)",
+  "deductionsEditToChange": "{count, plural, =1{1 deduction (edit to change)} other{{count} deductions (edit to change)}}",
+  "@deductionsEditToChange": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deletePayslip": "Delete payslip",
+  "finishEditingFirst": "Finish editing first",
+  "newPayslip": "New Payslip",
+  "searchEmployees": "Search employees…",
+  "showingRange": "Showing {from}–{to} of {total}",
+  "@showingRange": {
+    "placeholders": {
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "failedToLoadData": "Failed to load data",
+  "selectCompanyForPayslips": "Select a company to manage payslips",
+  "addFirstEmployee": "Add First Employee",
+  "tsLinePhWorkedNormal": "Public holiday worked ({date}, {hours} h): greater of 2 × daily wage or daily wage {daily} + {hours} h × {rate}",
+  "@tsLinePhWorkedNormal": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "hours": {
+        "type": "String"
+      },
+      "daily": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "tsLinePhWorkedOff": "Public holiday worked ({date}, {hours} h): daily wage {daily} + {hours} h × {rate}",
+  "@tsLinePhWorkedOff": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "hours": {
+        "type": "String"
+      },
+      "daily": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "tsLineSundayMin": "{count, plural, =1{Sunday minimum pay (1 day: at least the daily wage {daily})} other{Sunday minimum pay ({count} days: at least the daily wage {daily})}}",
+  "@tsLineSundayMin": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tsLineNight": "{count, plural, =1{Night-shift allowance (1 day × {perDay})} other{Night-shift allowance ({count} days × {perDay})}}",
+  "@tsLineNight": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tsLinePiece": "Piecework: {units} {unit} × {rate} ({task})",
+  "@tsLinePiece": {
+    "placeholders": {
+      "units": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      },
+      "task": {
+        "type": "String"
+      }
+    }
+  },
+  "tsLineTopUpDays": "{count, plural, =1{Minimum wage top-up (1 day below {wage}/h)} other{Minimum wage top-up ({count} days below {wage}/h)}}",
+  "@tsLineTopUpDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tsLineTopUpWeeks": "{count, plural, =1{Minimum wage top-up (1 week below {wage}/h)} other{Minimum wage top-up ({count} weeks below {wage}/h)}}",
+  "@tsLineTopUpWeeks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tsWarnDay": "{hours} h on {date} (over {limit} h a day)",
+  "@tsWarnDay": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "tsWarnWeek": "{hours} h overtime in week of {week} (over {limit} h)",
+  "@tsWarnWeek": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      },
+      "week": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "periodWeekly": "Weekly",
+  "periodFortnightly": "Fortnightly",
+  "periodMonthly": "Monthly",
+  "leaveSick": "sick leave",
+  "leaveAnnual": "annual (holiday) leave",
+  "leaveFamily": "family responsibility leave",
+  "tsLoadPeriodFailed": "Could not load that period: {error}",
+  "@tsLoadPeriodFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unsavedChanges": "Unsaved changes",
+  "tsUnsavedBody": "You have changes on this timesheet that are not saved yet.",
+  "keepEditing": "Keep editing",
+  "discardChanges": "Discard changes",
+  "tsFixRedCells": "{count, plural, =1{Fix the red cell first (hours like 9 or 7.5, codes SL / AL / PH / A, finish times like 21:30).} other{Fix the {count} red cells first (hours like 9 or 7.5, codes SL / AL / PH / A, finish times like 21:30).}}",
+  "@tsFixRedCells": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tsSavedUpdated": "{count, plural, =1{Saved · 1 payslip updated} other{Saved · {count} payslips updated}}",
+  "@tsSavedUpdated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tsSavedSkipped": "{skipped} waiting for rates (see the banner)",
+  "@tsSavedSkipped": {
+    "placeholders": {
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "saveFailedError": "Save failed: {error}",
+  "@saveFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "tsFinaliseTitle": "Finalise period?",
+  "tsFinaliseBody": "This saves the timesheet, locks all three sheets for {start} – {end} and finalises the payslips. You can unlock it again if something needs fixing.",
+  "@tsFinaliseBody": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "tsFinalisePeriod": "Finalise period",
+  "tsUnlockTitle": "Unlock this period?",
+  "tsUnlockBody": "The sheets become editable again and the payslips go back to Draft until you finalise again. This is recorded in the audit log.",
+  "actionUnlock": "Unlock",
+  "tsFinalisedToast": "Period finalised — sheets locked, payslips finalised",
+  "tsUnlockedToast": "Period unlocked — payslips are Draft again",
+  "tsPeriodUpdateFailed": "Could not update the period: {error}",
+  "@tsPeriodUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "tsNeedRatesTitle": "Some payslips need rates first",
+  "tsNeedRatesBody": "{count, plural, =1{1 payslip ({names}) can’t be calculated until these are set: {missing}.} other{{count} payslips ({names}) can’t be calculated until these are set: {missing}.}}",
+  "@tsNeedRatesBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "later": "Later",
+  "setThemNow": "Set them now",
+  "tsRatesSaved": "Rates saved — press Save to update the payslips",
+  "tsRatesSaveFailed": "Could not save rates: {error}",
+  "@tsRatesSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "tsPieceRateAddFailed": "Could not add the piece rate: {error}",
+  "@tsPieceRateAddFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "tsPayPeriodTitle": "{type} pay period",
+  "@tsPayPeriodTitle": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "tsChooseStartDate": "Choose a start date…",
+  "tsFirstDayHelp": "First day of the pay period",
+  "tsTitle": "Timesheet – {company}",
+  "@tsTitle": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      }
+    }
+  },
+  "tsRates": "Rates",
+  "tsLoadFailed": "The timesheet could not be loaded.",
+  "tsNormalHours": "Normal hours",
+  "tsOvertime": "Overtime",
+  "tsPiecework": "Piecework",
+  "tsPayPeriod": "Pay period",
+  "tsDaysWorkers": "{days} days · {count, plural, =1{1 worker} other{{count} workers}}",
+  "@tsDaysWorkers": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tsNsLegend": "NS = night work (finish after 20:00, before 04:00)",
+  "tsFinalised": "Finalised",
+  "tsFinalisedBy": "Finalised by {name}",
+  "@tsFinalisedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tsPieceRate": "Piece rate",
+  "chooseEllipsis": "Choose…",
+  "tsAddPieceRateMenu": "+ Add piece rate…",
+  "tsNotUpdatedBanner": "{count, plural, =1{1 payslip not updated yet — set: {missing}.} other{{count} payslips not updated yet — set: {missing}.}}",
+  "@tsNotUpdatedBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "colHours": "Hours",
+  "colLeave": "Leave",
+  "colComment": "Comment",
+  "colOtHours": "OT hours",
+  "colNsDays": "NS days",
+  "colUnits": "Units",
+  "colPiecePay": "Piece pay",
+  "colTopUp": "Top-up",
+  "tsNoEmployees": "No employees yet.",
+  "tsAddEmployeesHint": "Add employees in the Payslip Manager",
+  "colWorker": "Worker",
+  "tsPhTooltip": "Public holiday. Not worked: type PH (paid one daily wage). Worked: type the hours — paid per SD13 (greater of 2 × daily wage or daily wage + hours, on a normal work day).",
+  "tsSundayTooltip": "Sunday: hours worked are paid at double the ordinary wage, and at least the daily wage (SD13).",
+  "tsBelowMinTooltip": "Piece pay is below the minimum wage — a top-up is added to the payslip.",
+  "tsOk": "OK",
+  "viewPayslip": "View payslip",
+  "viewDraft": "View draft",
+  "tsSummaryNormal": "{count, plural, =1{Normal hours · All workers · Hours {hours} · Leave / absent 1 day} other{Normal hours · All workers · Hours {hours} · Leave / absent {count} days}}",
+  "@tsSummaryNormal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tsSummaryOvertime": "Overtime · All workers · OT hours {hours} · Night-shift days {ns}",
+  "@tsSummaryOvertime": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      },
+      "ns": {
+        "type": "int"
+      }
+    }
+  },
+  "tsSummaryPiece": "Piecework · All workers · Units {units}",
+  "@tsSummaryPiece": {
+    "placeholders": {
+      "units": {
+        "type": "String"
+      }
+    }
+  },
+  "tsChoosePieceRateSuffix": " · choose a piece rate",
+  "tsHelpNormal": "Type hours (9, 7.5…) or a code: SL sick leave · AL annual leave · PH public holiday · A absent (unpaid). Overtime and piecework go on their own sheets.",
+  "tsHelpOvertime": "Each day: overtime hours + finish time. NS is marked automatically when the finish time is after 20:00 or before 04:00 (SD13 cl 17) and adds a night-shift allowance line to the payslip.",
+  "tsHelpPiece": "Each day: hours worked + units. Piece pay = units × the piece rate. Top-up is flagged when piece pay is below the minimum wage for the hours worked.",
+  "tsRatesTitle": "Timesheet rates",
+  "tsRatesConfirmedNote": "Confirmed figures: overtime 1.5×, night-shift 10% of the daily wage per night-shift day, minimum wage R30.23 (check each March). Sundays and public holidays are paid per SD13 automatically. Leave a field blank and the payslips that need it show “R —” until it’s set.",
+  "tsFillConfirmed": "Fill in the confirmed figures",
+  "tsOtMultiplier": "Overtime multiplier",
+  "tsOtMultiplierHelp": "SD13 cl 14: at least 1.5 × the wage.",
+  "tsNightAllowance": "Night-shift allowance (% of ordinary daily wage)",
+  "tsNightAllowanceHelp": "SD13 cl 17: at least 10%, per day with night work.",
+  "tsMinWage": "Minimum wage per ordinary hour (R)",
+  "tsMinWageHelp": "Farm-worker NMW from 1 March 2026: R30.23 — check the current gazette.",
+  "tsDayHours": "Ordinary hours per day",
+  "tsDayHoursHelp": "Used for leave days (SL / AL / PH) and the daily wage.",
+  "tsWarnWeekLabel": "Warn above overtime hours per week",
+  "tsWarnWeekHelp": "SD13 cl 13: max 15 h overtime a week (warning only).",
+  "tsWarnDayLabel": "Warn above total hours per day",
+  "tsWarnDayHelp": "SD13 cl 13: max 12 h a day including overtime (warning only).",
+  "tsTopUpTitle": "Minimum-wage top-up for piecework",
+  "tsTopUpHelp": "Checked per day or per week, depending on this farm. Workers below the minimum are shown in red.",
+  "perDay": "Per day",
+  "perWeek": "Per week",
+  "tsWorkDaysTitle": "Normal work days",
+  "tsWorkDaysHelp": "Decides how a worked public holiday is paid: on a normal work day the greater of 2 × daily wage or daily wage + hours; otherwise daily wage + hours.",
+  "tsSaveRates": "Save rates",
+  "tsAddPieceRate": "Add piece rate",
+  "tsTaskOrCrop": "Task or crop",
+  "tsTaskHint": "e.g. Harvest",
+  "tsTaskRequired": "Enter the task or crop",
+  "tsUnit": "Unit",
+  "tsUnitHint": "bins, crates, …",
+  "tsUnitDefault": "bins",
+  "tsUnitRequired": "Enter the unit",
+  "tsRatePerUnit": "Rate per unit (R)",
+  "tsRatePerUnitHelp": "From your configured tariff — not an example figure.",
+  "tsRateRequired": "Enter the rate per unit",
+  "actionAdd": "Add",
+  "missOvertime": "overtime multiplier",
+  "missNight": "night-shift allowance %",
+  "missPieceRate": "piece rate",
+  "missMinWage": "minimum hourly wage",
+  "missTopUp": "top-up per day or per week",
+  "missWorkDays": "normal work days",
+  "leaveRecordsTitle": "Leave Records – {company}",
+  "@leaveRecordsTitle": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      }
+    }
+  },
+  "noEmployeesFoundDot": "No employees found.",
+  "leaveCodeHL": "HL",
+  "leaveCodeSL": "SL",
+  "leaveCodeFL": "FL",
+  "leaveHoliday": "Holiday Leave",
+  "leaveHolidayRule": "1 hr per 17 hrs worked",
+  "leaveSickTitle": "Sick Leave",
+  "leaveSickRule": "1 hr per 26 hrs (pre-6mo) / 30 days per 3 yrs",
+  "leaveFamilyTitle": "Family Resp. Leave",
+  "leaveFamilyRule": "3 days/yr after 4 months (needs start date)",
+  "leaveReportPdf": "Leave Report (PDF)",
+  "employedSince": "Employed {date}",
+  "@employedSince": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "setOpeningLeave": "Set opening leave",
+  "hoursWorkedInSystem": "Hours worked in system: ",
+  "hoursAmount": "{hours} hrs",
+  "@hoursAmount": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "accrualNote": "(drives new accrual; opening balances set separately)",
+  "allocated30Day": "Allocated (30-day batches)",
+  "accrued126": "Accrued (1/26 hrs)",
+  "entitlement3Days": "Entitlement (3 days/yr)",
+  "setStartDateToEnable": "Set employment start date to enable",
+  "eligibleAfter4Months": "Eligible after 4 months employment",
+  "openingPreSystem": "Opening (pre-system)",
+  "accrued": "Accrued",
+  "taken": "Taken",
+  "balance": "Balance",
+  "balanceHoursHelp": "Balance in hours (8 hrs = 1 day)",
+  "openingLeaveTitle": "Leave Accumulated Before Using the System",
+  "openingLeaveBody": "For {name} — enter the leave this employee had already banked BEFORE you started using the app. This is the opening balance; the system adds new accrual on top and subtracts leave taken. Enter each type separately — holiday and sick leave are not the same.",
+  "@openingLeaveBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "openingHL": "Holiday Leave (HL) opening",
+  "openingSL": "Sick Leave (SL) opening",
+  "openingFL": "Family Resp. Leave (FL) opening",
+  "sickAllocationTitle": "Sick Leave Allocation – {name}",
+  "@sickAllocationTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sickPost6Months": "Employee has passed 6 months — grant 30-day batches",
+  "sickPre6Months": "Pre-6 months: auto-accrues 1 hr per 26 hrs worked",
+  "previousAllocations": "Previous allocations",
+  "hoursOnDate": "{hours} hrs on {date}",
+  "@hoursOnDate": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "sickAutoNote": "Sick leave is auto-calculated at 1 hour per 26 hours worked. No manual allocation needed until 6 months of employment.",
+  "grantSickBatch": "Grant new 30-day sick leave batch",
+  "hours240Hint": "240 (= 30 days × 8 hrs)",
+  "noteOptional": "Note (optional)",
+  "grantSickLeave": "Grant Sick Leave",
+  "familyAllocateBody": "{name} — allocate annual family responsibility leave. SA law provides 3 days per year for employees employed > 4 months.",
+  "@familyAllocateBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "hoursAllocated": "Hours allocated",
+  "hours24Hint": "24 (= 3 days × 8 hrs)",
+  "hours24Help": "Typically 24 hrs (3 working days at 8 hrs/day)",
+  "actionAllocate": "Allocate",
+  "actionFailed": "{action} failed: {error}",
+  "@actionFailed": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePayslipsTitle": "Delete Payslips",
+  "deletePayslipsBody": "{count, plural, =1{Permanently delete 1 payslip? This cannot be undone.} other{Permanently delete {count} payslips? This cannot be undone.}}",
+  "@deletePayslipsBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteCount": "Delete {count}",
+  "@deleteCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "payslipsDeleted": "{count, plural, =1{1 payslip deleted} other{{count} payslips deleted}}",
+  "@payslipsDeleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bankFile": "Bank file",
+  "payslipRecordsTitle": "Payslip Records – {company}",
+  "@payslipRecordsTitle": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      }
+    }
+  },
+  "presetThisWeek": "This week",
+  "presetLastWeek": "Last week",
+  "presetThisMonth": "This month",
+  "presetLastMonth": "Last month",
+  "dateFrom": "From",
+  "dateTo": "To",
+  "any": "Any",
+  "selectedCount": "{count} selected",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "payslipsCount": "{count, plural, =1{1 payslip} other{{count} payslips}}",
+  "@payslipsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bankCsv": "Bank CSV",
+  "noPayslipsInRange": "No payslips in this date range.",
+  "payslipWord": "Payslip",
+  "payslipNotFound": "Payslip not found",
+  "printSavePdf": "Print / Save PDF",
+  "deletePayslipFor": "Delete this payslip for {name}?",
+  "@deletePayslipFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "psPersonalDetails": "PERSONAL DETAILS",
+  "psPeriodStart": "Period Start",
+  "psPeriodEnd": "Period End",
+  "psHourlyRate": "Hourly Rate",
+  "psOvertimeRate": "Overtime Rate",
+  "psDoubleTimeRate": "Double Time Rate",
+  "psNormalPay": "Normal Pay",
+  "psOvertimePay": "Overtime Pay",
+  "psDoubleTime": "Double Time",
+  "psPublicHoliday": "Public Holiday",
+  "psSickLeaveCoded": "Sick Leave (SL)",
+  "psHolidayLeaveCoded": "Annual Leave (HL)",
+  "psFamilyLeaveCoded": "Family Leave (FL)",
+  "psOtherDetails": "OTHER DETAILS",
+  "psUifRegNr": "UIF Reg No",
+  "psNetSalaryCaps": "NET SALARY",
+  "pdfGenerateFailed": "Could not generate PDF: {error}",
+  "@pdfGenerateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "payslipFinalised": "This payslip has been finalised",
+  "payslipIsDraft": "This payslip is a draft",
+  "selectEmployeePlease": "Please select an employee",
+  "finalisePayslipTitle": "Finalise Payslip",
+  "finalisePayslipBody": "Once finalised this payslip cannot be edited. Continue?",
+  "actionFinalise": "Finalise",
+  "failedToSave": "Failed to save",
+  "viewPayslipTitle": "View Payslip",
+  "editPayslipTitle": "Edit Payslip",
+  "employeePayPeriod": "Employee & Pay Period",
+  "hourlyRates": "Hourly Rates",
+  "normalRateR": "Normal Rate (R)",
+  "overtimeRateR": "Overtime Rate (R)",
+  "doubleRateR": "Double Rate (R)",
+  "normalHoursLabel": "Normal Hours",
+  "overtimeHoursLabel": "Overtime Hours",
+  "doubleTimeHoursLabel": "Double Time Hours",
+  "publicHolidayHoursLabel": "Public Holiday Hours",
+  "earningsSummary": "Earnings Summary",
+  "normalPayLabel": "Normal Pay",
+  "overtimePayLabel": "Overtime Pay",
+  "doubleTimePayLabel": "Double Time Pay",
+  "publicHolidayPayLabel": "Public Holiday Pay",
+  "totalEarnings": "Total Earnings",
+  "deductionsTitle": "Deductions",
+  "uifOnePercent": "UIF (1% of earnings)",
+  "compulsory": "Compulsory",
+  "totalDeductions": "Total Deductions",
+  "saveDraft": "Save Draft",
+  "selectAnEmployee": "Select an employee",
+  "noEmployeesAddFirst": "No employees – add one first",
+  "selectEmployee": "Select employee",
+  "required": "Required",
+  "invalidNumber": "Invalid number",
+  "payslipFinalisedNoEdit": "This payslip has been finalised and cannot be edited.",
+  "bulkEnterHours": "Enter hours for at least one employee.",
+  "bulkGeneratedOk": "{count, plural, =1{1 payslip generated} other{{count} payslips generated}}",
+  "@bulkGeneratedOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkGeneratedSome": "{ok} generated, {failed} failed",
+  "@bulkGeneratedSome": {
+    "placeholders": {
+      "ok": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkTitle": "Bulk Payslip Generator",
+  "generateAll": "Generate All",
+  "addEmployeesFirst": "Add employees in the Payslip Manager first.",
+  "backToManager": "Back to Manager",
+  "colRateRHr": "Rate (R/hr)",
+  "colNormalHrs": "Normal\nhrs",
+  "colOvertimeHrs": "Overtime\nhrs",
+  "colDoubleTime": "Double\nTime",
+  "colPublicHol": "Public\nHol",
+  "colEstNetPay": "Est. Net Pay",
+  "shortfallTitle": "Not enough leave left",
+  "shortfallOne": "This employee doesn’t have enough leave left for what was entered. Choose what to do:",
+  "shortfallMany": "These employees don’t have enough leave left for what was entered. Choose what to do for each:",
+  "applyToAll": "Apply to all:",
+  "payAvailable": "Pay available",
+  "takeOff": "Take off",
+  "overridePay": "Override & pay",
+  "chooseForMore": "Choose an option for {count} more",
+  "@chooseForMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "backToEdit": "Back to edit",
+  "applyAndSave": "Apply & save",
+  "shortfallLine": " — {requested} h {type} entered, only {available} h left",
+  "@shortfallLine": {
+    "placeholders": {
+      "requested": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      },
+      "available": {
+        "type": "String"
+      }
+    }
+  },
+  "shortfallPayAvailableTitle": "Pay only the {hours} h available",
+  "@shortfallPayAvailableTitle": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "shortfallPayAvailableSub": "The other {hours} h is left off the payslip (unpaid).",
+  "@shortfallPayAvailableSub": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "shortfallTakeOffTitle": "Take the leave off",
+  "shortfallTakeOffSub": "No {code} on this payslip — the {hours} h is unpaid.",
+  "@shortfallTakeOffSub": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "shortfallOverrideTitle": "Override & pay all {hours} h",
+  "@shortfallOverrideTitle": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "shortfallOverrideSub": "Pays the full amount as {code}; their {code} balance goes {hours} h below zero.",
+  "@shortfallOverrideSub": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "bulkPaymentFile": "Bulk Payment File",
+  "noPaymentsYet": "No payments yet",
+  "paymentsTotal": "{count, plural, =1{1 payment · total {total}} other{{count} payments · total {total}}}",
+  "@paymentsTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bankUploadHelp": "Upload the file to your online banking as a bulk payment, check the total, then approve once.",
+  "reference": "Reference",
+  "refFirstNameAdded": "Each employee’s first name is added",
+  "refFirstNameExample": "Each employee’s first name is added — e.g. “{sample}”",
+  "@refFirstNameExample": {
+    "placeholders": {
+      "sample": {
+        "type": "String"
+      }
+    }
+  },
+  "combinedPayments": "{count, plural, =1{1 employee has more than one payslip selected — their net pay is combined into one payment.} other{{count} employees have more than one payslip selected — their net pay is combined into one payment.}}",
+  "@combinedPayments": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadFile": "Download file",
+  "chooseYourBank": "Choose your bank",
+  "bankFarmPaysFrom": "Bank the farm pays from",
+  "nobodyPayable": "Nobody can be paid yet — let’s fix that",
+  "eachFixSaves": "Each fix saves straight away and this list updates as you go.",
+  "addBankingForCount": "{count, plural, =1{Add banking details for 1 employee} other{Add banking details for {count} employees}}",
+  "@addBankingForCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fixUnlinkedCount": "{count, plural, =1{Fix 1 unlinked payslip} other{Fix {count} unlinked payslips}}",
+  "@fixUnlinkedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewZeroCount": "{count, plural, =1{Review 1 R 0 payslip} other{Review {count} R 0 payslips}}",
+  "@reviewZeroCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notIncludedCount": "Not included ({count})",
+  "@notIncludedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addBankingForAll": "Add banking details for all {count}",
+  "@addBankingForAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addBankingDetails": "Add banking details",
+  "fixBankingDetails": "Fix banking details",
+  "linkToEmployee": "Link to employee",
+  "editPayslip": "Edit payslip",
+  "relinkedNote": "{count, plural, =1{1 payslip was linked to a removed employee record — matched to the current employee by ID number or name.} other{{count} payslips were linked to a removed employee record — matched to the current employee by ID number or name.}}",
+  "@relinkedNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveLinks": "Save links",
+  "draftsUndecided": "{count, plural, =1{1 selected payslip is still Draft — amounts may still change:} other{{count} selected payslips are still Draft — amounts may still change:}}",
+  "@draftsUndecided": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "draftsRemoved": "{count, plural, =1{1 draft payslip removed from this export:} other{{count} draft payslips removed from this export:}}",
+  "@draftsRemoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "draftsIncluded": "{count, plural, =1{1 draft payslip included as it is now:} other{{count} draft payslips included as they are now:}}",
+  "@draftsIncluded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "removeDrafts": "{count, plural, =1{Remove draft} other{Remove drafts}}",
+  "@removeDrafts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "includeAnyway": "Include anyway",
+  "undo": "Undo",
+  "bankingDetailsFor": "Banking details — {name}",
+  "@bankingDetailsFor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "orphanPayslipBody": "This payslip is linked to an employee record that no longer exists (the employee was probably removed). Link it to a current employee, or re-create the employee from the payslip.",
+  "skip": "Skip",
+  "recreateEmployee": "Re-create employee",
+  "linkNameTo": "Link “{name}” to…",
+  "@linkNameTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noIdNumber": "No ID number",
+  "notListedRecreate": "Not listed? Re-create the employee instead",
+  "couldNotLink": "Could not link: {reason}",
+  "@couldNotLink": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "employeeSavedLinkFailed": "Employee saved, but linking payslips failed.",
+  "payslipLinksSaved": "Payslip links saved",
+  "someLinksFailed": "Some links could not be saved",
+  "completeHighlighted": "Please complete the highlighted fields.",
+  "editEmployee": "Edit Employee",
+  "employeeDetails": "Employee details",
+  "fullName": "Full Name",
+  "fullNameHint": "e.g. John Smith",
+  "normalHourlyRateR": "Normal Hourly Rate (R)",
+  "enterValidNumber": "Enter a valid number",
+  "jobDescription": "Job Description",
+  "jobDescriptionHint": "e.g. Farm Worker, Tractor Driver",
+  "employmentStartOptional": "Employment Start Date (optional)",
+  "saveChanges": "Save Changes",
+  "employmentType": "Employment Type",
+  "bankingDetails": "Banking Details",
+  "bankingOnlyIfCsv": "Only needed if you pay staff with the Bank CSV bulk-payment file. Leave blank otherwise.",
+  "bank": "Bank",
+  "otherBank": "Other bank…",
+  "bankName": "Bank name",
+  "bankNameHint": "e.g. Bidvest Bank",
+  "accountHolderLabel": "Account holder (if not the employee)",
+  "accountHolderHint": "Leave blank to use the employee’s name",
+  "accountNumber": "Account Number",
+  "accountDigits": "Digits only, 6–16 long",
+  "branchCode": "Branch Code",
+  "branchCodeHint": "Filled in automatically for major banks",
+  "accountType": "Account Type",
+  "leaveEligibility": "Leave eligibility ({months} months employed):",
+  "@leaveEligibility": {
+    "placeholders": {
+      "months": {
+        "type": "int"
+      }
+    }
+  },
+  "familyLeave3Days": "Family Resp. Leave (3 days/yr)",
+  "months4Required": "4 months required",
+  "sickLeave30Days": "Sick Leave (30 days/3 yr)",
+  "months6Required": "6 months required",
+  "rateHelper": "Overtime: R {overtime}/hr  ·  Double: R {double}/hr",
+  "@rateHelper": {
+    "placeholders": {
+      "overtime": {
+        "type": "String"
+      },
+      "double": {
+        "type": "String"
+      }
+    }
+  },
+  "employmentPermanent": "Permanent",
+  "employmentSeasonal": "Seasonal",
+  "accountCurrent": "Current / Cheque",
+  "accountSavings": "Savings",
+  "accountTransmission": "Transmission",
+  "bankIssueNone": "no banking details",
+  "bankIssueNoAccount": "no account number",
+  "bankIssueAccountDigits": "account number must be 6–16 digits",
+  "bankIssueNoBranch": "no branch code",
+  "bankIssueBranchDigits": "branch code must be 6 digits",
+  "formUntitledField": "Untitled Field",
+  "formEnterField": "Enter {label}",
+  "@formEnterField": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "formNoOptions": "No options provided",
+  "formInvalidConfig": "Invalid form configuration: missing fields",
+  "formBuildError": "Error building form: {error}",
+  "@formBuildError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "formContractName": "Contract Name",
+  "formContractNameHint": "Enter the name of the contract",
+  "formContractNumber": "Contract Number",
+  "formContractNumberHint": "Enter the contract reference number",
+  "formCounterparty": "Counterparty",
+  "formCounterpartyHint": "Enter the name of the other party",
+  "formEffectiveDate": "Effective Date",
+  "formContractStatus": "Contract Status",
+  "formOptActive": "Active",
+  "formOptPending": "Pending",
+  "formOptTerminated": "Terminated",
+  "formOptExpired": "Expired",
+  "formContractDescHint": "Enter a description of the contract",
+  "formCertName": "Certification Name",
+  "formCertNameHint": "Enter the name of the certification",
+  "formCertNumber": "Certification Number",
+  "formCertNumberHint": "Enter the certification reference number",
+  "formIssuingAuthority": "Issuing Authority",
+  "formIssuingAuthorityHint": "Enter the name of the issuing authority",
+  "formIssueDate": "Issue Date",
+  "formHasRestrictions": "Has Restrictions",
+  "formNotes": "Notes",
+  "formNotesHint": "Enter any additional notes",
+  "formInspectionLocation": "Inspection Location",
+  "formInspectionLocationHint": "Enter the location that was inspected",
+  "formInspectionDate": "Inspection Date",
+  "formInspector": "Inspector",
+  "formInspectorHint": "Enter the name of the inspector",
+  "formInspectionResult": "Inspection Result",
+  "formOptPass": "Pass",
+  "formOptPassConditions": "Pass with Conditions",
+  "formOptFail": "Fail",
+  "formOptIncomplete": "Incomplete",
+  "formFindings": "Findings",
+  "formFindingsHint": "Enter inspection findings",
+  "formRecommendations": "Recommendations",
+  "formRecommendationsHint": "Enter recommendations",
+  "formAssessmentTitle": "Assessment Title",
+  "formAssessmentTitleHint": "Enter the title of this risk assessment",
+  "formAssessmentDate": "Assessment Date",
+  "formAssessor": "Assessor",
+  "formAssessorHint": "Enter the name of the assessor",
+  "formOverallRisk": "Overall Risk Level",
+  "formOptLow": "Low",
+  "formOptMedium": "Medium",
+  "formOptHigh": "High",
+  "formOptCritical": "Critical",
+  "formHazards": "Identified Hazards",
+  "formHazardsHint": "List the identified hazards",
+  "formControlMeasures": "Control Measures",
+  "formControlMeasuresHint": "List the control measures",
+  "formRequiresFollowUp": "Requires Follow-up",
+  "formTitle": "Title",
+  "formTitleHint": "Enter a title",
+  "formReferenceHint": "Enter a reference number",
+  "formDocumentDate": "Document Date",
+  "formSelectDate": "Select a date",
+  "fmNoFarmLinked": "No Farmable farm is linked to this company.",
+  "fmMapLoadFailed": "Could not load farm map",
+  "fmCrop": "Crop",
+  "fmVariety": "Variety",
+  "fmFieldType": "Field type",
+  "fmArea": "Area",
+  "fmHectares": "{value} ha",
+  "@fmHectares": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "fmSkyView": "Farm Sky View",
+  "fmCropsBlocks": "{count, plural, =1{Crops · 1 block} other{Crops · {count} blocks}}",
+  "@fmCropsBlocks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fmDataLoadFailed": "Could not load farm data",
+  "fmFarmableLoadFailed": "Could not load Farmable data",
+  "fmFarmData": "Farm Data",
+  "fmFieldsCrops": "Fields & Crops",
+  "fmRecentSales": "Recent Harvests / Sales",
+  "fmNoSales": "No sales records found.",
+  "fmViewRegister": "View full farm register",
+  "fmNoCrops": "No crops",
+  "fmCropArea": "{crops} · {area} ha",
+  "@fmCropArea": {
+    "placeholders": {
+      "crops": {
+        "type": "String"
+      },
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "fmUnassigned": "Unassigned",
+  "fmNoMappedFields": "No mapped fields",
+  "fmTotalArea": "Total Cultivated Area",
+  "fmFields": "Fields",
+  "fmCropTypes": "Crop Types",
+  "fmPeople": "People",
+  "unitBlocks": "blocks",
+  "unitTypes": "types",
+  "unitMembers": "members",
+  "fmEquipmentInspection": "Equipment Inspection",
+  "fmNoEquipment": "No equipment",
+  "fmAllInspected": "All inspected",
+  "fmNeedInspection": "{count} need inspection",
+  "@fmNeedInspection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fmBlocksArea": "{count, plural, =1{1 block · {area} ha} other{{count} blocks · {area} ha}}",
+  "@fmBlocksArea": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fmCropDistribution": "Crop Distribution",
+  "fmNoCropData": "No crop data.",
+  "fmEquipment": "Equipment",
+  "fmToInspect": "{count} to inspect",
+  "@fmToInspect": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fmAllGood": "All good",
+  "fmNoEquipmentRecord": "No equipment on record.",
+  "fmInspectedOn": "Inspected {date}",
+  "@fmInspectedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "fmDue": "Due",
+  "fmPeopleRoles": "People & Roles",
+  "fmNoPeople": "No people on record.",
+  "srTitle": "Spray & Fertilizer Records",
+  "srAddRecord": "Add Record",
+  "srRecordCount": "{count, plural, =1{1 record} other{{count} records}}",
+  "@srRecordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "srSyncedFarmable": "Synced to Farmable (Job #{job})",
+  "@srSyncedFarmable": {
+    "placeholders": {
+      "job": {
+        "type": "String"
+      }
+    }
+  },
+  "srNoFields": "No fields",
+  "srPhiDays": "PHI: {days}d",
+  "@srPhiDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "srNoRecordsSpray": "No spray application records yet",
+  "srNoRecordsFert": "No fertilizer application records yet",
+  "srEmptyHint": "Tap + Add Record to log your first application",
+  "srAdded": "Record added",
+  "srUpdated": "Record updated",
+  "srDeleted": "Record deleted",
+  "srLogTitle": "Log Application Record",
+  "srEditTitle": "Edit Application Record",
+  "srDeleteTooltip": "Delete record",
+  "srDeleteTitle": "Delete Record",
+  "srDeleteBody": "This will permanently delete this record.",
+  "srSpray": "Spray",
+  "srFertilizer": "Fertilizer",
+  "srAppDate": "Application Date *",
+  "srProduct": "Product Name *",
+  "srProductHint": "e.g. Karate 5 EC",
+  "srActiveIngredient": "Active Ingredient",
+  "srActiveIngredientHint": "e.g. Lambda-cyhalothrin",
+  "srRegNumber": "Registration Number",
+  "srTargetPest": "Target Pest / Disease *",
+  "srTargetCrop": "Target Crop / Nutrient *",
+  "srTargetPestHint": "e.g. False codling moth",
+  "srTargetCropHint": "e.g. Nitrogen top-dressing",
+  "srRate": "Application Rate *",
+  "enterANumber": "Enter a number",
+  "srUnit": "Unit",
+  "srTotalUsed": "Total Used",
+  "srFieldsTreated": "Fields Treated",
+  "srOperator": "Operator Name *",
+  "srEquipment": "Equipment",
+  "srEquipmentHint": "e.g. Tractor boom sprayer",
+  "srPhi": "PHI (days)",
+  "srPhiHint": "Pre-Harvest Interval",
+  "srRei": "REI (days)",
+  "srReiHint": "Re-Entry Interval",
+  "srWeather": "Weather Conditions",
+  "srWeatherHint": "e.g. Clear, 22°C, wind < 5 km/h",
+  "srNotesHint": "Any additional notes",
+  "srSave": "Save Record",
+  "actionUpdate": "Update",
+  "srTypeSpray": "Spray Application",
+  "srTypeFertilizer": "Fertilizer Application",
+  "unitBoxes": "{value} boxes",
+  "@unitBoxes": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "unitPieces": "{count} pcs",
+  "@unitPieces": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "errNoAuthUser": "No authenticated user",
+  "errInitData": "Failed to initialize data: {error}",
+  "@errInitData": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errUpdateFiles": "Failed to update document files: {error}",
+  "@errUpdateFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errDeleteDoc": "Failed to delete document: {error}",
+  "@errDeleteDoc": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errFetchData": "Failed to fetch data: {error}",
+  "@errFetchData": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errFetchCatsTypes": "Failed to fetch categories and document types: {error}",
+  "@errFetchCatsTypes": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errFetchCats": "Failed to fetch categories: {error}",
+  "@errFetchCats": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errFetchTypes": "Failed to fetch document types: {error}",
+  "@errFetchTypes": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errFetchDocs": "Failed to fetch documents: {error}",
+  "@errFetchDocs": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errGetDoc": "Failed to get document: {error}",
+  "@errGetDoc": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errCreateDoc": "Failed to create document: {error}",
+  "@errCreateDoc": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errNoEffectiveUser": "No effective user found",
+  "errUpdateStatus": "Failed to update document status: {error}",
+  "@errUpdateStatus": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errSupersede": "Failed to supersede document: {error}",
+  "@errSupersede": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errAddSignature": "Failed to add signature: {error}",
+  "@errAddSignature": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errAddComment": "Failed to add comment: {error}",
+  "@errAddComment": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errCompliancePct": "Failed to calculate compliance percentage: {error}",
+  "@errCompliancePct": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cmtCreatedByAdmin": "Document created by admin {admin} for user {user}",
+  "@cmtCreatedByAdmin": {
+    "placeholders": {
+      "admin": {
+        "type": "String"
+      },
+      "user": {
+        "type": "String"
+      }
+    }
+  },
+  "cmtSpecUpdated": "specification updated",
+  "cmtExpiryUpdated": "expiry date updated to {date}",
+  "@cmtExpiryUpdated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "cmtExpiryRemoved": "expiry date removed",
+  "cmtStatusByAdmin": "Status updated by admin {name}",
+  "@cmtStatusByAdmin": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viaAdmin": "{user} (via admin {admin})",
+  "@viaAdmin": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      },
+      "admin": {
+        "type": "String"
+      }
+    }
+  },
+  "cmtResubmitted": "Document resubmitted with updated files.",
+  "cmtResubmittedByAdmin": "Document resubmitted with updated files by admin {admin} for user {user}.",
+  "@cmtResubmittedByAdmin": {
+    "placeholders": {
+      "admin": {
+        "type": "String"
+      },
+      "user": {
+        "type": "String"
+      }
+    }
+  },
+  "noReasonProvided": "No reason provided",
+  "errInitCats": "Failed to initialize categories: {error}",
+  "@errInitCats": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errComplianceStats": "Failed to calculate compliance statistics: {error}",
+  "@errComplianceStats": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errAuditDocs": "Failed to get documents for audit: {error}",
+  "@errAuditDocs": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pushChannelName": "Compliance Alerts",
+  "pushChannelDesc": "Document rejections, expiries and audit reminders",
+  "statusDraft": "Draft",
+  "statusFinal": "Final",
+  "routeNotFound": "No route defined for {name}",
+  "@routeNotFound": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fmInvalidKey": "Invalid API key.",
+  "fmForbidden": "Access forbidden.",
+  "fmNotFound": "Not found.",
+  "fmRateLimit": "Rate limit reached. Try again shortly.",
+  "fmApiError": "API error ({code})",
+  "@fmApiError": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "bankRefDefault": "Salaries",
+  "bankNoteGeneric": "Generic layout with column headings — map the columns in your bank’s import screen and test a small upload first.",
+  "bankNoteUnverified": "Template not yet confirmed with {bank} — test a small upload first.",
+  "@bankNoteUnverified": {
+    "placeholders": {
+      "bank": {
+        "type": "String"
+      }
+    }
+  },
+  "bankIssueNetZero": "net pay is R 0.00 or less",
+  "bankFileName": "{company} Bank Payments {bank} {period}.{ext}",
+  "@bankFileName": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      },
+      "bank": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      },
+      "ext": {
+        "type": "String"
+      }
+    }
+  },
+  "bankFileNameGeneric": "{company} Bank Payments {period}.{ext}",
+  "@bankFileNameGeneric": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      },
+      "ext": {
+        "type": "String"
+      }
+    }
+  },
+  "bankGenericName": "Other bank (generic CSV)",
+  "unnamedEmployee": "Unnamed employee",
+  "skipEmployeeGone": "employee record no longer exists",
+  "bankNoneSelected": "No payslips selected.",
+  "bankChooseBank": "Choose the bank the farm pays from.",
+  "bankDraftsSelected": "{count, plural, =1{1 draft payslip selected — remove it or include it anyway.} other{{count} draft payslips selected — remove them or include them anyway.}}",
+  "@bankDraftsSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bankAllDrafts": "All selected payslips are drafts — include them anyway or select finalised payslips.",
+  "bankNobodyBanking": "Nobody has banking details yet — add them to continue.",
+  "bankNotLinked": "These payslips aren’t linked to an employee — fix them to continue.",
+  "bankNobodyPayableFix": "Nobody can be paid yet — fix the employees listed below.",
+  "pdfPayslipFile": "{name} {period} Payslip.pdf",
+  "@pdfPayslipFile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "pdfUifFile": "{company} UIF Summary {period}.pdf",
+  "@pdfUifFile": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "pdfLeaveFile": "{company} Leave Records {stamp}.pdf",
+  "@pdfLeaveFile": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      },
+      "stamp": {
+        "type": "String"
+      }
+    }
+  },
+  "psEmployeeType": "Employee Type",
+  "payslipFinalisedDot": "This payslip has been finalised.",
+  "payslipDraftBanner": "DRAFT – This payslip has not been finalised.",
+  "uifSummaryTitle": "UIF & DEDUCTIONS SUMMARY",
+  "uifPeriodRange": "Period: {start} – {end}",
+  "@uifPeriodRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "uifRegNrValue": "UIF Reg No: {value}",
+  "@uifRegNrValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "uifEmployeeCount": "{count, plural, =1{1 employee} other{{count} employees}}",
+  "@uifEmployeeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "uifColIncome": "Income",
+  "uifColEmployeeUif": "UIF Empl. (1%)",
+  "uifColEmployerUif": "UIF Emplr. (1%)",
+  "uifColOtherDed": "Other Ded.",
+  "uifColEmployeeDed": "Empl. Ded.",
+  "uifSummaryHeading": "Summary",
+  "uifPayeTaxColon": "PAYE Tax:",
+  "uifEmployeeContribution": "Employee UIF contribution (1%):",
+  "uifOtherDeductions": "Other deductions:",
+  "uifTotalEmployeeDed": "TOTAL EMPLOYEE DEDUCTIONS:",
+  "uifEmployerContribution": "Employer UIF contribution (1%):",
+  "uifTotalPayable": "TOTAL UIF PAYABLE (Empl. + Emplr.):",
+  "leavePdfTitle": "LEAVE RECORDS",
+  "leavePdfGenerated": "Generated: {date}",
+  "@leavePdfGenerated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "leavePdfHoursNote": "Values in hours (days = hours ÷ 8)",
+  "leavePdfNoEmployees": "No employees.",
+  "leavePdfColType": "Leave Type",
+  "leavePdfOpening": "Opening",
+  "leavePdfHoliday": "Holiday (HL)",
+  "leavePdfSick": "Sick (SL)",
+  "leavePdfFamily": "Family (FL)",
+  "leavePdfFormula": "Balance = Opening (pre-system) + Accrued (in-system) − Taken.",
+  "xlsSheet": "Payslips",
+  "xlsType": "Type",
+  "xlsJob": "Job",
+  "xlsSickHrs": "Sick hrs",
+  "xlsHolidayHrs": "Holiday hrs",
+  "xlsFamilyHrs": "Family hrs",
+  "xlsGross": "Gross (R)",
+  "xlsPaye": "PAYE (R)",
+  "xlsUif": "UIF 1% (R)",
+  "xlsOtherDed": "Other deductions (R)",
+  "xlsTotalDed": "Total deductions (R)",
+  "xlsNet": "Net (R)",
+  "xlsTotalRow": "TOTAL ({count})",
+  "@xlsTotalRow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "xlsFileName": "{company} Payslips {period}.xlsx",
+  "@xlsFileName": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      },
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "zipFileName": "{company} Payslips.zip",
+  "@zipFileName": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      }
+    }
+  },
+  "frFileName": "{company} Farm Register {stamp}.pdf",
+  "@frFileName": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      },
+      "stamp": {
+        "type": "String"
+      }
+    }
+  },
+  "frTitle": "FARM REGISTER",
+  "frFarm": "Farm: {name}",
+  "@frFarm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "frCountry": "Country: {name}",
+  "@frCountry": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "frLocation": "Location: {lat}, {lng}",
+  "@frLocation": {
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "frGenerated": "Generated: {date}",
+  "@frGenerated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "frCounts": "{fields} fields · {area} ha · {equipment} equipment · {people} people",
+  "@frCounts": {
+    "placeholders": {
+      "fields": {
+        "type": "int"
+      },
+      "area": {
+        "type": "String"
+      },
+      "equipment": {
+        "type": "int"
+      },
+      "people": {
+        "type": "int"
+      }
+    }
+  },
+  "frFieldsSection": "FIELDS / BLOCKS",
+  "frBlockField": "Block / Field",
+  "frAreaHa": "Area (ha)",
+  "frEquipmentSection": "EQUIPMENT REGISTER",
+  "frCapacity": "Capacity",
+  "frRate": "Rate",
+  "frRegNo": "Reg. No.",
+  "frInspection": "Inspection",
+  "frPeopleSection": "PEOPLE / ROLES",
+  "frName": "Name",
+  "frEmail": "Email",
+  "frRole": "Role",
+  "frSource": "Source: Farmable Partner API v2.0. Generated by Crop Compliance for audit evidence."
+}

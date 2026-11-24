@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class SignaturePad extends StatefulWidget {
   final Function(File) onSave;
@@ -64,7 +65,7 @@ class _SignaturePadState extends State<SignaturePad> {
           children: [
             ElevatedButton.icon(
               icon: const Icon(Icons.clear),
-              label: const Text('Clear'),
+              label: Text(context.l10n.actionClear),
               onPressed: _clear,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
@@ -81,7 +82,7 @@ class _SignaturePadState extends State<SignaturePad> {
                   strokeWidth: 2,
                 ),
               )
-                  : const Text('Save'),
+                  : Text(context.l10n.actionSave),
               onPressed: _isSaving || _points.isEmpty ? null : _save,
             ),
           ],
@@ -99,8 +100,8 @@ class _SignaturePadState extends State<SignaturePad> {
   Future<void> _save() async {
     if (_points.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please sign before saving'),
+        SnackBar(
+          content: Text(context.l10n.signFirst),
           backgroundColor: Colors.red,
         ),
       );
@@ -127,7 +128,7 @@ class _SignaturePadState extends State<SignaturePad> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error saving signature: $e'),
+          content: Text(context.l10n.signatureSaveError('$e')),
           backgroundColor: Colors.red,
         ),
       );

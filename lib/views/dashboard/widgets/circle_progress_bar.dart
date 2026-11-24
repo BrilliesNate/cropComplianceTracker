@@ -12,6 +12,8 @@ class ThickLineSemiCircleGauge extends CustomPainter {
   final double dashWidth;
   final double radius;
   final bool startFromLeft;
+  final StrokeCap strokeCap;
+  final double? innerWidth; // if set, dashes are tapered (innerWidth → dashWidth outward)
 
   ThickLineSemiCircleGauge({
     required this.percentage,
@@ -22,6 +24,8 @@ class ThickLineSemiCircleGauge extends CustomPainter {
     this.dashWidth = 8,
     this.radius = 100,
     this.startFromLeft = true,
+    this.strokeCap = StrokeCap.round,
+    this.innerWidth,
   });
 
   @override
@@ -54,12 +58,6 @@ class ThickLineSemiCircleGauge extends CustomPainter {
 
       final color = isProgress ? progressColor : baseColor;
 
-      // Create paint for this line
-      final paint = Paint()
-        ..color = color
-        ..strokeWidth = dashWidth
-        ..strokeCap = StrokeCap.round;
-
       // Calculate inner point (where the dash starts)
       final double innerX = center.dx + radius * cos(angle);
       final double innerY = center.dy - radius * sin(angle);
@@ -68,12 +66,35 @@ class ThickLineSemiCircleGauge extends CustomPainter {
       final double outerX = center.dx + (radius + dashLength) * cos(angle);
       final double outerY = center.dy - (radius + dashLength) * sin(angle);
 
-      // Draw the dash
-      canvas.drawLine(
-        Offset(innerX, innerY),
-        Offset(outerX, outerY),
-        paint,
-      );
+      if (innerWidth != null && innerWidth != dashWidth) {
+        // Tapered dash → draw as filled trapezoid.
+        // Perpendicular direction to the radial line.
+        final double perpX = -sin(angle);
+        final double perpY = -cos(angle);
+
+        final double inHalf = innerWidth! / 2;
+        final double outHalf = dashWidth / 2;
+
+        final path = Path()
+          ..moveTo(innerX + perpX * inHalf, innerY + perpY * inHalf)
+          ..lineTo(outerX + perpX * outHalf, outerY + perpY * outHalf)
+          ..lineTo(outerX - perpX * outHalf, outerY - perpY * outHalf)
+          ..lineTo(innerX - perpX * inHalf, innerY - perpY * inHalf)
+          ..close();
+
+        canvas.drawPath(path, Paint()..color = color..style = PaintingStyle.fill);
+      } else {
+        // Uniform dash → simple stroked line.
+        final paint = Paint()
+          ..color = color
+          ..strokeWidth = dashWidth
+          ..strokeCap = strokeCap;
+        canvas.drawLine(
+          Offset(innerX, innerY),
+          Offset(outerX, outerY),
+          paint,
+        );
+      }
     }
   }
 

@@ -1,6 +1,8 @@
 import 'dart:developer' as developer;
 
 import 'package:cropCompliance/core/constants/route_constants.dart';
+import 'package:cropCompliance/core/utils/data_bootstrap.dart';
+import 'package:cropCompliance/core/constants/app_constants.dart';
 import 'package:cropCompliance/models/category_model.dart';
 import 'package:cropCompliance/models/document_model.dart';
 import 'package:cropCompliance/models/document_type_model.dart';
@@ -17,6 +19,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
+
+// Timing/trace output used while profiling. Off by default: logging from inside
+// build() on every rebuild is itself a noticeable cost in debug builds.
+const bool _kTrackerTrace = false;
+void _tlog(String message) {
+  if (_kTrackerTrace) developer.log(message);
+}
 
 class AuditTrackerScreen extends StatefulWidget {
   const AuditTrackerScreen({Key? key}) : super(key: key);
@@ -31,110 +41,95 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
   Stopwatch _stopwatch = Stopwatch();
   String _selectedPackage = 'siza_wieta'; // NEW: Selected package filter
 
+  late bool _ready; // one loader, then the finished page (no half-filled UI)
+
   @override
   void initState() {
     super.initState();
-    developer.log('AuditTrackerScreen - initState called');
+    _ready = isCompanyDataWarm(context);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      developer.log('AuditTrackerScreen - post frame callback triggered');
       _initializeData();
     });
   }
 
   Future<void> _initializeData() async {
-    _stopwatch.start();
-    developer.log('AuditTrackerScreen - _initializeData started');
-
+    if (!mounted) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    developer.log('AuditTrackerScreen - authProvider accessed: ${_stopwatch.elapsedMilliseconds}ms');
+    if (authProvider.currentUser == null) return;
 
-    final documentProvider = Provider.of<DocumentProvider>(context, listen: false);
-    developer.log('AuditTrackerScreen - documentProvider accessed: ${_stopwatch.elapsedMilliseconds}ms');
+    // Initial package filter: the company's first available package.
+    final packages = authProvider.effectivePackages;
+    if (packages.isNotEmpty) _selectedPackage = packages.first;
 
-    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
-    developer.log('AuditTrackerScreen - categoryProvider accessed: ${_stopwatch.elapsedMilliseconds}ms');
-
-    if (authProvider.currentUser != null) {
-      developer.log('AuditTrackerScreen - User is logged in, initializing data');
-
-      developer.log('AuditTrackerScreen - Starting category initialization');
-      await categoryProvider.initialize();
-      developer.log('AuditTrackerScreen - Category initialization completed: ${_stopwatch.elapsedMilliseconds}ms');
-
-      // NEW: Set initial package filter based on company's available packages
-      final packages = authProvider.effectivePackages;
-      if (packages.isNotEmpty) {
-        _selectedPackage = packages.first;
-        categoryProvider.setPackageFilter([_selectedPackage]);
-      }
-
-      // Use the company-aware method instead of the old initialize method
-      developer.log('AuditTrackerScreen - Starting document initialization with company context');
-      await documentProvider.refreshForUserContext(context);
-      developer.log('AuditTrackerScreen - Document initialization completed: ${_stopwatch.elapsedMilliseconds}ms');
-
-      developer.log('AuditTrackerScreen - Document count: ${documentProvider.documents.length}');
-      developer.log('AuditTrackerScreen - Document types count: ${documentProvider.documentTypes.length}');
+    try {
+      // Categories, documents and the company's switched-off document types
+      // load together, so the first thing drawn already has the final numbers.
+      await loadCompanyData(
+        context,
+        packages: packages.isNotEmpty ? [_selectedPackage] : null,
+      );
+    } finally {
+      if (mounted) setState(() => _ready = true);
     }
-
-    developer.log('AuditTrackerScreen - _initializeData completed: ${_stopwatch.elapsedMilliseconds}ms');
-    _stopwatch.stop();
   }
 
   @override
   Widget build(BuildContext context) {
-    developer.log('AuditTrackerScreen - build method called');
+    _tlog('AuditTrackerScreen - build method called');
     _stopwatch.reset();
     _stopwatch.start();
 
     final authProvider = Provider.of<AuthProvider>(context);
-    developer.log('AuditTrackerScreen - build: authProvider accessed: ${_stopwatch.elapsedMilliseconds}ms');
+    _tlog('AuditTrackerScreen - build: authProvider accessed: ${_stopwatch.elapsedMilliseconds}ms');
 
     final documentProvider = Provider.of<DocumentProvider>(context);
-    developer.log('AuditTrackerScreen - build: documentProvider accessed: ${_stopwatch.elapsedMilliseconds}ms');
+    _tlog('AuditTrackerScreen - build: documentProvider accessed: ${_stopwatch.elapsedMilliseconds}ms');
 
     final categoryProvider = Provider.of<CategoryProvider>(context);
-    developer.log('AuditTrackerScreen - build: categoryProvider accessed: ${_stopwatch.elapsedMilliseconds}ms');
+    _tlog('AuditTrackerScreen - build: categoryProvider accessed: ${_stopwatch.elapsedMilliseconds}ms');
 
     if (authProvider.currentUser == null) {
-      developer.log('AuditTrackerScreen - build: No user logged in, showing login prompt');
-      return const Scaffold(
+      _tlog('AuditTrackerScreen - build: No user logged in, showing login prompt');
+      return Scaffold(
         body: Center(
-          child: Text('Please log in to continue'),
+          child: Text(context.l10n.pleaseLogIn),
         ),
       );
     }
 
-    final isLoading = documentProvider.isLoading || categoryProvider.isLoading;
+    final isLoading = !_ready || documentProvider.isLoading || categoryProvider.isLoading;
     final hasError = documentProvider.error != null || categoryProvider.error != null;
     final error = documentProvider.error ?? categoryProvider.error ?? '';
 
-    developer.log('AuditTrackerScreen - build: isLoading=$isLoading, hasError=$hasError');
+    _tlog('AuditTrackerScreen - build: isLoading=$isLoading, hasError=$hasError');
 
     Widget content;
     if (isLoading) {
-      developer.log('AuditTrackerScreen - build: Showing loading indicator');
-      content = const LoadingIndicator(message: 'Loading audit data...');
+      _tlog('AuditTrackerScreen - build: Showing loading indicator');
+      content = LoadingIndicator(message: context.l10n.trackerLoading);
     } else if (hasError) {
-      developer.log('AuditTrackerScreen - build: Showing error: $error');
+      _tlog('AuditTrackerScreen - build: Showing error: $error');
       content = ErrorDisplay(
         error: error,
-        onRetry: _initializeData,
+        onRetry: () {
+          setState(() => _ready = false);
+          _initializeData();
+        },
       );
     } else {
       _stopwatch.reset();
       _stopwatch.start();
-      developer.log('AuditTrackerScreen - build: Starting to build content sections');
+      _tlog('AuditTrackerScreen - build: Starting to build content sections');
 
-      developer.log('AuditTrackerScreen - build: Building KPI section');
+      _tlog('AuditTrackerScreen - build: Building KPI section');
       final kpiSection = _buildKPISection(documentProvider, authProvider);
-      developer.log('AuditTrackerScreen - build: KPI section built: ${_stopwatch.elapsedMilliseconds}ms');
+      _tlog('AuditTrackerScreen - build: KPI section built: ${_stopwatch.elapsedMilliseconds}ms');
 
-      developer.log('AuditTrackerScreen - build: Building toggle buttons');
+      _tlog('AuditTrackerScreen - build: Building toggle buttons');
       final toggleButtons = _buildViewToggleButtons();
-      developer.log('AuditTrackerScreen - build: Toggle buttons built: ${_stopwatch.elapsedMilliseconds}ms');
+      _tlog('AuditTrackerScreen - build: Toggle buttons built: ${_stopwatch.elapsedMilliseconds}ms');
 
-      developer.log('AuditTrackerScreen - build: Preparing main content view (documents or audit list)');
+      _tlog('AuditTrackerScreen - build: Preparing main content view (documents or audit list)');
 
       // Check if mobile before building content
       final isMobile = MediaQuery.of(context).size.width < 600;
@@ -172,14 +167,14 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
         );
       }
 
-      developer.log('AuditTrackerScreen - build: Content column assembled: ${_stopwatch.elapsedMilliseconds}ms');
+      _tlog('AuditTrackerScreen - build: Content column assembled: ${_stopwatch.elapsedMilliseconds}ms');
     }
 
     _stopwatch.stop();
-    developer.log('AuditTrackerScreen - build method completed: ${_stopwatch.elapsedMilliseconds}ms');
+    _tlog('AuditTrackerScreen - build method completed: ${_stopwatch.elapsedMilliseconds}ms');
 
     return AppScaffoldWrapper(
-      title: 'Compliance Tracker',
+      title: context.l10n.trackerTitle,
       backgroundColor: ThemeConstants.lightBackgroundColor,
       child: content,
     );
@@ -188,7 +183,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
   Widget _buildKPISection(DocumentProvider documentProvider, AuthProvider authProvider) {
     _stopwatch.reset();
     _stopwatch.start();
-    developer.log('AuditTrackerScreen - _buildKPISection started');
+    _tlog('AuditTrackerScreen - _buildKPISection started');
 
     // ============================================
     // UPDATED: Use package-aware filtering for KPI metrics
@@ -206,7 +201,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     final pendingDocuments = complianceStats['pendingDocs'] as int;
     final rejectedDocuments = complianceStats['rejectedDocs'] as int;
 
-    developer.log('AuditTrackerScreen - KPI counts (filtered by packages: $companyPackages) - '
+    _tlog('AuditTrackerScreen - KPI counts (filtered by packages: $companyPackages) - '
         'total: $totalDocuments, '
         'uploaded: $uploadedDocuments, '
         'approved: $approvedDocuments, '
@@ -225,103 +220,86 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       approvalRate = (approvedDocuments / uploadedDocuments) * 100;
     }
 
+    // Completion per standard the company is enrolled in (in the app's
+    // standard order). Categories belong to exactly one standard, so these add
+    // up to the overall figure.
+    final standards = <_StandardProgress>[];
+    for (final p in AppConstants.auditPackages) {
+      if (!companyPackages.contains(p.id)) continue;
+      final s = documentProvider.getComplianceStatsForPackages([p.id]);
+      standards.add(_StandardProgress(
+        p.label,
+        s['uploadedDocs'] as int,
+        s['totalDocTypes'] as int,
+      ));
+    }
+
     // Check if we're on a small screen
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     final result = Container(
       padding: isMobile ? const EdgeInsets.all(8) : const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Remove title on mobile
-          if (!isMobile)
-            const Text(
-              'Audit Compliance Overview',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          if (!isMobile) const SizedBox(height: 16),
-
           isMobile
               ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildKPICard(
-                      'Completion',
-                      '$uploadedDocuments/$totalDocuments',
-                      '${completionPercentage.toStringAsFixed(1)}%',
-                      Colors.blue,
-                      Icons.insert_chart,
+              _buildCompletionCard(uploadedDocuments, totalDocuments,
+                  completionPercentage, standards),
+              const SizedBox(height: 6),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _buildKPICard(
+                        context.l10n.kpiApproval,
+                        '$approvedDocuments/$uploadedDocuments',
+                        '${approvalRate.toStringAsFixed(1)}%',
+                        Colors.green,
+                        Icons.check_circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: _buildKPICard(
-                      'Approval',
-                      '$approvedDocuments/$uploadedDocuments',
-                      '${approvalRate.toStringAsFixed(1)}%',
-                      Colors.green,
-                      Icons.check_circle,
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildKPICard(
+                        context.l10n.statusPending,
+                        '$pendingDocuments',
+                        pendingDocuments > 0 ? context.l10n.kpiActionNeeded : context.l10n.kpiAllClear,
+                        Colors.orange,
+                        Icons.hourglass_empty,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildKPICard(
-                      'Pending',
-                      '$pendingDocuments',
-                      pendingDocuments > 0 ? "Action needed" : "All clear",
-                      Colors.orange,
-                      Icons.hourglass_empty,
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildKPICard(
+                        context.l10n.statusRejected,
+                        '$rejectedDocuments',
+                        rejectedDocuments > 0 ? context.l10n.kpiFixRequired : context.l10n.kpiAllClear,
+                        Colors.red,
+                        Icons.error_outline,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: _buildKPICard(
-                      'Rejected',
-                      '$rejectedDocuments',
-                      rejectedDocuments > 0 ? "Fix required" : "All clear",
-                      Colors.red,
-                      Icons.error_outline,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           )
-              : Row(
+              : IntrinsicHeight(
+            child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: _buildKPICard(
-                  'Completion Rate',
-                  '$uploadedDocuments/$totalDocuments',
-                  '${completionPercentage.toStringAsFixed(1)}%',
-                  Colors.blue,
-                  Icons.insert_chart,
-                ),
+                flex: 2,
+                child: _buildCompletionCard(uploadedDocuments, totalDocuments,
+                    completionPercentage, standards),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: _buildKPICard(
-                  'Approval Rate',
+                  context.l10n.kpiApprovalRate,
                   '$approvedDocuments/$uploadedDocuments',
                   '${approvalRate.toStringAsFixed(1)}%',
                   Colors.green,
@@ -331,9 +309,9 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: _buildKPICard(
-                  'Pending Review',
+                  context.l10n.kpiPendingReview,
                   '$pendingDocuments',
-                  pendingDocuments > 0 ? "Action needed" : "All clear",
+                  pendingDocuments > 0 ? context.l10n.kpiActionNeeded : context.l10n.kpiAllClear,
                   Colors.orange,
                   Icons.hourglass_empty,
                 ),
@@ -341,21 +319,22 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: _buildKPICard(
-                  'Rejected Items',
+                  context.l10n.kpiRejectedItems,
                   '$rejectedDocuments',
-                  rejectedDocuments > 0 ? "Needs attention" : "All clear",
+                  rejectedDocuments > 0 ? context.l10n.kpiNeedsAttention : context.l10n.kpiAllClear,
                   Colors.red,
                   Icons.error_outline,
                 ),
               ),
             ],
           ),
+          ),
         ],
       ),
     );
 
     _stopwatch.stop();
-    developer.log('AuditTrackerScreen - _buildKPISection completed: ${_stopwatch.elapsedMilliseconds}ms');
+    _tlog('AuditTrackerScreen - _buildKPISection completed: ${_stopwatch.elapsedMilliseconds}ms');
 
     return result;
   }
@@ -364,21 +343,21 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     final isAdmin = authProvider.currentUser?.role == UserRole.ADMIN;
 
     bool isExpiringSoon(DocumentModel doc) {
-      if (doc.expiryDate == null) return false;
+      if (doc.effectiveExpiryDate == null) return false;
       final now = DateTime.now();
       final thirtyDaysFromNow = now.add(const Duration(days: 30));
-      return doc.expiryDate!.isBefore(thirtyDaysFromNow) || doc.expiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
+      return doc.effectiveExpiryDate!.isBefore(thirtyDaysFromNow) || doc.effectiveExpiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
     }
 
     final documents = _showApprovedDocuments
-        ? documentProvider.documents.where((doc) => doc.status == DocumentStatus.APPROVED && !doc.isExpired && !isExpiringSoon(doc)).toList()
-        : documentProvider.documents.where((doc) => doc.status != DocumentStatus.APPROVED || doc.isExpired || isExpiringSoon(doc)).toList();
+        ? documentProvider.documents.where((doc) => !doc.isSuperseded && doc.status == DocumentStatus.APPROVED && !doc.isExpired && !isExpiringSoon(doc)).toList()
+        : documentProvider.documents.where((doc) => !doc.isSuperseded && (doc.status != DocumentStatus.APPROVED || doc.isExpired || isExpiringSoon(doc))).toList();
 
     if (documents.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Text(_showApprovedDocuments ? 'No approved documents' : 'No action items found'),
+          child: Text(_showApprovedDocuments ? context.l10n.trackerNoApproved : context.l10n.trackerNoActionItems),
         ),
       );
     }
@@ -390,10 +369,10 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              const Text('Filter: '),
+              Text(context.l10n.filterColon),
               const SizedBox(width: 8),
               ChoiceChip(
-                label: const Text('Action Items'),
+                label: Text(context.l10n.trackerActionItems),
                 selected: !_showApprovedDocuments,
                 onSelected: (selected) {
                   if (selected) setState(() => _showApprovedDocuments = false);
@@ -401,7 +380,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
               ),
               const SizedBox(width: 8),
               ChoiceChip(
-                label: const Text('Approved & Current'),
+                label: Text(context.l10n.trackerApprovedCurrent),
                 selected: _showApprovedDocuments,
                 onSelected: (selected) {
                   if (selected) setState(() => _showApprovedDocuments = true);
@@ -433,12 +412,12 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
             try {
               category = categoryProvider.categories.firstWhere((c) => c.id == document.categoryId);
             } catch (_) {
-              category = CategoryModel(id: document.categoryId, name: 'Unknown Category', description: '', order: 0, packageId: 'siza_wieta');
+              category = CategoryModel(id: document.categoryId, name: context.l10n.unknownCategory, description: '', order: 0, packageId: 'siza_wieta');
             }
 
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
-              child: _buildMobileDocumentCard(document, documentType?.name ?? 'Unknown', category.name, isAdmin),
+              child: _buildMobileDocumentCard(document, documentType?.name ?? context.l10n.unknown, category.name, isAdmin),
             );
           },
         ),
@@ -448,7 +427,10 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
 // MOBILE VERSION - Uses shrinkWrap
   Widget _buildAuditListViewMobile(DocumentProvider documentProvider, CategoryProvider categoryProvider) {
-    final categories = categoryProvider.categories;
+    // Only show categories that have at least one active document type
+    final categories = categoryProvider.categories
+        .where((c) => documentProvider.documentTypes.any((dt) => dt.categoryId == c.id))
+        .toList();
 
     return ListView.builder(
       shrinkWrap: true,
@@ -485,97 +467,281 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     );
   }
 
-  Widget _buildKPICard(
-      String title, String value, String subtitle, Color color, IconData icon) {
-    // Check if we're on a small screen
+  /// The green Completion Rate card: the overall figure on the left and one
+  /// progress bar per standard the company is enrolled in. Stacks vertically on
+  /// phones; nothing in it can overflow (names ellipsize, numbers scale down).
+  Widget _buildCompletionCard(int uploaded, int total, double percentage,
+      List<_StandardProgress> standards) {
     final isMobile = MediaQuery.of(context).size.width < 600;
+    final green = Theme.of(context).primaryColor;
+
+    final arrow = Container(
+      width: isMobile ? 24 : 34,
+      height: isMobile ? 24 : 34,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(0.22),
+      ),
+      child: Icon(Icons.north_east,
+          size: isMobile ? 13 : 17, color: Colors.white),
+    );
+
+    final overall = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            '$uploaded/$total',
+            style: TextStyle(
+              fontSize: isMobile ? 26 : 34,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              height: 1,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ),
+        SizedBox(height: isMobile ? 4 : 6),
+        Text(
+          context.l10n.percentOverall(percentage.toStringAsFixed(1)),
+          style: TextStyle(
+            fontSize: isMobile ? 11 : 13,
+            fontWeight: FontWeight.w500,
+            color: Colors.white.withOpacity(0.85),
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+
+    final breakdown = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < standards.length; i++) ...[
+          if (i > 0) SizedBox(height: isMobile ? 8 : 10),
+          _buildStandardBar(standards[i], isMobile),
+        ],
+      ],
+    );
 
     return Container(
-      padding: isMobile ? const EdgeInsets.all(6) : const EdgeInsets.all(12),
+      padding: EdgeInsets.all(isMobile ? 12 : 20),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        color: green,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.10),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: isMobile
-          ? Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                icon,
-                color: color,
-                size: 14,
+              Expanded(
+                child: Text(
+                  context.l10n.kpiCompletionRate,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    fontSize: isMobile ? 12 : 15,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 8),
+              arrow,
+            ],
+          ),
+          SizedBox(height: isMobile ? 8 : 14),
+          if (standards.isEmpty)
+            overall
+          else if (isMobile) ...[
+            overall,
+            const SizedBox(height: 12),
+            breakdown,
+          ] else
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Flexible(
+                    flex: 4,
+                    child: Align(alignment: Alignment.centerLeft, child: overall),
+                  ),
+                  const SizedBox(width: 20),
+                  // Thin divider, as tall as the per-standard bars.
+                  Container(width: 1, color: Colors.white.withOpacity(0.25)),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    flex: 6,
+                    child: Align(alignment: Alignment.centerLeft, child: breakdown),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStandardBar(_StandardProgress s, bool isMobile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                s.label,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isMobile ? 11 : 12,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '${s.done}/${s.total}',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.75),
+                fontSize: isMobile ? 10 : 11,
+              ),
+            ),
+            SizedBox(
+              width: isMobile ? 38 : 44,
+              child: Text(
+                '${s.percent.round()}%',
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isMobile ? 11 : 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: s.fraction,
+            minHeight: isMobile ? 5 : 6,
+            backgroundColor: Colors.white.withOpacity(0.22),
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildKPICard(
+      String title, String value, String subtitle, Color color, IconData icon,
+      {bool primary = false}) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final green = Theme.of(context).primaryColor;
+
+    final bg = primary ? green : Colors.white;
+    final titleColor = primary ? Colors.white : const Color(0xFF5A6270);
+    final valueColor = primary ? Colors.white : const Color(0xFF1A1D22);
+    final subtitleColor =
+        primary ? Colors.white.withOpacity(0.85) : Colors.grey.shade500;
+
+    // Circular arrow badge (↗) top-right.
+    final arrow = Container(
+      width: isMobile ? 24 : 34,
+      height: isMobile ? 24 : 34,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: primary ? Colors.white.withOpacity(0.22) : Colors.white,
+        border: primary
+            ? null
+            : Border.all(color: Colors.grey.shade200),
+      ),
+      child: Icon(Icons.north_east,
+          size: isMobile ? 13 : 17,
+          color: primary ? Colors.white : const Color(0xFF1A1D22)),
+    );
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 12 : 20),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+        border: primary ? null : Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(primary ? 0.10 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: titleColor,
+                    fontSize: isMobile ? 12 : 15,
                   ),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
+              arrow,
             ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
+          SizedBox(height: isMobile ? 8 : 14),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: isMobile ? 20 : 34,
+                fontWeight: FontWeight.w800,
+                color: valueColor,
+                height: 1,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
+          SizedBox(height: isMobile ? 2 : 6),
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 9,
-              color: Colors.grey.shade700,
+              fontSize: isMobile ? 10 : 13,
+              fontWeight: FontWeight.w500,
+              color: subtitleColor,
             ),
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      )
-          : Row(
-        children: [
-          Icon(
-            icon,
-            color: color,
-            size: 36,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -603,8 +769,8 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                 foregroundColor: _showDocuments ? Colors.white : Colors.black87,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              child: const Text(
-                'Action Items',
+              child: Text(
+                context.l10n.trackerActionItems,
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -625,8 +791,8 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                 !_showDocuments ? Colors.white : Colors.black87,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              child: const Text(
-                'Audit Checklist',
+              child: Text(
+                context.l10n.checklistTitle,
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -636,31 +802,44 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     );
   }
 
-  // NEW: Package toggle buttons for switching between SIZA/WIETA and GlobalG.A.P.
+  IconData _packageIcon(String id) {
+    switch (id) {
+      case 'globalgap':
+        return Icons.eco;
+      case 'ipw':
+        return Icons.wine_bar;
+      case 'fairtrade':
+        return Icons.handshake_outlined;
+      case 'siza_environmental':
+        return Icons.forest_outlined;
+      default:
+        return Icons.people;
+    }
+  }
+
+  // Package toggle buttons — rendered from the company's enabled packages.
   Widget _buildPackageToggle(AuthProvider authProvider, CategoryProvider categoryProvider) {
+    final enabled = AppConstants.auditPackages
+        .where((p) => authProvider.effectivePackages.contains(p.id))
+        .toList();
+    if (enabled.length < 2) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          Expanded(
-            child: _buildPackageButton(
-              packageId: 'siza_wieta',
-              label: 'SIZA/WIETA',
-              icon: Icons.people,
-              isSelected: _selectedPackage == 'siza_wieta',
-              categoryProvider: categoryProvider,
+          for (int i = 0; i < enabled.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            Expanded(
+              child: _buildPackageButton(
+                packageId: enabled[i].id,
+                label: enabled[i].label,
+                icon: _packageIcon(enabled[i].id),
+                isSelected: _selectedPackage == enabled[i].id,
+                categoryProvider: categoryProvider,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildPackageButton(
-              packageId: 'globalgap',
-              label: 'GlobalG.A.P.',
-              icon: Icons.eco,
-              isSelected: _selectedPackage == 'globalgap',
-              categoryProvider: categoryProvider,
-            ),
-          ),
+          ],
         ],
       ),
     );
@@ -721,7 +900,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       DocumentProvider documentProvider, CategoryProvider categoryProvider) {
     _stopwatch.reset();
     _stopwatch.start();
-    developer.log('AuditTrackerScreen - _buildDocumentsView started');
+    _tlog('AuditTrackerScreen - _buildDocumentsView started');
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUserRole = authProvider.currentUser?.role;
@@ -729,37 +908,40 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
     // Helper method to check if document is expiring soon (within 30 days)
     bool isExpiringSoon(DocumentModel doc) {
-      if (doc.expiryDate == null) return false;
+      if (doc.effectiveExpiryDate == null) return false;
 
       final now = DateTime.now();
       final thirtyDaysFromNow = now.add(const Duration(days: 30));
 
-      return doc.expiryDate!.isBefore(thirtyDaysFromNow) || doc.expiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
+      return doc.effectiveExpiryDate!.isBefore(thirtyDaysFromNow) || doc.effectiveExpiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
     }
 
     // Filter documents based on the _showApprovedDocuments toggle
     final documents = _showApprovedDocuments
         ? documentProvider.documents.where((doc) {
       // For "Approved Documents" filter: only show approved documents that are NOT expired and NOT expiring soon
-      return doc.status == DocumentStatus.APPROVED &&
+      return !doc.isSuperseded &&
+          doc.status == DocumentStatus.APPROVED &&
           !doc.isExpired &&
           !isExpiringSoon(doc);
     }).toList()
         : documentProvider.documents.where((doc) {
-      // For "Action Items" filter: show all documents that need attention
+      // For "Action Items" filter: show documents that need attention — but a
+      // superseded (replaced) document is no longer an action item.
+      if (doc.isSuperseded) return false;
       return doc.status != DocumentStatus.APPROVED ||  // Not approved documents
           doc.isExpired ||                           // OR expired documents (even if approved)
           isExpiringSoon(doc);                       // OR documents expiring within 30 days (even if approved)
     }).toList();
 
-    developer.log('AuditTrackerScreen - Filtered ${documents.length} documents to display');
+    _tlog('AuditTrackerScreen - Filtered ${documents.length} documents to display');
 
     if (documents.isEmpty) {
-      developer.log('AuditTrackerScreen - No documents to display in this filter');
+      _tlog('AuditTrackerScreen - No documents to display in this filter');
       return Center(
         child: Text(_showApprovedDocuments
-            ? 'No approved documents that are current and not expiring soon'
-            : 'No action items found'),
+            ? context.l10n.trackerNoApprovedCurrent
+            : context.l10n.trackerNoActionItems),
       );
     }
 
@@ -771,10 +953,10 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              const Text('Filter: '),
+              Text(context.l10n.filterColon),
               const SizedBox(width: 8),
               ChoiceChip(
-                label: const Text('Action Items'),
+                label: Text(context.l10n.trackerActionItems),
                 selected: !_showApprovedDocuments,
                 onSelected: (selected) {
                   if (selected) {
@@ -786,7 +968,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
               ),
               const SizedBox(width: 8),
               ChoiceChip(
-                label: const Text('Approved & Current'),
+                label: Text(context.l10n.trackerApprovedCurrent),
                 selected: _showApprovedDocuments,
                 onSelected: (selected) {
                   if (selected) {
@@ -816,9 +998,9 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                 documentType = documentProvider.documentTypes
                     .firstWhere((dt) => dt.id == document.documentTypeId)
                 as DocumentTypeModel?;
-                developer.log('AuditTrackerScreen - Found document type for document ${index+1}/${documents.length}: ${_stopwatch.elapsedMilliseconds}ms');
+                _tlog('AuditTrackerScreen - Found document type for document ${index+1}/${documents.length}: ${_stopwatch.elapsedMilliseconds}ms');
               } catch (_) {
-                developer.log('AuditTrackerScreen - Document type not found for document ${index+1}/${documents.length}');
+                _tlog('AuditTrackerScreen - Document type not found for document ${index+1}/${documents.length}');
                 documentType = null;
               }
 
@@ -829,13 +1011,13 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                 _stopwatch.start();
                 category = categoryProvider.categories
                     .firstWhere((c) => c.id == document.categoryId);
-                developer.log('AuditTrackerScreen - Found category for document ${index+1}/${documents.length}: ${_stopwatch.elapsedMilliseconds}ms');
+                _tlog('AuditTrackerScreen - Found category for document ${index+1}/${documents.length}: ${_stopwatch.elapsedMilliseconds}ms');
               } catch (e) {
-                developer.log('AuditTrackerScreen - Category not found for document ${index+1}/${documents.length}: ${e.toString()}');
+                _tlog('AuditTrackerScreen - Category not found for document ${index+1}/${documents.length}: ${e.toString()}');
                 // Category not found, create a placeholder
                 category = CategoryModel(
                   id: document.categoryId,
-                  name: 'Unknown Category',
+                  name: context.l10n.unknownCategory,
                   description: '',
                   order: 0,
                   packageId: 'siza_wieta',
@@ -843,7 +1025,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
               }
 
               final documentName =
-                  documentType?.name ?? 'Unknown Document Type';
+                  documentType?.name ?? context.l10n.unknownDocumentType;
               final categoryName = category.name;
 
               // Check if we're on a small screen
@@ -859,7 +1041,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                     : _buildDesktopDocumentCard(
                     document, documentName, categoryName, isAdmin),
               );
-              developer.log('AuditTrackerScreen - Built card for document ${index+1}/${documents.length}: ${_stopwatch.elapsedMilliseconds}ms');
+              _tlog('AuditTrackerScreen - Built card for document ${index+1}/${documents.length}: ${_stopwatch.elapsedMilliseconds}ms');
 
               return card;
             },
@@ -869,7 +1051,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     );
 
     _stopwatch.stop();
-    developer.log('AuditTrackerScreen - _buildDocumentsView completed: ${_stopwatch.elapsedMilliseconds}ms');
+    _tlog('AuditTrackerScreen - _buildDocumentsView completed: ${_stopwatch.elapsedMilliseconds}ms');
 
     return result;
   }
@@ -880,20 +1062,20 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
     // Helper method to check if document is expiring soon (within 30 days)
     bool isExpiringSoon(DocumentModel doc) {
-      if (doc.expiryDate == null) return false;
+      if (doc.effectiveExpiryDate == null) return false;
 
       final now = DateTime.now();
       final thirtyDaysFromNow = now.add(const Duration(days: 30));
 
-      return doc.expiryDate!.isBefore(thirtyDaysFromNow) || doc.expiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
+      return doc.effectiveExpiryDate!.isBefore(thirtyDaysFromNow) || doc.effectiveExpiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
     }
 
     // Helper method to get days until expiry
     int? getDaysUntilExpiry(DocumentModel doc) {
-      if (doc.expiryDate == null) return null;
+      if (doc.effectiveExpiryDate == null) return null;
 
       final now = DateTime.now();
-      final difference = doc.expiryDate!.difference(now).inDays;
+      final difference = doc.effectiveExpiryDate!.difference(now).inDays;
 
       return difference;
     }
@@ -970,7 +1152,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
           const SizedBox(height: 8),
 
           // Expiry date with enhanced warnings
-          if (document.expiryDate != null) ...[
+          if (document.effectiveExpiryDate != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -1010,10 +1192,10 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                       children: [
                         Text(
                           document.isExpired
-                              ? 'EXPIRED'
+                              ? context.l10n.expiredCaps
                               : isExpiringSoonFlag
-                              ? 'EXPIRES SOON'
-                              : 'Expires',
+                              ? context.l10n.expiresSoonCaps
+                              : context.l10n.colExpires,
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -1025,7 +1207,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                           ),
                         ),
                         Text(
-                          DateFormat('MMM d, y').format(document.expiryDate!),
+                          DateFormat('MMM d, y').format(document.effectiveExpiryDate!),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -1039,8 +1221,8 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                         if (daysUntilExpiry != null && !document.isExpired)
                           Text(
                             daysUntilExpiry > 0
-                                ? '$daysUntilExpiry days left'
-                                : 'Expires today',
+                                ? context.l10n.daysLeft(daysUntilExpiry)
+                                : context.l10n.expiresToday,
                             style: TextStyle(
                               fontSize: 10,
                               color: isExpiringSoonFlag
@@ -1079,8 +1261,8 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                   Expanded(
                     child: Text(
                       document.isExpired
-                          ? 'This document has expired and needs to be renewed'
-                          : 'This document expires soon and may need renewal',
+                          ? context.l10n.docExpiredRenew
+                          : context.l10n.docExpiresSoonRenew,
                       style: TextStyle(
                         fontSize: 12,
                         color: document.isExpired ? Colors.red.shade700 : Colors.orange.shade700,
@@ -1099,7 +1281,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
             const Divider(),
             const SizedBox(height: 4),
             Text(
-              'Comments:',
+              context.l10n.commentsColon,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -1161,7 +1343,9 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                   color: Colors.white,
                   size: 16,
                 ),
-                label: const Text('Resubmit'),
+                label: Text(document.status == DocumentStatus.REJECTED
+                    ? context.l10n.actionResubmit
+                    : context.l10n.uploadNewVersion),
                 onPressed: () {
                   // Navigate to document upload/form screen with existing document ID
                   Navigator.of(context).pushNamed(
@@ -1190,7 +1374,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
             width: double.infinity,
             child: OutlinedButton.icon(
               icon: const Icon(Icons.visibility, size: 16),
-              label: const Text('View Details'),
+              label: Text(context.l10n.actionViewDetails),
               onPressed: () {
                 Navigator.of(context).pushNamed(
                   RouteConstants.documentDetail,
@@ -1213,7 +1397,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
             width: double.infinity,
             child: OutlinedButton.icon(
               icon: const Icon(Icons.delete, size: 16),
-              label: const Text('Delete'),
+              label: Text(context.l10n.actionDelete),
               onPressed: () => _showDeleteConfirmation(context, document),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red,
@@ -1235,15 +1419,15 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Document'),
+        title: Text(context.l10n.deleteDocTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Are you sure you want to delete this document?'),
+            Text(context.l10n.deleteDocConfirm),
             const SizedBox(height: 16),
-            const Text(
-              'This action cannot be undone. The document and all its files will be permanently deleted.',
+            Text(
+              context.l10n.deleteDocWarning,
               style: TextStyle(color: Colors.red, fontSize: 12),
             ),
           ],
@@ -1251,12 +1435,12 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            child: Text(context.l10n.actionDelete, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1276,12 +1460,12 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const AlertDialog(
+        builder: (context) => AlertDialog(
           content: Row(
             children: [
               CircularProgressIndicator(),
               SizedBox(width: 16),
-              Text('Deleting document...'),
+              Text(context.l10n.deletingDoc),
             ],
           ),
         ),
@@ -1290,7 +1474,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       final success = await documentProvider.deleteDocument(
         documentId: document.id,
         user: authProvider.currentUser!,
-        reason: 'Deleted by admin ${authProvider.currentUser!.name}',
+        reason: 'Deleted by admin ${authProvider.currentUser!.name}', // l10n-ignore: stored audit log
       );
 
       // Hide loading
@@ -1298,15 +1482,15 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Document deleted successfully'),
+          SnackBar(
+            content: Text(context.l10n.docDeleted),
             backgroundColor: Colors.green,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to delete document'),
+          SnackBar(
+            content: Text(context.l10n.docDeleteFailed),
             backgroundColor: Colors.red,
           ),
         );
@@ -1317,7 +1501,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error deleting document: $e'),
+          content: Text(context.l10n.docDeleteError('$e')),
           backgroundColor: Colors.red,
         ),
       );
@@ -1330,12 +1514,12 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
     // Helper method to check if document is expiring soon (within 30 days)
     bool isExpiringSoon(DocumentModel doc) {
-      if (doc.expiryDate == null) return false;
+      if (doc.effectiveExpiryDate == null) return false;
 
       final now = DateTime.now();
       final thirtyDaysFromNow = now.add(const Duration(days: 30));
 
-      return doc.expiryDate!.isBefore(thirtyDaysFromNow) || doc.expiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
+      return doc.effectiveExpiryDate!.isBefore(thirtyDaysFromNow) || doc.effectiveExpiryDate!.isAtSameMomentAs(thirtyDaysFromNow);
     }
 
     final isExpiringSoonFlag = isExpiringSoon(document);
@@ -1367,9 +1551,9 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
               Expanded(
                 flex: 2,
                 child: Text(
-                  document.expiryDate != null
-                      ? 'Expires: ${DateFormat('MMM d, y').format(document.expiryDate!)}'
-                      : 'No Expiry Date',
+                  document.effectiveExpiryDate != null
+                      ? context.l10n.expiresOn(DateFormat('MMM d, y').format(document.effectiveExpiryDate!))
+                      : context.l10n.noExpiryDate,
                   style: TextStyle(
                     fontSize: 13,
                     color: document.isExpired ? Colors.red : Colors.grey.shade700,
@@ -1386,8 +1570,8 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Text(
-                  'Not Applicable',
+                child: Text(
+                  context.l10n.notApplicable,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
@@ -1430,7 +1614,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.refresh,
                         color: Colors.white, size: 16),
-                    label: const Text('Resubmit'),
+                    label: Text(context.l10n.actionResubmit),
                     onPressed: () {
                       // Navigate to document upload/form screen with existing document ID
                       Navigator.of(context).pushNamed(
@@ -1456,7 +1640,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
               // View Details button (available to all users)
               OutlinedButton.icon(
                 icon: const Icon(Icons.visibility, size: 16),
-                label: const Text('View Details'),
+                label: Text(context.l10n.actionViewDetails),
                 onPressed: () {
                   Navigator.of(context).pushNamed(
                     RouteConstants.documentDetail,
@@ -1475,7 +1659,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
               const SizedBox(width: 8),
               OutlinedButton.icon(
                 icon: const Icon(Icons.delete, size: 16),
-                label: const Text('Delete'),
+                label: Text(context.l10n.actionDelete),
                 onPressed: () => _showDeleteConfirmation(context, document),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
@@ -1502,8 +1686,8 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Comments:',
+                Text(
+                  context.l10n.commentsColon,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -1586,10 +1770,13 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       DocumentProvider documentProvider, CategoryProvider categoryProvider) {
     _stopwatch.reset();
     _stopwatch.start();
-    developer.log('AuditTrackerScreen - _buildAuditListView started');
+    _tlog('AuditTrackerScreen - _buildAuditListView started');
 
-    final categories = categoryProvider.categories;
-    developer.log('AuditTrackerScreen - Categories count: ${categories.length}');
+    // Only show categories that have at least one active document type
+    final categories = categoryProvider.categories
+        .where((c) => documentProvider.documentTypes.any((dt) => dt.categoryId == c.id))
+        .toList();
+    _tlog('AuditTrackerScreen - Categories count: ${categories.length}');
 
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
@@ -1599,7 +1786,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       itemBuilder: (context, index) {
         _stopwatch.reset();
         _stopwatch.start();
-        developer.log('AuditTrackerScreen - Building category item ${index+1}/${categories.length}');
+        _tlog('AuditTrackerScreen - Building category item ${index+1}/${categories.length}');
 
         final category = categories[index];
 
@@ -1655,13 +1842,13 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
           ),
         );
 
-        developer.log('AuditTrackerScreen - Built category item ${index+1}/${categories.length}: ${_stopwatch.elapsedMilliseconds}ms');
+        _tlog('AuditTrackerScreen - Built category item ${index+1}/${categories.length}: ${_stopwatch.elapsedMilliseconds}ms');
         return card;
       },
     );
 
     _stopwatch.stop();
-    developer.log('AuditTrackerScreen - _buildAuditListView completed: ${_stopwatch.elapsedMilliseconds}ms');
+    _tlog('AuditTrackerScreen - _buildAuditListView completed: ${_stopwatch.elapsedMilliseconds}ms');
 
     return result;
   }
@@ -1670,19 +1857,19 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       DocumentProvider documentProvider, bool isSmallScreen) {
     _stopwatch.reset();
     _stopwatch.start();
-    developer.log('AuditTrackerScreen - _buildDocumentTypesList started for category: $categoryId');
+    _tlog('AuditTrackerScreen - _buildDocumentTypesList started for category: $categoryId');
 
     final documentTypes = documentProvider.documentTypes
         .where((dt) => dt.categoryId == categoryId)
         .toList();
 
-    developer.log('AuditTrackerScreen - Document types for category $categoryId: ${documentTypes.length}');
+    _tlog('AuditTrackerScreen - Document types for category $categoryId: ${documentTypes.length}');
 
     if (documentTypes.isEmpty) {
-      developer.log('AuditTrackerScreen - No document types found for category: $categoryId');
-      return const Padding(
+      _tlog('AuditTrackerScreen - No document types found for category: $categoryId');
+      return Padding(
         padding: EdgeInsets.all(16),
-        child: Text('No document types found for this category'),
+        child: Text(context.l10n.docTypesNoneInCategory),
       );
     }
 
@@ -1694,7 +1881,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       itemBuilder: (context, index) {
         _stopwatch.reset();
         _stopwatch.start();
-        developer.log('AuditTrackerScreen - Building document type ${index+1}/${documentTypes.length} for category: $categoryId');
+        _tlog('AuditTrackerScreen - Building document type ${index+1}/${documentTypes.length} for category: $categoryId');
 
         final documentType = documentTypes[index];
 
@@ -1703,14 +1890,14 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
             .where((doc) => doc.documentTypeId == documentType.id)
             .toList();
 
-        developer.log('AuditTrackerScreen - Found ${existingDocuments.length} existing documents for type: ${documentType.id}');
+        _tlog('AuditTrackerScreen - Found ${existingDocuments.length} existing documents for type: ${documentType.id}');
 
         final hasDocument = existingDocuments.isNotEmpty;
         final documentStatus = hasDocument
             ? existingDocuments.first.isNotApplicable
-            ? 'Not Applicable'
+            ? _naKey
             : existingDocuments.first.status.name
-            : 'Not Uploaded';
+            : _noneKey;
 
         final listItem = isSmallScreen
             ? _buildMobileDocumentTypeItem(context, documentType, hasDocument,
@@ -1718,13 +1905,13 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
             : _buildDesktopDocumentTypeItem(context, documentType, hasDocument,
             documentStatus, existingDocuments);
 
-        developer.log('AuditTrackerScreen - Built document type ${index+1}/${documentTypes.length}: ${_stopwatch.elapsedMilliseconds}ms');
+        _tlog('AuditTrackerScreen - Built document type ${index+1}/${documentTypes.length}: ${_stopwatch.elapsedMilliseconds}ms');
         return listItem;
       },
     );
 
     _stopwatch.stop();
-    developer.log('AuditTrackerScreen - _buildDocumentTypesList completed for category $categoryId: ${_stopwatch.elapsedMilliseconds}ms');
+    _tlog('AuditTrackerScreen - _buildDocumentTypesList completed for category $categoryId: ${_stopwatch.elapsedMilliseconds}ms');
 
     return result;
   }
@@ -1763,7 +1950,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                 border: Border.all(color: Colors.blue.shade200),
               ),
               child: Text(
-                '${existingDocuments.length} document${existingDocuments.length > 1 ? 's' : ''} uploaded',
+                context.l10n.docsUploadedCount(existingDocuments.length),
                 style: TextStyle(
                   fontSize: 11,
                   color: Colors.blue.shade700,
@@ -1799,7 +1986,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                   icon: const Icon(Icons.visibility, size: 20),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  tooltip: 'View Documents',
+                  tooltip: context.l10n.viewDocuments,
                   onPressed: () {
                     _showDocumentsList(context, documentType, existingDocuments);
                   },
@@ -1831,7 +2018,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
           if (hasDocument) ...[
             const SizedBox(height: 4),
             Text(
-              '${existingDocuments.length} document${existingDocuments.length > 1 ? 's' : ''} uploaded',
+              context.l10n.docsUploadedCount(existingDocuments.length),
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.blue.shade700,
@@ -1865,7 +2052,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
           if (hasDocument)
             IconButton(
               icon: const Icon(Icons.visibility),
-              tooltip: 'View Documents',
+              tooltip: context.l10n.viewDocuments,
               onPressed: () {
                 _showDocumentsList(context, documentType, existingDocuments);
               },
@@ -1911,7 +2098,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${documents.length} document${documents.length > 1 ? 's' : ''} uploaded',
+                    context.l10n.docsUploadedCount(documents.length),
                     style: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 14,
@@ -1939,19 +2126,19 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                           title: Text(
                             document.specification?.isNotEmpty == true
                                 ? document.specification!
-                                : 'No specification',
+                                : context.l10n.specNoneShort,
                             style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Uploaded: ${DateFormat('MMM d, y').format(document.createdAt)}',
+                                context.l10n.uploadedOn(DateFormat('MMM d, y').format(document.createdAt)),
                                 style: const TextStyle(fontSize: 12),
                               ),
-                              if (document.expiryDate != null)
+                              if (document.effectiveExpiryDate != null)
                                 Text(
-                                  'Expires: ${DateFormat('MMM d, y').format(document.expiryDate!)}',
+                                  context.l10n.expiresOn(DateFormat('MMM d, y').format(document.effectiveExpiryDate!)),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: document.isExpired ? Colors.red : null,
@@ -1995,7 +2182,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.add),
-                        label: Text(documentType.isUploadable ? 'Add Another Document' : 'Add Another Form'),
+                        label: Text(documentType.isUploadable ? context.l10n.addAnotherDocument : context.l10n.addAnotherForm),
                         onPressed: () {
                           Navigator.of(context).pop();
                           _navigateToDocumentUpload(context, documentType);
@@ -2036,44 +2223,51 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
   // Helper method to get the appropriate button text
   String _getUploadButtonText(DocumentTypeModel documentType, bool hasDocument) {
     if (!hasDocument) {
-      return documentType.isUploadable ? 'Upload' : 'Fill Form';
+      return documentType.isUploadable ? context.l10n.actionUpload : context.l10n.actionFillForm;
     }
 
     if (documentType.allowMultipleDocuments) {
-      return documentType.isUploadable ? 'Add More' : 'Add Form';
+      return documentType.isUploadable ? context.l10n.actionAddMore : context.l10n.actionAddForm;
     } else {
-      return documentType.isUploadable ? 'Replace' : 'Update Form';
+      return documentType.isUploadable ? context.l10n.actionReplace : context.l10n.actionUpdateForm;
     }
   }
+
+  // Status keys for documents that aren't approved / pending / rejected.
+  static const _naKey = 'NA';
+  static const _noneKey = 'NONE';
 
   Widget _buildStatusChip(String status) {
     Color backgroundColor;
     Color textColor;
 
+    final l10n = context.l10n;
+    final String label;
     switch (status) {
       case 'APPROVED':
-      case 'Approved':
         backgroundColor = Colors.green.shade100;
         textColor = Colors.green.shade800;
+        label = l10n.statusApproved;
         break;
       case 'PENDING':
-      case 'Pending':
         backgroundColor = Colors.orange.shade100;
         textColor = Colors.orange.shade800;
+        label = l10n.statusPending;
         break;
       case 'REJECTED':
-      case 'Rejected':
         backgroundColor = Colors.red.shade100;
         textColor = Colors.red.shade800;
+        label = l10n.statusRejected;
         break;
-      case 'Not Applicable':
+      case _naKey:
         backgroundColor = Colors.grey.shade200;
         textColor = Colors.grey.shade800;
+        label = l10n.notApplicable;
         break;
-      case 'Not Uploaded':
       default:
         backgroundColor = Colors.grey.shade100;
         textColor = Colors.grey.shade800;
+        label = l10n.statusNotUploaded;
         break;
     }
 
@@ -2084,7 +2278,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        status,
+        label,
         style: TextStyle(
           fontSize: 12,
           color: textColor,
@@ -2098,22 +2292,22 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
     List<String> properties = [];
 
     if (documentType.allowMultipleDocuments) {
-      properties.add('Multiple documents allowed');
+      properties.add(context.l10n.ruleMultipleAllowed);
     }
 
     if (documentType.hasExpiryDate) {
-      properties.add('Requires expiry date');
+      properties.add(context.l10n.ruleRequiresExpiry);
     }
 
     if (documentType.requiresSignature) {
-      properties.add('Requires signature');
+      properties.add(context.l10n.ruleRequiresSignature);
     }
 
     if (documentType.hasNotApplicableOption) {
-      properties.add('Can be marked N/A');
+      properties.add(context.l10n.ruleCanBeNa);
     }
 
-    return properties.join(' Ã¢â‚¬Â¢ ');
+    return properties.join(' • ');
   }
 // Helper methods for the documents list
   Color _getStatusColor(DocumentStatus status) {
@@ -2145,7 +2339,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
   void _navigateToDocumentUpload(
       BuildContext context, DocumentTypeModel documentType) {
-    developer.log('AuditTrackerScreen - Navigating to document upload/form: ${documentType.id}');
+    _tlog('AuditTrackerScreen - Navigating to document upload/form: ${documentType.id}');
 
     if (documentType.isUploadable) {
       Navigator.of(context).pushNamed(
@@ -2177,7 +2371,7 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
       return Icons.people;
     } else if (name.contains('child') || name.contains('young')) {
       return Icons.child_care;
-    } else if (name.contains('forced') || name.contains('labor prevention')) {
+    } else if (name.contains('forced') || name.contains('labor prevention')) { // l10n-ignore: matches stored names
       return Icons.security;
     } else if (name.contains('wages') || name.contains('working')) {
       return Icons.payments;
@@ -2197,4 +2391,15 @@ class _AuditTrackerScreenState extends State<AuditTrackerScreen> {
 
     return Icons.folder;
   }
+}
+
+/// Completion for one standard on the Compliance Tracker's KPI card.
+class _StandardProgress {
+  final String label;
+  final int done; // document types with at least one upload
+  final int total; // document types required by this standard
+  const _StandardProgress(this.label, this.done, this.total);
+
+  double get fraction => total <= 0 ? 0 : (done / total).clamp(0.0, 1.0);
+  double get percent => fraction * 100;
 }

@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:io';
+
+import 'package:cropCompliance/core/offline/upload_outbox.dart';
 
 import 'package:cropCompliance/core/services/document_service.dart';
 import 'package:cropCompliance/core/services/firestore_service.dart';
@@ -12,6 +15,13 @@ import 'package:cropCompliance/providers/auth_provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
+
+// Flip to `true` to see every DocumentProvider state change.
+const bool _kDocProviderVerbose = false;
+void _dplog(String msg) {
+  if (_kDocProviderVerbose) debugPrint('DocumentProvider: $msg');
+}
 
 class DocumentProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
@@ -27,11 +37,19 @@ class DocumentProvider with ChangeNotifier {
   Map<String, CategoryModel> _categoriesMap = {};
   Map<String, DocumentModel> _documentsMap = {};
 
+  // Per-company deactivated document type IDs (set from CategoryProvider after loading overrides)
+  Set<String> _deactivatedDocumentTypeIds = {};
+
   bool _isLoading = false;
   String? _error;
 
   // Context tracking for user selection
   String? _currentContextUserId;
+
+  // Auditor mode: only APPROVED documents are loaded (and no review comments).
+  // Re-evaluated from the signed-in user on every context refresh so it can
+  // never leak between users who share a browser session.
+  bool _approvedOnly = false;
   String? _currentContextCompanyId;
 
   DocumentProvider() {
@@ -39,14 +57,44 @@ class DocumentProvider with ChangeNotifier {
       firestoreService: _firestoreService,
       storageService: _storageService,
     );
+    // When a file saved offline finishes uploading, swap "waiting to upload"
+    // for the real file in memory so open screens update straight away.
+    _uploadSub = UploadOutbox.instance.uploaded.listen(_onFileUploaded);
+  }
+
+  StreamSubscription<UploadedFile>? _uploadSub;
+
+  void _onFileUploaded(UploadedFile f) {
+    final i = _documents.indexWhere((d) => d.id == f.documentId);
+    if (i == -1) return;
+    final d = _documents[i];
+    final updated = d.copyWith(
+      fileUrls: [...d.fileUrls, f.url],
+      pendingFiles: d.pendingFiles.where((n) => n != f.fileName).toList(),
+    );
+    _documents[i] = updated;
+    _documentsMap[updated.id] = updated;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _uploadSub?.cancel();
+    super.dispose();
   }
 
   // Getters - unchanged
   List<DocumentModel> get documents => _documents;
   List<CategoryModel> get categories => _categories;
-  List<DocumentTypeModel> get documentTypes => _documentTypes;
+  List<DocumentTypeModel> get documentTypes => _deactivatedDocumentTypeIds.isEmpty
+      ? _documentTypes
+      : _documentTypes.where((dt) => !_deactivatedDocumentTypeIds.contains(dt.id)).toList();
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  /// Categories and document types are in memory (documents may still be loading).
+  bool get hasLoadedReferenceData =>
+      _categories.isNotEmpty && _documentTypes.isNotEmpty;
 
   // Context getters
   String? get currentContextUserId => _currentContextUserId;
@@ -72,17 +120,26 @@ class DocumentProvider with ChangeNotifier {
     return getCategoriesForPackages(packages).map((c) => c.id).toSet();
   }
 
-  /// Get document types filtered by company packages
-  /// This filters document types that belong to categories matching the packages
-  List<DocumentTypeModel> getDocumentTypesForPackages(List<String>? packages) {
-    if (packages == null || packages.isEmpty) {
-      return _documentTypes;
-    }
+  /// Set deactivated document type IDs for the current company.
+  /// Call this after CategoryProvider.loadCompanyOverrides().
+  void setDeactivatedDocumentTypeIds(Set<String> ids) {
+    _deactivatedDocumentTypeIds = ids;
+    notifyListeners();
+  }
 
-    final validCategoryIds = getCategoryIdsForPackages(packages);
-    return _documentTypes
-        .where((docType) => validCategoryIds.contains(docType.categoryId))
-        .toList();
+  /// Get document types filtered by company packages, excluding deactivated ones
+  List<DocumentTypeModel> getDocumentTypesForPackages(List<String>? packages) {
+    List<DocumentTypeModel> types;
+    if (packages == null || packages.isEmpty) {
+      types = _documentTypes;
+    } else {
+      final validCategoryIds = getCategoryIdsForPackages(packages);
+      types = _documentTypes
+          .where((docType) => validCategoryIds.contains(docType.categoryId))
+          .toList();
+    }
+    if (_deactivatedDocumentTypeIds.isEmpty) return types;
+    return types.where((dt) => !_deactivatedDocumentTypeIds.contains(dt.id)).toList();
   }
 
   /// Get documents filtered by company packages
@@ -98,31 +155,31 @@ class DocumentProvider with ChangeNotifier {
         .toList();
   }
 
-  /// Get pending documents filtered by packages
+  /// Get pending documents filtered by packages (excludes superseded)
   List<DocumentModel> getPendingDocumentsForPackages(List<String>? packages) {
     return getDocumentsForPackages(packages)
-        .where((doc) => doc.status == DocumentStatus.PENDING)
+        .where((doc) => doc.status == DocumentStatus.PENDING && !doc.isSuperseded)
         .toList();
   }
 
-  /// Get approved documents filtered by packages
+  /// Get approved documents filtered by packages (excludes superseded)
   List<DocumentModel> getApprovedDocumentsForPackages(List<String>? packages) {
     return getDocumentsForPackages(packages)
-        .where((doc) => doc.status == DocumentStatus.APPROVED)
+        .where((doc) => doc.status == DocumentStatus.APPROVED && !doc.isSuperseded)
         .toList();
   }
 
-  /// Get rejected documents filtered by packages
+  /// Get rejected documents filtered by packages (excludes superseded)
   List<DocumentModel> getRejectedDocumentsForPackages(List<String>? packages) {
     return getDocumentsForPackages(packages)
-        .where((doc) => doc.isRejected)
+        .where((doc) => doc.isRejected && !doc.isSuperseded)
         .toList();
   }
 
-  /// Get expired documents filtered by packages
+  /// Get expired documents filtered by packages (excludes superseded)
   List<DocumentModel> getExpiredDocumentsForPackages(List<String>? packages) {
     return getDocumentsForPackages(packages)
-        .where((doc) => doc.isExpired)
+        .where((doc) => doc.isExpired && !doc.isSuperseded)
         .toList();
   }
 
@@ -136,7 +193,14 @@ class DocumentProvider with ChangeNotifier {
       return 0.0;
     }
 
-    return (filteredApprovedDocs.length / filteredDocTypes.length) * 100;
+    // Count unique doc types that have at least one approved, non-expired document
+    final approvedDocTypeCount = filteredApprovedDocs
+        .where((d) => !d.isExpired)
+        .map((d) => d.documentTypeId)
+        .toSet()
+        .length;
+
+    return (approvedDocTypeCount / filteredDocTypes.length) * 100;
   }
 
   /// Get compliance stats for a specific package
@@ -149,8 +213,17 @@ class DocumentProvider with ChangeNotifier {
     final filteredRejectedDocs = getRejectedDocumentsForPackages(packages);
 
     final totalDocTypes = filteredDocTypes.length;
-    final uploadedDocs = filteredDocs.length;
-    final approvedDocs = filteredApprovedDocs.length;
+    // Count unique doc types that have at least one document uploaded (any status)
+    final uploadedDocs = filteredDocs
+        .map((d) => d.documentTypeId)
+        .toSet()
+        .length;
+    // Count unique doc types with at least one approved, non-expired document
+    final approvedDocs = filteredApprovedDocs
+        .where((d) => !d.isExpired)
+        .map((d) => d.documentTypeId)
+        .toSet()
+        .length;
     final pendingDocs = filteredPendingDocs.length;
     final rejectedDocs = filteredRejectedDocs.length;
 
@@ -182,20 +255,30 @@ class DocumentProvider with ChangeNotifier {
     return _documents.where((doc) => doc.documentTypeId == documentTypeId).toList();
   }
 
+  // NOTE: these "active" getters exclude superseded (replaced) documents so they
+  // don't keep showing up as action items / compliance gaps. The raw
+  // getDocumentsByCategory / getDocumentsByType still include them so they stay
+  // findable in the audit index.
   List<DocumentModel> get pendingDocuments {
-    return _documents.where((doc) => doc.status == DocumentStatus.PENDING).toList();
+    return _documents
+        .where((doc) => doc.status == DocumentStatus.PENDING && !doc.isSuperseded)
+        .toList();
   }
 
   List<DocumentModel> get approvedDocuments {
-    return _documents.where((doc) => doc.status == DocumentStatus.APPROVED).toList();
+    return _documents
+        .where((doc) => doc.status == DocumentStatus.APPROVED && !doc.isSuperseded)
+        .toList();
   }
 
   List<DocumentModel> get rejectedDocuments {
-    return _documents.where((doc) => doc.status == DocumentStatus.REJECTED).toList();
+    return _documents
+        .where((doc) => doc.status == DocumentStatus.REJECTED && !doc.isSuperseded)
+        .toList();
   }
 
   List<DocumentModel> get expiredDocuments {
-    return _documents.where((doc) => doc.isExpired).toList();
+    return _documents.where((doc) => doc.isExpired && !doc.isSuperseded).toList();
   }
 
   // FIXED: Updated initialize method to work with user selection context
@@ -203,7 +286,7 @@ class DocumentProvider with ChangeNotifier {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     if (authProvider.currentUser == null) {
-      _error = 'No authenticated user';
+      _error = LocaleProvider.instance.l10n.errNoAuthUser;
       notifyListeners();
       return;
     }
@@ -212,26 +295,30 @@ class DocumentProvider with ChangeNotifier {
     UserModel targetUser;
     if (authProvider.hasSelectedUser && authProvider.selectedUser != null) {
       targetUser = authProvider.selectedUser!;
-      print('DocumentProvider: Loading documents for SELECTED user: ${targetUser.name} (${targetUser.email})');
+      _dplog(' Loading documents for SELECTED user: ${targetUser.name} (${targetUser.email})');
     } else {
       targetUser = authProvider.currentUser!;
-      print('DocumentProvider: Loading documents for CURRENT user: ${targetUser.name} (${targetUser.email})');
+      _dplog(' Loading documents for CURRENT user: ${targetUser.name} (${targetUser.email})');
     }
 
     final targetUserId = targetUser.id;
     final targetCompanyId = targetUser.companyId;
 
-    print('DocumentProvider: Target user ID: $targetUserId, Company ID: $targetCompanyId');
+    _dplog(' Target user ID: $targetUserId, Company ID: $targetCompanyId');
+
+    final modeChanged = _approvedOnly != authProvider.isAuditer;
+    _approvedOnly = authProvider.isAuditer;
 
     // IMPORTANT: Always reload if user context changes OR if we don't have the right context
-    final needsReload = _currentContextUserId != targetUserId ||
+    final needsReload = modeChanged ||
+        _currentContextUserId != targetUserId ||
         _currentContextCompanyId != targetCompanyId ||
         _documents.isEmpty;
 
     if (needsReload) {
-      print('DocumentProvider: Context changed or no data, reloading...');
-      print('DocumentProvider: Previous context - User: $_currentContextUserId, Company: $_currentContextCompanyId');
-      print('DocumentProvider: New context - User: $targetUserId, Company: $targetCompanyId');
+      _dplog(' Context changed or no data, reloading...');
+      _dplog(' Previous context - User: $_currentContextUserId, Company: $_currentContextCompanyId');
+      _dplog(' New context - User: $targetUserId, Company: $targetCompanyId');
 
       // Clear previous data before loading new context
       _clearData();
@@ -241,9 +328,9 @@ class DocumentProvider with ChangeNotifier {
       _currentContextUserId = targetUserId;
       _currentContextCompanyId = targetCompanyId;
 
-      print('DocumentProvider: Context updated successfully. Loaded ${_documents.length} documents.');
+      _dplog(' Context updated successfully. Loaded ${_documents.length} documents.');
     } else {
-      print('DocumentProvider: Context unchanged, using existing data (${_documents.length} documents)');
+      _dplog(' Context unchanged, using existing data (${_documents.length} documents)');
     }
   }
 
@@ -259,15 +346,15 @@ class DocumentProvider with ChangeNotifier {
     _setLoading(true);
 
     try {
-      print('DocumentProvider: Initializing with companyId: $companyId, userId: $userId');
+      _dplog(' Initializing with companyId: $companyId, userId: $userId');
 
       // Modified implementation to batch notifications
       await _batchFetchAllData(companyId, userId: userId);
 
-      print('DocumentProvider: Initialization completed successfully');
+      _dplog(' Initialization completed successfully');
     } catch (e) {
-      _error = 'Failed to initialize data: $e';
-      print('DocumentProvider initialize error: $e');
+      _error = LocaleProvider.instance.l10n.errInitData('$e');
+      _dplog('initialize error: $e');
       notifyListeners();
     } finally {
       _setLoading(false);
@@ -280,19 +367,23 @@ class DocumentProvider with ChangeNotifier {
 
     if (authProvider.currentUser == null) return;
 
+    final modeChanged = _approvedOnly != authProvider.isAuditer;
+    _approvedOnly = authProvider.isAuditer;
+
     // COMPANY CONTEXT: If admin selected a company, load ALL documents for that company
     if (authProvider.isManagingCompany && authProvider.selectedCompany != null) {
       final targetCompanyId = authProvider.selectedCompany!.id;
 
-      print('DocumentProvider: Loading ALL documents for company: ${authProvider.selectedCompany!.name}');
+      _dplog(' Loading ALL documents for company: ${authProvider.selectedCompany!.name}');
 
       // Check if we need to reload
-      final needsReload = _currentContextUserId != null || // Was previously user-specific
+      final needsReload = modeChanged ||
+          _currentContextUserId != null || // Was previously user-specific
           _currentContextCompanyId != targetCompanyId ||
           _documents.isEmpty;
 
       if (needsReload) {
-        print('DocumentProvider: Company context changed, reloading...');
+        _dplog(' Company context changed, reloading...');
 
         // Clear previous data
         _clearData();
@@ -303,9 +394,9 @@ class DocumentProvider with ChangeNotifier {
         _currentContextUserId = null; // No specific user
         _currentContextCompanyId = targetCompanyId;
 
-        print('DocumentProvider: Loaded ${_documents.length} documents for company ${authProvider.selectedCompany!.name}');
+        _dplog(' Loaded ${_documents.length} documents for company ${authProvider.selectedCompany!.name}');
       } else {
-        print('DocumentProvider: Company context unchanged, using existing data (${_documents.length} documents)');
+        _dplog(' Company context unchanged, using existing data (${_documents.length} documents)');
       }
       return;
     }
@@ -314,24 +405,25 @@ class DocumentProvider with ChangeNotifier {
     UserModel targetUser;
     if (authProvider.hasSelectedUser && authProvider.selectedUser != null) {
       targetUser = authProvider.selectedUser!;
-      print('DocumentProvider: Loading documents for SELECTED user: ${targetUser.name} (${targetUser.email})');
+      _dplog(' Loading documents for SELECTED user: ${targetUser.name} (${targetUser.email})');
     } else {
       targetUser = authProvider.currentUser!;
-      print('DocumentProvider: Loading documents for CURRENT user: ${targetUser.name} (${targetUser.email})');
+      _dplog(' Loading documents for CURRENT user: ${targetUser.name} (${targetUser.email})');
     }
 
     final targetUserId = targetUser.id;
     final targetCompanyId = targetUser.companyId;
 
-    print('DocumentProvider: Target user ID: $targetUserId, Company ID: $targetCompanyId');
+    _dplog(' Target user ID: $targetUserId, Company ID: $targetCompanyId');
 
     // Check if we need to reload
-    final needsReload = _currentContextUserId != targetUserId ||
+    final needsReload = modeChanged ||
+        _currentContextUserId != targetUserId ||
         _currentContextCompanyId != targetCompanyId ||
         _documents.isEmpty;
 
     if (needsReload) {
-      print('DocumentProvider: User context changed, reloading...');
+      _dplog(' User context changed, reloading...');
 
       // Clear previous data before loading new context
       _clearData();
@@ -341,9 +433,9 @@ class DocumentProvider with ChangeNotifier {
       _currentContextUserId = targetUserId;
       _currentContextCompanyId = targetCompanyId;
 
-      print('DocumentProvider: Context updated successfully. Loaded ${_documents.length} documents.');
+      _dplog(' Context updated successfully. Loaded ${_documents.length} documents.');
     } else {
-      print('DocumentProvider: User context unchanged, using existing data (${_documents.length} documents)');
+      _dplog(' User context unchanged, using existing data (${_documents.length} documents)');
     }
   }
 
@@ -378,7 +470,7 @@ class DocumentProvider with ChangeNotifier {
 
       return document;
     } catch (e) {
-      _error = 'Failed to update document files: $e';
+      _error = LocaleProvider.instance.l10n.errUpdateFiles('$e');
       return null;
     } finally {
       _setLoading(false);
@@ -416,7 +508,7 @@ class DocumentProvider with ChangeNotifier {
 
       return result;
     } catch (e) {
-      _error = 'Failed to delete document: $e';
+      _error = LocaleProvider.instance.l10n.errDeleteDoc('$e');
       return false;
     } finally {
       _setLoading(false);
@@ -425,7 +517,7 @@ class DocumentProvider with ChangeNotifier {
 
   Future<void> _batchFetchAllData(String companyId, {String? userId}) async {
     try {
-      print('DocumentProvider: Batch fetching data for companyId: $companyId, userId: $userId');
+      _dplog(' Batch fetching data for companyId: $companyId, userId: $userId');
 
       // Fetch categories and all document types without multiple notifications
       await _batchFetchCategories();
@@ -433,10 +525,16 @@ class DocumentProvider with ChangeNotifier {
       // FIXED: Always fetch ALL documents for the company, regardless of userId
       List<DocumentModel> documents;
 
-      print('DocumentProvider: Fetching ALL documents for company: $companyId');
+      _dplog(' Fetching ALL documents for company: $companyId');
       // Always fetch documents for entire company - users should see all company documents
       documents = await _firestoreService.getDocuments(
         companyId: companyId, // Always use companyId, never filter by userId
+        approvedOnly: _approvedOnly, // auditors: approved documents only
+        // Only these types can carry signatures, so skip looking up the rest.
+        signatureTypeIds: _documentTypes
+            .where((t) => t.requiresSignature || t.signatureCount > 0)
+            .map((t) => t.id)
+            .toSet(),
       );
 
       _documents = documents;
@@ -444,50 +542,32 @@ class DocumentProvider with ChangeNotifier {
       // Build lookup maps for faster access
       _buildLookupMaps();
 
-      print('DocumentProvider: Loaded ${_documents.length} documents for company $companyId');
+      _dplog(' Loaded ${_documents.length} documents for company $companyId');
     } catch (e) {
-      print('DocumentProvider: Error in _batchFetchAllData: $e');
-      _error = 'Failed to fetch data: $e';
+      _dplog(' Error in _batchFetchAllData: $e');
+      _error = LocaleProvider.instance.l10n.errFetchData('$e');
     }
   }
 
-  // Helper to batch fetch categories and document types
+  // Helper to batch fetch categories and document types.
+  // OPTIMIZED:
+  //   1) Skip entirely if we already have data in memory (cache).
+  //   2) Use a single getAllDocumentTypes() call instead of N getDocumentTypes
+  //      calls — 2 round-trips instead of (1 + N).
   Future<void> _batchFetchCategories() async {
+    // FirestoreService caches these for the session, so calling this on every
+    // refresh is instant and still picks up admin edits once they're invalidated.
     try {
-      // Fetch categories
-      final categories = await _firestoreService.getCategories();
-      _categories = categories;
+      final results = await Future.wait([
+        _firestoreService.getCategories(),
+        _firestoreService.getAllDocumentTypes(),
+      ]);
 
-      // Prepare list of futures for parallel fetching
-      final futures = <Future>[];
-      for (var category in _categories) {
-        futures.add(_fetchDocTypesForCategory(category.id));
-      }
-
-      // Wait for all document types to be fetched
-      await Future.wait(futures);
+      _categories = results[0] as List<CategoryModel>;
+      _documentTypes = results[1] as List<DocumentTypeModel>;
     } catch (e) {
-      _error = 'Failed to fetch categories and document types: $e';
-      throw e; // Re-throw to be caught by the calling method
-    }
-  }
-
-  // Helper to fetch document types for a category
-  Future<void> _fetchDocTypesForCategory(String categoryId) async {
-    try {
-      final documentTypes = await _firestoreService.getDocumentTypes(categoryId);
-
-      // Add new document types and update existing ones
-      for (var docType in documentTypes) {
-        final index = _documentTypes.indexWhere((dt) => dt.id == docType.id);
-        if (index >= 0) {
-          _documentTypes[index] = docType;
-        } else {
-          _documentTypes.add(docType);
-        }
-      }
-    } catch (e) {
-      print('Error fetching document types for category $categoryId: $e');
+      _error = LocaleProvider.instance.l10n.errFetchCatsTypes('$e');
+      rethrow; // Re-throw to be caught by the calling method
     }
   }
 
@@ -513,7 +593,7 @@ class DocumentProvider with ChangeNotifier {
       await _batchFetchCategories();
       notifyListeners(); // Only notify once at the end
     } catch (e) {
-      _error = 'Failed to fetch categories: $e';
+      _error = LocaleProvider.instance.l10n.errFetchCats('$e');
       notifyListeners();
     }
   }
@@ -540,7 +620,7 @@ class DocumentProvider with ChangeNotifier {
 
       notifyListeners(); // Single notification
     } catch (e) {
-      _error = 'Failed to fetch document types: $e';
+      _error = LocaleProvider.instance.l10n.errFetchTypes('$e');
       notifyListeners();
     }
   }
@@ -554,6 +634,7 @@ class DocumentProvider with ChangeNotifier {
         companyId: companyId,
         categoryId: categoryId,
         userId: userId, // Add user filter support
+        approvedOnly: _approvedOnly,
       );
 
       if (categoryId != null) {
@@ -572,7 +653,7 @@ class DocumentProvider with ChangeNotifier {
 
       notifyListeners(); // Single notification
     } catch (e) {
-      _error = 'Failed to fetch documents: $e';
+      _error = LocaleProvider.instance.l10n.errFetchDocs('$e');
     } finally {
       _setLoading(false);
     }
@@ -584,7 +665,8 @@ class DocumentProvider with ChangeNotifier {
       print('DEBUG DocumentProvider.getDocument: Fetching document $documentId');
 
       // Always fetch fresh from Firestore to ensure we have complete data including fileUrls
-      final document = await _firestoreService.getDocument(documentId);
+      final document = await _firestoreService.getDocument(documentId,
+          approvedOnly: _approvedOnly);
 
       if (document != null) {
         print('DEBUG DocumentProvider.getDocument: Document found');
@@ -606,7 +688,7 @@ class DocumentProvider with ChangeNotifier {
       return document;
     } catch (e) {
       print('DEBUG DocumentProvider.getDocument: Error - $e');
-      _error = 'Failed to get document: $e';
+      _error = LocaleProvider.instance.l10n.errGetDoc('$e');
       return null;
     }
   }
@@ -621,6 +703,7 @@ class DocumentProvider with ChangeNotifier {
     DateTime? expiryDate,
     bool isNotApplicable = false,
     String? specification, // NEW FIELD
+    DateTime? reviewedDate,
   }) async {
     _setLoading(true);
 
@@ -634,6 +717,7 @@ class DocumentProvider with ChangeNotifier {
         expiryDate: expiryDate,
         isNotApplicable: isNotApplicable,
         specification: specification, // NEW FIELD
+        reviewedDate: reviewedDate,
       );
 
       if (document != null) {
@@ -644,7 +728,7 @@ class DocumentProvider with ChangeNotifier {
 
       return document;
     } catch (e) {
-      _error = 'Failed to create document: $e';
+      _error = LocaleProvider.instance.l10n.errCreateDoc('$e');
       return null;
     } finally {
       _setLoading(false);
@@ -664,7 +748,7 @@ class DocumentProvider with ChangeNotifier {
     final effectiveUser = _getEffectiveUser(context);
 
     if (effectiveUser == null) {
-      _error = 'No effective user found';
+      _error = LocaleProvider.instance.l10n.errNoEffectiveUser;
       return null;
     }
 
@@ -684,8 +768,11 @@ class DocumentProvider with ChangeNotifier {
       String documentId,
       DocumentStatus status,
       String? comment,
-      UserModel user,
-      ) async {
+      UserModel user, {
+      String? specification,
+      DateTime? expiryDate,
+      bool clearExpiryDate = false,
+      }) async {
     _setLoading(true);
 
     try {
@@ -694,6 +781,9 @@ class DocumentProvider with ChangeNotifier {
         status,
         comment,
         user,
+        specification: specification,
+        expiryDate: expiryDate,
+        clearExpiryDate: clearExpiryDate,
       );
 
       if (result) {
@@ -711,10 +801,35 @@ class DocumentProvider with ChangeNotifier {
 
       return result;
     } catch (e) {
-      _error = 'Failed to update document status: $e';
+      _error = LocaleProvider.instance.l10n.errUpdateStatus('$e');
       return false;
     } finally {
       _setLoading(false);
+    }
+  }
+
+  /// Marks a document as superseded by a newer version. It drops out of action
+  /// items / compliance counts but remains in the audit index for history.
+  Future<bool> supersedeDocument(String documentId,
+      {String? newDocumentId}) async {
+    try {
+      final index = _documents.indexWhere((doc) => doc.id == documentId);
+      if (index < 0) return false;
+      final updated = _documents[index].copyWith(
+        isSuperseded: true,
+        supersededByDocumentId: newDocumentId,
+        updatedAt: DateTime.now(),
+      );
+      final ok = await _firestoreService.updateDocument(updated);
+      if (ok) {
+        _documents[index] = updated;
+        _documentsMap[documentId] = updated;
+        notifyListeners();
+      }
+      return ok;
+    } catch (e) {
+      _error = LocaleProvider.instance.l10n.errSupersede('$e');
+      return false;
     }
   }
 
@@ -748,7 +863,7 @@ class DocumentProvider with ChangeNotifier {
 
       return result;
     } catch (e) {
-      _error = 'Failed to add signature: $e';
+      _error = LocaleProvider.instance.l10n.errAddSignature('$e');
       return false;
     } finally {
       _setLoading(false);
@@ -783,7 +898,7 @@ class DocumentProvider with ChangeNotifier {
 
       return result;
     } catch (e) {
-      _error = 'Failed to add comment: $e';
+      _error = LocaleProvider.instance.l10n.errAddComment('$e');
       return false;
     }
   }
@@ -793,7 +908,7 @@ class DocumentProvider with ChangeNotifier {
     try {
       return await _documentService.calculateCompliancePercentage(companyId);
     } catch (e) {
-      _error = 'Failed to calculate compliance percentage: $e';
+      _error = LocaleProvider.instance.l10n.errCompliancePct('$e');
       return 0.0;
     }
   }
@@ -816,6 +931,7 @@ class DocumentProvider with ChangeNotifier {
     _currentContextCompanyId = null;
     _documents = [];
     _documentsMap = {};
+    _deactivatedDocumentTypeIds = {};
     notifyListeners();
   }
 

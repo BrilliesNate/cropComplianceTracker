@@ -10,6 +10,7 @@ import 'package:cropCompliance/views/shared/status_badge.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 class DocumentStatusList extends StatelessWidget {
   final String categoryId;
@@ -27,8 +28,8 @@ class DocumentStatusList extends StatelessWidget {
     final documentTypes = categoryProvider.getDocumentTypes(categoryId);
 
     if (documentTypes.isEmpty) {
-      return const Center(
-        child: Text('No document types found for this category'),
+      return Center(
+        child: Text(context.l10n.docTypesNoneInCategory),
       );
     }
 
@@ -76,7 +77,7 @@ class DocumentStatusList extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _getDocumentTypeDescription(documentType),
+                        _getDocumentTypeDescription(context, documentType),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -94,8 +95,8 @@ class DocumentStatusList extends StatelessWidget {
                       color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Text(
-                      'Not Applicable',
+                    child: Text(
+                      context.l10n.notApplicable,
                       style: TextStyle(
                         color: Colors.grey,
                         fontWeight: FontWeight.bold,
@@ -112,7 +113,7 @@ class DocumentStatusList extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.upload_file),
-                      label: const Text('Upload'),
+                      label: Text(context.l10n.actionUpload),
                       onPressed: () {
                         Navigator.of(context).pushNamed(
                           RouteConstants.documentUpload,
@@ -130,7 +131,7 @@ class DocumentStatusList extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.edit_document),
-                      label: const Text('Fill Form'),
+                      label: Text(context.l10n.actionFillForm),
                       onPressed: () {
                         Navigator.of(context).pushNamed(
                           RouteConstants.documentForm,
@@ -153,7 +154,7 @@ class DocumentStatusList extends StatelessWidget {
                           arguments: {'documentId': documents.first.id},
                         );
                       },
-                      tooltip: 'View Document',
+                      tooltip: context.l10n.viewDocument,
                     ),
                   ),
                 if (documentType.hasNotApplicableOption)
@@ -167,7 +168,7 @@ class DocumentStatusList extends StatelessWidget {
                       onPressed: () {
                         _showNotApplicableDialog(context, documentType);
                       },
-                      tooltip: 'Mark as Not Applicable',
+                      tooltip: context.l10n.markNotApplicable,
                     ),
                   ),
               ],
@@ -186,8 +187,8 @@ class DocumentStatusList extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Rejection Reason:',
+                      Text(
+                        context.l10n.rejectionReason,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.red,
@@ -208,20 +209,20 @@ class DocumentStatusList extends StatelessWidget {
     );
   }
 
-  String _getDocumentTypeDescription(DocumentTypeModel documentType) {
+  String _getDocumentTypeDescription(BuildContext context, DocumentTypeModel documentType) {
     List<String> descriptions = [];
 
     if (documentType.allowMultipleDocuments) {
-      descriptions.add('Multiple documents allowed');
+      descriptions.add(context.l10n.ruleMultipleAllowed);
     }
 
     if (documentType.hasExpiryDate) {
-      descriptions.add('Requires expiry date');
+      descriptions.add(context.l10n.ruleRequiresExpiry);
     }
 
     if (documentType.requiresSignature) {
       final count = documentType.signatureCount;
-      descriptions.add('Requires $count signature${count > 1 ? 's' : ''}');
+      descriptions.add(context.l10n.ruleRequiresSignatures(count));
     }
 
     return descriptions.join(' • ');

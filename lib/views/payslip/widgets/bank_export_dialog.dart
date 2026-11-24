@@ -8,6 +8,7 @@ import 'package:cropCompliance/views/payslip/widgets/employee_form_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 /// What the user confirmed in [BankExportDialog].
 class BankExportDialogResult {
@@ -58,7 +59,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
   static const _green = Color(0xFF2E7D32);
   static final _currency =
       NumberFormat.currency(locale: 'en_ZA', symbol: 'R ', decimalDigits: 2);
-  static final _date = DateFormat('d MMM');
+  static DateFormat get _date => DateFormat('d MMM'); // follows the app language
 
   late final TextEditingController _refCtrl;
   BankExportTemplate? _template;
@@ -69,7 +70,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
   void initState() {
     super.initState();
     _refCtrl = TextEditingController(
-        text: BankExportTemplate.defaultReferencePrefix);
+        text: LocaleProvider.instance.l10n.bankRefDefault);
     _template = widget.initialTemplate;
   }
 
@@ -115,7 +116,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      title: const Text('Bulk Payment File'),
+      title: Text(context.l10n.bulkPaymentFile),
       content: SizedBox(
         width: 520,
         child: SingleChildScrollView(
@@ -125,15 +126,14 @@ class _BankExportDialogState extends State<BankExportDialog> {
             children: [
               Text(
                 plan.ready.isEmpty
-                    ? 'No payments yet'
-                    : '${plan.ready.length} payment${plan.ready.length == 1 ? '' : 's'} · total ${_currency.format(plan.total)}',
+                    ? context.l10n.noPaymentsYet
+                    : context.l10n.paymentsTotal(plan.ready.length, _currency.format(plan.total)),
                 style:
                     const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               Text(
-                'Upload the file to your online banking as a bulk payment, '
-                'check the total, then approve once.',
+                context.l10n.bankUploadHelp,
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
               if (plan.ready.isEmpty && plan.skipped.isNotEmpty)
@@ -147,10 +147,10 @@ class _BankExportDialogState extends State<BankExportDialog> {
                 maxLength: 15,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  labelText: 'Reference',
+                  labelText: context.l10n.reference,
                   helperText: sample == null
-                      ? 'Each employee\'s first name is added'
-                      : 'Each employee\'s first name is added — e.g. "$sample"',
+                      ? context.l10n.refFirstNameAdded
+                      : context.l10n.refFirstNameExample(sample),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10)),
                   isDense: true,
@@ -160,7 +160,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
               if (plan.relinks.isNotEmpty) _relinksNote(plan),
               if (plan.combinedCount > 0)
                 _line(Icons.merge_type, Colors.blue,
-                    '${plan.combinedCount} employee${plan.combinedCount == 1 ? ' has' : 's have'} more than one payslip selected — their net pay is combined into one payment.'),
+                    context.l10n.combinedPayments(plan.combinedCount)),
               if (plan.skipped.isNotEmpty) _notIncluded(plan),
             ],
           ),
@@ -191,7 +191,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
             ),
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(context.l10n.commonCancel)),
           const SizedBox(width: 8),
           FilledButton.icon(
             style: FilledButton.styleFrom(backgroundColor: _green),
@@ -209,7 +209,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
                       ),
                     ),
             icon: const Icon(Icons.download, size: 18),
-            label: const Text('Download file'),
+            label: Text(context.l10n.downloadFile),
           ),
         ]),
       ],
@@ -221,9 +221,9 @@ class _BankExportDialogState extends State<BankExportDialog> {
   Widget _bankPicker() => DropdownButtonFormField<String>(
         initialValue: _template?.id,
         isExpanded: true,
-        hint: const Text('Choose your bank'),
+        hint: Text(context.l10n.chooseYourBank),
         decoration: InputDecoration(
-          labelText: 'Bank the farm pays from',
+          labelText: context.l10n.bankFarmPaysFrom,
           border:
               OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           isDense: true,
@@ -257,11 +257,11 @@ class _BankExportDialogState extends State<BankExportDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Nobody can be paid yet — let\'s fix that',
+          Text(context.l10n.nobodyPayable,
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(
-            'Each fix saves straight away and this list updates as you go.',
+            context.l10n.eachFixSaves,
             style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
           ),
           const SizedBox(height: 10),
@@ -272,21 +272,21 @@ class _BankExportDialogState extends State<BankExportDialog> {
                 onPressed: _working ? null : () => _stepThrough(banking),
                 icon: const Icon(Icons.account_balance_outlined, size: 18),
                 label: Text(
-                    'Add banking details for ${banking.length} employee${banking.length == 1 ? '' : 's'}'),
+                    context.l10n.addBankingForCount(banking.length)),
               ),
             if (missing.isNotEmpty)
               FilledButton.tonalIcon(
                 onPressed: _working ? null : () => _stepThrough(missing),
                 icon: const Icon(Icons.person_search_outlined, size: 18),
                 label: Text(
-                    'Fix ${missing.length} unlinked payslip${missing.length == 1 ? '' : 's'}'),
+                    context.l10n.fixUnlinkedCount(missing.length)),
               ),
             if (payslipFix.isNotEmpty)
               OutlinedButton.icon(
                 onPressed: _working ? null : () => _stepThrough(payslipFix),
                 icon: const Icon(Icons.edit_outlined, size: 18),
                 label: Text(
-                    'Review ${payslipFix.length} R 0 payslip${payslipFix.length == 1 ? '' : 's'}'),
+                    context.l10n.reviewZeroCount(payslipFix.length)),
               ),
           ]),
         ],
@@ -306,7 +306,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
             Icon(Icons.info_outline, size: 18, color: Colors.grey.shade700),
             const SizedBox(width: 10),
             Expanded(
-              child: Text('Not included (${plan.skipped.length})',
+              child: Text(context.l10n.notIncludedCount(plan.skipped.length),
                   style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -315,7 +315,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
             if (plan.ready.isNotEmpty && banking.length > 1)
               TextButton(
                 onPressed: _working ? null : () => _stepThrough(banking),
-                child: Text('Add banking details for all ${banking.length}'),
+                child: Text(context.l10n.addBankingForAll(banking.length)),
               ),
           ]),
           ...plan.skipped.map(_skipRow),
@@ -328,17 +328,17 @@ class _BankExportDialogState extends State<BankExportDialog> {
     final actions = <Widget>[];
     switch (s.kind) {
       case SkipKind.noBankingDetails:
-        actions.add(_rowButton('Add banking details', () => _fix(s)));
+        actions.add(_rowButton(context.l10n.addBankingDetails, () => _fix(s)));
         break;
       case SkipKind.invalidBankingDetails:
-        actions.add(_rowButton('Fix banking details', () => _fix(s)));
+        actions.add(_rowButton(context.l10n.fixBankingDetails, () => _fix(s)));
         break;
       case SkipKind.missingEmployee:
-        actions.add(_rowButton('Link to employee', () => _linkToEmployee(s)));
+        actions.add(_rowButton(context.l10n.linkToEmployee, () => _linkToEmployee(s)));
         actions.add(_rowButton('Re-create', () => _recreateEmployee(s)));
         break;
       case SkipKind.nonPositivePay:
-        actions.add(_rowButton('Edit payslip', () => _editPayslip(s)));
+        actions.add(_rowButton(context.l10n.editPayslip, () => _editPayslip(s)));
         break;
     }
     return Padding(
@@ -381,15 +381,13 @@ class _BankExportDialogState extends State<BankExportDialog> {
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            '$n payslip${n == 1 ? ' was' : 's were'} linked to a removed '
-            'employee record — matched to the current employee by ID number '
-            'or name.',
+            context.l10n.relinkedNote(n),
             style: TextStyle(fontSize: 12.5, color: Colors.blue.shade900),
           ),
         ),
         TextButton(
           onPressed: _working ? null : () => _saveRelinks(plan),
-          child: const Text('Save links'),
+          child: Text(context.l10n.saveLinks),
         ),
       ]),
     );
@@ -403,12 +401,11 @@ class _BankExportDialogState extends State<BankExportDialog> {
 
     final String title;
     if (undecided) {
-      title = '$n selected payslip${n == 1 ? ' is' : 's are'} still Draft '
-          '— amounts may still change:';
+      title = context.l10n.draftsUndecided(n);
     } else if (removed) {
-      title = '$n draft payslip${n == 1 ? '' : 's'} removed from this export:';
+      title = context.l10n.draftsRemoved(n);
     } else {
-      title = '$n draft payslip${n == 1 ? '' : 's'} included as they are now:';
+      title = context.l10n.draftsIncluded(n);
     }
 
     return Container(
@@ -460,18 +457,18 @@ class _BankExportDialogState extends State<BankExportDialog> {
               FilledButton.tonal(
                 onPressed: () =>
                     setState(() => _draftChoice = DraftChoice.remove),
-                child: Text('Remove draft${n == 1 ? '' : 's'}'),
+                child: Text(context.l10n.removeDrafts(n)),
               ),
               TextButton(
                 onPressed: () =>
                     setState(() => _draftChoice = DraftChoice.include),
-                child: const Text('Include anyway'),
+                child: Text(context.l10n.includeAnyway),
               ),
             ] else
               TextButton(
                 onPressed: () =>
                     setState(() => _draftChoice = DraftChoice.undecided),
-                child: const Text('Undo'),
+                child: Text(context.l10n.undo),
               ),
           ]),
         ],
@@ -510,7 +507,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
       builder: (dctx) => EmployeeFormDialog(
         companyId: widget.companyId,
         employee: e,
-        title: 'Banking details — ${e.name}',
+        title: context.l10n.bankingDetailsFor(e.name),
         bankingFirst: true,
         onSave: (emp) async {
           final ok = await _prov.saveEmployee(emp);
@@ -518,7 +515,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
           if (ok) {
             Navigator.of(dctx).pop(true);
           } else {
-            _toast('Could not save: ${_prov.error ?? 'unknown error'}');
+            _toast(context.l10n.saveFailedReason(_prov.error ?? context.l10n.errorUnknown));
           }
         },
       ),
@@ -533,20 +530,17 @@ class _BankExportDialogState extends State<BankExportDialog> {
       context: context,
       builder: (dctx) => AlertDialog(
         title: Text(s.name),
-        content: const Text(
-            'This payslip is linked to an employee record that no longer '
-            'exists (the employee was probably removed). Link it to a '
-            'current employee, or re-create the employee from the payslip.'),
+        content: Text(context.l10n.orphanPayslipBody),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dctx),
-              child: const Text('Skip')),
+              child: Text(context.l10n.skip)),
           TextButton(
               onPressed: () => Navigator.pop(dctx, 'link'),
-              child: const Text('Link to employee')),
+              child: Text(context.l10n.linkToEmployee)),
           FilledButton(
               onPressed: () => Navigator.pop(dctx, 'recreate'),
-              child: const Text('Re-create employee')),
+              child: Text(context.l10n.recreateEmployee)),
         ],
       ),
     );
@@ -565,7 +559,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
     final picked = await showDialog<Object>(
       context: context,
       builder: (dctx) => SimpleDialog(
-        title: Text('Link "${s.name}" to…'),
+        title: Text(context.l10n.linkNameTo(s.name)),
         children: [
           SizedBox(
             width: 380,
@@ -576,8 +570,8 @@ class _BankExportDialogState extends State<BankExportDialog> {
                         dense: true,
                         title: Text(e.name),
                         subtitle: Text(e.idNumber.isNotEmpty
-                            ? 'ID ${e.idNumber}'
-                            : 'No ID number'),
+                            ? context.l10n.employeeIdShort(e.idNumber)
+                            : context.l10n.noIdNumber),
                         trailing: e.hasBankingDetails
                             ? Icon(Icons.account_balance_outlined,
                                 size: 16, color: Colors.grey.shade500)
@@ -592,7 +586,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
             child: TextButton.icon(
               onPressed: () => Navigator.pop(dctx, 'recreate'),
               icon: const Icon(Icons.person_add_alt, size: 18),
-              label: const Text('Not listed? Re-create the employee instead'),
+              label: Text(context.l10n.notListedRecreate),
             ),
           ),
         ],
@@ -604,7 +598,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
     if (picked is! EmployeeModel) return false; // dismissed
     final ok = await _busy(() =>
         _prov.relinkPayslips(s.payslips.map((p) => p.id), picked.id));
-    if (!ok) _toast('Could not link: ${_prov.error ?? 'unknown error'}');
+    if (!ok) _toast(context.l10n.couldNotLink(_prov.error ?? context.l10n.errorUnknown));
     return ok;
   }
 
@@ -629,7 +623,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
       builder: (dctx) => EmployeeFormDialog(
         companyId: widget.companyId,
         employee: draft,
-        title: 'Re-create employee',
+        title: context.l10n.recreateEmployee,
         bankingFirst: true,
         onSave: (emp) async {
           created = await _prov.upsertEmployee(emp);
@@ -637,7 +631,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
           if (created != null) {
             Navigator.of(dctx).pop(true);
           } else {
-            _toast('Could not save: ${_prov.error ?? 'unknown error'}');
+            _toast(context.l10n.saveFailedReason(_prov.error ?? context.l10n.errorUnknown));
           }
         },
       ),
@@ -645,7 +639,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
     if (created == null) return false;
     final ok = await _busy(() =>
         _prov.relinkPayslips(s.payslips.map((p) => p.id), created!.id));
-    if (!ok) _toast('Employee saved, but linking payslips failed.');
+    if (!ok) _toast(context.l10n.employeeSavedLinkFailed);
     return ok;
   }
 
@@ -675,7 +669,7 @@ class _BankExportDialogState extends State<BankExportDialog> {
       }
       return ok;
     });
-    _toast(ok ? 'Payslip links saved' : 'Some links could not be saved');
+    _toast(ok ? context.l10n.payslipLinksSaved : context.l10n.someLinksFailed);
   }
 
   Future<bool> _busy(Future<bool> Function() task) async {

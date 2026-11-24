@@ -5,6 +5,8 @@
 /// Flutter / Firestore) so they can be unit tested directly.
 library;
 
+import 'package:cropCompliance/providers/locale_provider.dart';
+
 /// One payment, already resolved from a payslip + employee record.
 class BankPaymentLine {
   /// Name on the receiving account (account holder, else employee name).
@@ -34,7 +36,7 @@ class BankPaymentLine {
     required this.amountCents,
     this.bankName = '',
     this.accountTypeCode = '2',
-    this.accountTypeLabel = 'Savings',
+    this.accountTypeLabel = 'Savings', // l10n-ignore: bank file format
     this.idNumber = '',
   });
 }
@@ -56,7 +58,7 @@ class BankExportContext {
 abstract class BankExportTemplate {
   const BankExportTemplate();
 
-  static const defaultReferencePrefix = 'Salaries';
+  static const defaultReferencePrefix = 'Salaries'; // l10n-ignore: fallback; the dialog fills the app-language default
 
   /// Stable key persisted in payroll settings — never change once shipped.
   String get id;
@@ -89,12 +91,10 @@ abstract class BankExportTemplate {
   /// Short note for the export dialog, or null when nothing needs saying.
   String? get userNote {
     if (isGeneric) {
-      return 'Generic layout with column headings — map the columns in '
-          'your bank\'s import screen and test a small upload first.';
+      return LocaleProvider.instance.l10n.bankNoteGeneric;
     }
     if (!verified) {
-      return 'Template not yet confirmed with $displayName — test a small '
-          'upload first.';
+      return LocaleProvider.instance.l10n.bankNoteUnverified(displayName);
     }
     return null;
   }
@@ -103,12 +103,12 @@ abstract class BankExportTemplate {
   List<String> validate(BankPaymentLine line) {
     final issues = <String>[];
     if (!RegExp(r'^\d{6,16}$').hasMatch(digitsOnly(line.accountNumber))) {
-      issues.add('account number must be 6–16 digits');
+      issues.add(LocaleProvider.instance.l10n.bankIssueAccountDigits);
     }
     if (!RegExp(r'^\d{6}$').hasMatch(digitsOnly(line.branchCode))) {
-      issues.add('branch code must be 6 digits');
+      issues.add(LocaleProvider.instance.l10n.bankIssueBranchDigits);
     }
-    if (line.amountCents <= 0) issues.add('net pay is R 0.00 or less');
+    if (line.amountCents <= 0) issues.add(LocaleProvider.instance.l10n.bankIssueNetZero);
     return issues;
   }
 
@@ -116,7 +116,7 @@ abstract class BankExportTemplate {
   /// [referenceMaxLength].
   String reference(BankPaymentLine line, BankExportContext ctx) {
     final prefix = ctx.referencePrefix.trim().isEmpty
-        ? defaultReferencePrefix
+        ? LocaleProvider.instance.l10n.bankRefDefault
         : ctx.referencePrefix.trim();
     return cleanText('$prefix ${line.firstName}', referenceMaxLength);
   }
@@ -133,7 +133,7 @@ abstract class BankExportTemplate {
   }
 
   String fileName(String companyName, String periodLabel) =>
-      '$companyName Bank Payments $displayName $periodLabel.$fileExtension';
+      LocaleProvider.instance.l10n.bankFileName(companyName, displayName, periodLabel, fileExtension);
 
   // ── Shared formatting helpers ───────────────────────────────────────────
 
@@ -171,7 +171,7 @@ abstract class BankExportTemplate {
 
   /// Always 2 decimals: 694500 → "6945.00".
   static String fixedAmount(int cents) =>
-      '${cents ~/ 100}.${(cents % 100).toString().padLeft(2, '0')}';
+      '${cents ~/ 100}.${(cents % 100).toString().padLeft(2, '0')}'; // l10n-ignore: number format
 
   /// Quotes a cell only if it contains a comma, quote or newline. Values from
   /// [cleanText] never do, so bank rows stay unquoted.

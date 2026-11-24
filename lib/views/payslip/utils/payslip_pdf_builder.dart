@@ -5,6 +5,7 @@ import 'package:cropCompliance/views/payslip/utils/pdf_downloader.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 /// One employee's leave standing, for the Leave Records report.
 /// All values are in HOURS; the report also shows days (÷8).
@@ -40,15 +41,15 @@ class PayslipPdfBuilder {
   static final _currency =
       NumberFormat.currency(locale: 'en_ZA', symbol: 'R ', decimalDigits: 2);
   static final _num1 = NumberFormat('#,##0.0', 'en_ZA');
-  static final _shortDate = DateFormat('d-MMM-yyyy');
-  static final _monthYear = DateFormat('MMM-yyyy');
+  static DateFormat get _shortDate => DateFormat('d-MMM-yyyy'); // follows the app language
+  static DateFormat get _monthYear => DateFormat('MMM-yyyy'); // follows the app language
 
   // ── Public entry points ───────────────────────────────────────────────────
 
   static String fileName(PayslipModel p) {
     final name = p.employeeName.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
     final period = _monthYear.format(p.payPeriodStart);
-    return '$name $period Payslip.pdf';
+    return LocaleProvider.instance.l10n.pdfPayslipFile(name, period);
   }
 
   static Future<Uint8List> buildBytes(PayslipModel payslip) async {
@@ -94,7 +95,7 @@ class PayslipPdfBuilder {
       payslips: payslips,
     ));
     final period = _monthYear.format(periodStart);
-    await triggerPdfDownload(bytes, '$companyName UIF Summary $period.pdf');
+    await triggerPdfDownload(bytes, LocaleProvider.instance.l10n.pdfUifFile(companyName, period));
   }
 
   /// Downloads a Leave Records report — per-employee Opening / Accrued / Taken /
@@ -110,7 +111,7 @@ class PayslipPdfBuilder {
       rows: rows,
     ));
     final stamp = DateFormat('yyyy-MM-dd').format(generatedOn);
-    await triggerPdfDownload(bytes, '$companyName Leave Records $stamp.pdf');
+    await triggerPdfDownload(bytes, LocaleProvider.instance.l10n.pdfLeaveFile(companyName, stamp));
   }
 
   // ── Single payslip PDF ────────────────────────────────────────────────────
@@ -230,64 +231,64 @@ class PayslipPdfBuilder {
     pw.Widget leftCol() => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            sectionHeader('PERSOONLIKE BESONDERHEDE'),
-            detailRow('Naam', p.employeeName),
-            detailRow('ID Nommer', p.employeeIdNumber),
-            detailRow('Werknemer Tipe', p.employmentType.labelAfr),
+            sectionHeader(LocaleProvider.instance.l10n.psPersonalDetails),
+            detailRow(LocaleProvider.instance.l10n.payslipName, p.employeeName),
+            detailRow(LocaleProvider.instance.l10n.payslipIdNumber, p.employeeIdNumber),
+            detailRow(LocaleProvider.instance.l10n.psEmployeeType, p.employmentType.label),
             if (p.jobDescription.trim().isNotEmpty)
-              detailRow('Posbeskrywing', p.jobDescription),
-            detailRow('Periode Begin', _shortDate.format(p.payPeriodStart)),
-            detailRow('Periode Einde', _shortDate.format(p.payPeriodEnd)),
+              detailRow(LocaleProvider.instance.l10n.jobDescription, p.jobDescription),
+            detailRow(LocaleProvider.instance.l10n.psPeriodStart, _shortDate.format(p.payPeriodStart)),
+            detailRow(LocaleProvider.instance.l10n.psPeriodEnd, _shortDate.format(p.payPeriodEnd)),
             pw.SizedBox(height: 14),
             sectionHeader('VERDIENSTE'),
-            rateRow('Uurlikse Loon', p.normalRate),
-            if (p.overtimeHours > 0) rateRow('Oortyd Loon', p.overtimeRate),
+            rateRow(LocaleProvider.instance.l10n.psHourlyRate, p.normalRate),
+            if (p.overtimeHours > 0) rateRow(LocaleProvider.instance.l10n.psOvertimeRate, p.overtimeRate),
             if (p.doubleTimeHours > 0)
-              rateRow('Dubbel Tyd Loon', p.doubleTimeRate),
+              rateRow(LocaleProvider.instance.l10n.psDoubleTimeRate, p.doubleTimeRate),
             pw.SizedBox(height: 6),
-            hoursRow('Normale Loon', p.normalHours, p.normalPay),
+            hoursRow(LocaleProvider.instance.l10n.psNormalPay, p.normalHours, p.normalPay),
             if (p.overtimePay > 0)
-              hoursRow('Oortyd Loon', p.overtimeHours, p.overtimePay),
+              hoursRow(LocaleProvider.instance.l10n.psOvertimePay, p.overtimeHours, p.overtimePay),
             if (p.doubleTimePay > 0)
-              hoursRow('Dubbel Tyd', p.doubleTimeHours, p.doubleTimePay),
+              hoursRow(LocaleProvider.instance.l10n.psDoubleTime, p.doubleTimeHours, p.doubleTimePay),
             if (p.publicHolidayPay > 0)
               hoursRow(
-                  'Openbare Vakansie', p.publicHolidayHours, p.publicHolidayPay),
+                  LocaleProvider.instance.l10n.psPublicHoliday, p.publicHolidayHours, p.publicHolidayPay),
             if (p.sickLeavePay > 0)
-              hoursRow('Siekteverlof (SV)', p.sickLeaveHours, p.sickLeavePay),
+              hoursRow(LocaleProvider.instance.l10n.psSickLeaveCoded, p.sickLeaveHours, p.sickLeavePay),
             if (p.holidayLeavePay > 0)
               hoursRow(
-                  'Vakansieverlof (VV)', p.holidayLeaveHours, p.holidayLeavePay),
+                  LocaleProvider.instance.l10n.psHolidayLeaveCoded, p.holidayLeaveHours, p.holidayLeavePay),
             if (p.familyLeavePay > 0)
-              hoursRow('Gesinsverlof (GV)', p.familyLeaveHours,
+              hoursRow(LocaleProvider.instance.l10n.psFamilyLeaveCoded, p.familyLeaveHours,
                   p.familyLeavePay),
             // Extra income lines (bonus, allowance, etc.)
             for (final earning in p.additionalEarnings)
               deductionRow(earning.description, earning.amount),
             pw.Divider(),
-            totalRow('TOTALE INKOMSTE', p.totalEarnings, accentColor),
+            totalRow(LocaleProvider.instance.l10n.payslipTotalEarnings, p.totalEarnings, accentColor),
           ],
         );
 
     pw.Widget rightCol() => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            sectionHeader('ANDER BESONDERHEDE'),
-            detailRow('Betaaldatum', _shortDate.format(p.payDate)),
-            detailRow('UIF Reg Nr',
+            sectionHeader(LocaleProvider.instance.l10n.psOtherDetails),
+            detailRow(LocaleProvider.instance.l10n.payslipPayDate, _shortDate.format(p.payDate)),
+            detailRow(LocaleProvider.instance.l10n.psUifRegNr,
                 p.uifRegNumber.isNotEmpty ? p.uifRegNumber : '-'),
             pw.SizedBox(height: 14),
             sectionHeader('AFTREKKINGS'),
-            deductionRow('UIF Werknemer (1%)', p.uifDeduction),
+            deductionRow(LocaleProvider.instance.l10n.payslipUifEmployee, p.uifDeduction),
             if (p.payeDeduction > 0)
-              deductionRow('PAYE Belasting', p.payeDeduction),
+              deductionRow(LocaleProvider.instance.l10n.payslipPayeTax, p.payeDeduction),
             for (final d in p.additionalDeductions)
               deductionRow(d.description, d.amount),
             pw.Divider(),
             totalRow(
-                'TOTALE AFTREKKINGS', p.totalDeductions, PdfColors.red700),
+                LocaleProvider.instance.l10n.payslipTotalDeductions, p.totalDeductions, PdfColors.red700),
             pw.SizedBox(height: 12),
-            sectionHeader('NETTO SALARIS'),
+            sectionHeader(LocaleProvider.instance.l10n.psNetSalaryCaps),
             pw.SizedBox(height: 6),
             pw.Container(
               padding: const pw.EdgeInsets.all(10),
@@ -299,7 +300,7 @@ class PayslipPdfBuilder {
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Nett Salaris',
+                  pw.Text(LocaleProvider.instance.l10n.payslipNetSalary,
                       style: pw.TextStyle(
                           fontWeight: pw.FontWeight.bold,
                           color: accentColor,
@@ -337,7 +338,7 @@ class PayslipPdfBuilder {
             width: double.infinity,
             color: PdfColors.grey200,
             padding: const pw.EdgeInsets.symmetric(vertical: 6),
-            child: pw.Text('SALARIS STROKIE',
+            child: pw.Text(LocaleProvider.instance.l10n.payslipTitle,
                 style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold,
                     fontSize: 11,
@@ -361,8 +362,8 @@ class PayslipPdfBuilder {
           pw.Divider(color: PdfColors.grey400),
           pw.Text(
             p.isFinalised
-                ? 'This payslip has been finalised.'
-                : 'DRAFT – This payslip has not been finalised.',
+                ? LocaleProvider.instance.l10n.payslipFinalisedDot
+                : LocaleProvider.instance.l10n.payslipDraftBanner,
             style: pw.TextStyle(
                 fontSize: 8,
                 color: p.isFinalised
@@ -510,7 +511,7 @@ class PayslipPdfBuilder {
             width: double.infinity,
             color: PdfColors.grey200,
             padding: const pw.EdgeInsets.symmetric(vertical: 6),
-            child: pw.Text('UIF & AFTREKKINGS OPSOMMING',
+            child: pw.Text(LocaleProvider.instance.l10n.uifSummaryTitle,
                 style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold,
                     fontSize: 11,
@@ -523,13 +524,13 @@ class PayslipPdfBuilder {
             children: [
               pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
                 pw.Text(
-                    'Periode: ${_shortDate.format(periodStart)} – ${_shortDate.format(periodEnd)}',
+                    LocaleProvider.instance.l10n.uifPeriodRange(_shortDate.format(periodStart), _shortDate.format(periodEnd)),
                     style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
                 pw.Text(
-                    'UIF Reg Nr: ${uifRegNumber.isNotEmpty ? uifRegNumber : '-'}',
+                    LocaleProvider.instance.l10n.uifRegNrValue(uifRegNumber.isNotEmpty ? uifRegNumber : '-'),
                     style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
               ]),
-              pw.Text('${rowIds.length} werknemer${rowIds.length == 1 ? '' : 's'}',
+              pw.Text(LocaleProvider.instance.l10n.uifEmployeeCount(rowIds.length),
                   style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
             ],
           ),
@@ -547,14 +548,14 @@ class PayslipPdfBuilder {
             },
             children: [
               pw.TableRow(children: [
-                headerCellLeft('Werknemer'),
-                headerCellLeft('ID Nommer'),
-                headerCell('Inkomste'),
+                headerCellLeft(LocaleProvider.instance.l10n.colEmployee),
+                headerCellLeft(LocaleProvider.instance.l10n.payslipIdNumber),
+                headerCell(LocaleProvider.instance.l10n.uifColIncome),
                 headerCell('PAYE'),
-                headerCell('UIF Wrkn (1%)'),
-                headerCell('UIF Wrkgr (1%)'),
-                headerCell('Ander Aftr.'),
-                headerCell('Werkn. Aftr.'),
+                headerCell(LocaleProvider.instance.l10n.uifColEmployeeUif),
+                headerCell(LocaleProvider.instance.l10n.uifColEmployerUif),
+                headerCell(LocaleProvider.instance.l10n.uifColOtherDed),
+                headerCell(LocaleProvider.instance.l10n.uifColEmployeeDed),
               ]),
               ...rowIds.map((id) => pw.TableRow(children: [
                     cellLeft(nameByEmp[id]!),
@@ -600,22 +601,22 @@ class PayslipPdfBuilder {
             child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('Opsomming',
+                  pw.Text(LocaleProvider.instance.l10n.uifSummaryHeading,
                       style: pw.TextStyle(
                           fontSize: 9,
                           fontWeight: pw.FontWeight.bold,
                           color: accentColor)),
                   pw.SizedBox(height: 4),
-                  _sumRow('PAYE Belasting:', _currency.format(totalPaye)),
-                  _sumRow('Werknemers UIF bydrae (1%):',
+                  _sumRow(LocaleProvider.instance.l10n.uifPayeTaxColon, _currency.format(totalPaye)),
+                  _sumRow(LocaleProvider.instance.l10n.uifEmployeeContribution,
                       _currency.format(totalEmployeeUIF)),
-                  _sumRow('Ander aftrekkings:',
+                  _sumRow(LocaleProvider.instance.l10n.uifOtherDeductions,
                       _currency.format(totalOtherDed)),
                   pw.Divider(color: PdfColors.grey400),
                   pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        pw.Text('TOTALE WERKNEMER AFTREKKINGS:',
+                        pw.Text(LocaleProvider.instance.l10n.uifTotalEmployeeDed,
                             style: pw.TextStyle(
                                 fontSize: 10,
                                 fontWeight: pw.FontWeight.bold,
@@ -627,9 +628,9 @@ class PayslipPdfBuilder {
                                 color: accentColor)),
                       ]),
                   pw.SizedBox(height: 6),
-                  _sumRow('Werkgewer UIF bydrae (1%):',
+                  _sumRow(LocaleProvider.instance.l10n.uifEmployerContribution,
                       _currency.format(totalEmployerUIF)),
-                  _sumRow('TOTALE UIF BETAALBAAR (Wrkn + Wrkgr):',
+                  _sumRow(LocaleProvider.instance.l10n.uifTotalPayable,
                       _currency.format(totalUIF),
                       bold: true),
                 ]),
@@ -719,7 +720,7 @@ class PayslipPdfBuilder {
             width: double.infinity,
             color: PdfColors.grey200,
             padding: const pw.EdgeInsets.symmetric(vertical: 6),
-            child: pw.Text('VERLOF REKORDS  /  LEAVE RECORDS',
+            child: pw.Text(LocaleProvider.instance.l10n.leavePdfTitle,
                 style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold,
                     fontSize: 11,
@@ -728,14 +729,14 @@ class PayslipPdfBuilder {
           ),
           pw.SizedBox(height: 8),
           pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-            pw.Text('Opgestel / Generated: ${_shortDate.format(generatedOn)}',
+            pw.Text(LocaleProvider.instance.l10n.leavePdfGenerated(_shortDate.format(generatedOn)),
                 style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-            pw.Text('Waardes in ure (dae = ure ÷ 8)',
+            pw.Text(LocaleProvider.instance.l10n.leavePdfHoursNote,
                 style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
           ]),
           pw.SizedBox(height: 12),
           if (sorted.isEmpty)
-            pw.Text('Geen werknemers / No employees.',
+            pw.Text(LocaleProvider.instance.l10n.leavePdfNoEmployees,
                 style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600))
           else
             pw.Table(
@@ -750,24 +751,24 @@ class PayslipPdfBuilder {
               },
               children: [
                 pw.TableRow(children: [
-                  hCell('Werknemer / Employee', left: true),
-                  hCell('ID Nommer', left: true),
-                  hCell('Verlof Tipe / Type', left: true),
-                  hCell('Opening'),
-                  hCell('Toegeken / Accrued'),
-                  hCell('Geneem / Taken'),
-                  hCell('Saldo / Balance'),
+                  hCell(LocaleProvider.instance.l10n.colEmployee, left: true),
+                  hCell(LocaleProvider.instance.l10n.payslipIdNumber, left: true),
+                  hCell(LocaleProvider.instance.l10n.leavePdfColType, left: true),
+                  hCell(LocaleProvider.instance.l10n.leavePdfOpening),
+                  hCell(LocaleProvider.instance.l10n.accrued),
+                  hCell(LocaleProvider.instance.l10n.taken),
+                  hCell(LocaleProvider.instance.l10n.balance),
                 ]),
                 for (final r in sorted) ...[
-                  typeRow(r.employeeName, r.idNumber, 'Vakansie / Holiday (HL)',
+                  typeRow(r.employeeName, r.idNumber, LocaleProvider.instance.l10n.leavePdfHoliday,
                       PdfColors.orange800, r.hlOpening, r.hlAccrued, r.hlTaken,
                       r.hlBalance,
                       first: true),
-                  typeRow(r.employeeName, r.idNumber, 'Siekte / Sick (SL)',
+                  typeRow(r.employeeName, r.idNumber, LocaleProvider.instance.l10n.leavePdfSick,
                       PdfColors.blue800, r.slOpening, r.slAccrued, r.slTaken,
                       r.slBalance,
                       first: false),
-                  typeRow(r.employeeName, r.idNumber, 'Gesin / Family (FL)',
+                  typeRow(r.employeeName, r.idNumber, LocaleProvider.instance.l10n.leavePdfFamily,
                       PdfColors.purple800, r.flOpening, r.flAccrued, r.flTaken,
                       r.flBalance,
                       first: false),
@@ -782,8 +783,7 @@ class PayslipPdfBuilder {
               borderRadius: pw.BorderRadius.circular(4),
             ),
             child: pw.Text(
-              'Saldo = Opening (voor die stelsel) + Toegeken (in stelsel) − Geneem.   '
-              'Balance = Opening (pre-system) + Accrued (in-system) − Taken.',
+              LocaleProvider.instance.l10n.leavePdfFormula,
               style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
             ),
           ),

@@ -7,6 +7,9 @@ class SignatureModel {
   final String userName;
   final String imageUrl;
   final DateTime signedAt;
+  // Signed offline: the record exists but the image is still on the
+  // signer's phone, waiting in the upload outbox.
+  final bool pendingImage;
 
   SignatureModel({
     required this.id,
@@ -15,6 +18,7 @@ class SignatureModel {
     required this.userName,
     required this.imageUrl,
     required this.signedAt,
+    this.pendingImage = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -24,6 +28,7 @@ class SignatureModel {
       'userName': userName,
       'imageUrl': imageUrl,
       'signedAt': Timestamp.fromDate(signedAt),
+      if (pendingImage) 'pendingImage': true,
     };
   }
 
@@ -35,6 +40,7 @@ class SignatureModel {
       userName: map['userName'] ?? '',
       imageUrl: map['imageUrl'] ?? '',
       signedAt: (map['signedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      pendingImage: map['pendingImage'] == true,
     );
   }
 }

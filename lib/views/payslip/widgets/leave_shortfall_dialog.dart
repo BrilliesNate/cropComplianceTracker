@@ -1,5 +1,6 @@
 import 'package:cropCompliance/views/payslip/utils/leave_check.dart';
 import 'package:flutter/material.dart';
+import 'package:cropCompliance/providers/locale_provider.dart';
 
 /// Shown when payslips include more leave than an employee has left. Lists
 /// each case by name and lets the user decide, per case: pay only what's
@@ -44,7 +45,7 @@ class _LeaveShortfallDialogState extends State<LeaveShortfallDialog> {
       title: Row(children: [
         Icon(Icons.event_busy_outlined, color: Colors.orange.shade800),
         const SizedBox(width: 10),
-        const Expanded(child: Text('Not enough leave left')),
+        Expanded(child: Text(context.l10n.shortfallTitle)),
       ]),
       content: SizedBox(
         width: 560,
@@ -55,19 +56,19 @@ class _LeaveShortfallDialogState extends State<LeaveShortfallDialog> {
             children: [
               Text(
                 n == 1
-                    ? 'This employee doesn\'t have enough leave left for what was entered. Choose what to do:'
-                    : 'These employees don\'t have enough leave left for what was entered. Choose what to do for each:',
+                    ? context.l10n.shortfallOne
+                    : context.l10n.shortfallMany,
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
               ),
               if (n > 1) ...[
                 const SizedBox(height: 8),
                 Wrap(spacing: 8, children: [
-                  Text('Apply to all:',
+                  Text(context.l10n.applyToAll,
                       style: TextStyle(
                           fontSize: 12, color: Colors.grey.shade700)),
-                  _allLink('Pay available', ShortfallChoice.payAvailable),
-                  _allLink('Take off', ShortfallChoice.remove),
-                  _allLink('Override & pay', ShortfallChoice.overridePay),
+                  _allLink(context.l10n.payAvailable, ShortfallChoice.payAvailable),
+                  _allLink(context.l10n.takeOff, ShortfallChoice.remove),
+                  _allLink(context.l10n.overridePay, ShortfallChoice.overridePay),
                 ]),
               ],
               const SizedBox(height: 8),
@@ -81,20 +82,20 @@ class _LeaveShortfallDialogState extends State<LeaveShortfallDialog> {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Text(
-              'Choose an option for $undecided more',
+              context.l10n.chooseForMore(undecided),
               style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
             ),
           ),
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Back to edit'),
+          child: Text(context.l10n.backToEdit),
         ),
         FilledButton(
           onPressed: undecided > 0
               ? null
               : () => Navigator.pop(
                   context, _choices.cast<ShortfallChoice>().toList()),
-          child: const Text('Apply & save'),
+          child: Text(context.l10n.applyAndSave),
         ),
       ],
     );
@@ -108,6 +109,13 @@ class _LeaveShortfallDialogState extends State<LeaveShortfallDialog> {
                 color: Theme.of(context).primaryColor,
                 decoration: TextDecoration.underline)),
       );
+
+  /// Leave code in the app language (SL / HL / FL ↔ SV / VV / GV).
+  String _code(LeaveType t) => switch (t) {
+        LeaveType.sick => context.l10n.leaveCodeSL,
+        LeaveType.holiday => context.l10n.leaveCodeHL,
+        LeaveType.family => context.l10n.leaveCodeFL,
+      };
 
   Widget _card(int i) {
     final s = widget.shortfalls[i];
@@ -174,7 +182,7 @@ class _LeaveShortfallDialogState extends State<LeaveShortfallDialog> {
                     fontSize: 14, fontWeight: FontWeight.w700)),
             TextSpan(
                 text:
-                    ' — ${_h(s.requested)} h ${s.type.label} entered, only ${_h(s.available)} h left',
+                    context.l10n.shortfallLine(_h(s.requested), s.type.label, _h(s.available)),
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade800)),
           ])),
           if (s.note != null) ...[
@@ -185,18 +193,18 @@ class _LeaveShortfallDialogState extends State<LeaveShortfallDialog> {
           if (s.available > 0)
             option(
               ShortfallChoice.payAvailable,
-              'Pay only the ${_h(s.available)} h available',
-              'The other ${_h(s.over)} h is left off the payslip (unpaid).',
+              context.l10n.shortfallPayAvailableTitle(_h(s.available)),
+              context.l10n.shortfallPayAvailableSub(_h(s.over)),
             ),
           option(
             ShortfallChoice.remove,
-            'Take the leave off',
-            'No ${s.type.code} on this payslip — the ${_h(s.requested)} h is unpaid.',
+            context.l10n.shortfallTakeOffTitle,
+            context.l10n.shortfallTakeOffSub(_code(s.type), _h(s.requested)),
           ),
           option(
             ShortfallChoice.overridePay,
-            'Override & pay all ${_h(s.requested)} h',
-            'Pays the full amount as ${s.type.code}; their ${s.type.code} balance goes ${_h(s.over)} h below zero.',
+            context.l10n.shortfallOverrideTitle(_h(s.requested)),
+            context.l10n.shortfallOverrideSub(_code(s.type), _h(s.over)),
           ),
         ],
       ),
