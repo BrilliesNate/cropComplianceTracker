@@ -8025,6 +8025,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your choices are on the timesheet: crossed-out days are unpaid.'**
   String get tsLeaveSettledToast;
+
+  /// No description provided for @tsSavedNoPayslipsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Timesheet saved — but no payslips were made yet. Choose what to do with the leave (blue banner → Make payslips).'**
+  String get tsSavedNoPayslipsYet;
+
+  /// No description provided for @tsPayslipsSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Timesheet saved, but 1 payslip could not be saved: {error}} other{Timesheet saved, but {count} payslips could not be saved: {error}}}'**
+  String tsPayslipsSaveFailed(int count, String error);
+
+  /// No description provided for @tsNoPayslipBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 worker has hours on this timesheet but no payslip yet ({names}).} other{{count} workers have hours on this timesheet but no payslip yet ({names}).}}'**
+  String tsNoPayslipBanner(int count, String names);
+
+  /// No description provided for @tsMakePayslips.
+  ///
+  /// In en, this message translates to:
+  /// **'Make payslips'**
+  String get tsMakePayslips;
 }
 
 class _AppLocalizationsDelegate

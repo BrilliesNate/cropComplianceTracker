@@ -3467,5 +3467,29 @@
   },
   "tsLeaveUnpaidLegend": "= unpaid or partly paid — not enough leave left, as chosen when saving. Type the code again to have the day checked again.",
   "tsPdfUnpaidLegend": "A number under a leave code = hours paid for that day (not enough leave left).",
-  "tsLeaveSettledToast": "Your choices are on the timesheet: crossed-out days are unpaid."
+  "tsLeaveSettledToast": "Your choices are on the timesheet: crossed-out days are unpaid.",
+  "tsSavedNoPayslipsYet": "Timesheet saved — but no payslips were made yet. Choose what to do with the leave (blue banner → Make payslips).",
+  "tsPayslipsSaveFailed": "{count, plural, =1{Timesheet saved, but 1 payslip could not be saved: {error}} other{Timesheet saved, but {count} payslips could not be saved: {error}}}",
+  "@tsPayslipsSaveFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "tsNoPayslipBanner": "{count, plural, =1{1 worker has hours on this timesheet but no payslip yet ({names}).} other{{count} workers have hours on this timesheet but no payslip yet ({names}).}}",
+  "@tsNoPayslipBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "tsMakePayslips": "Make payslips"
 }

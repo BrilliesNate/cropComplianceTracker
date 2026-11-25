@@ -80,6 +80,14 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
   /// Workers whose payslips couldn't be recalculated on the last Save, and why.
   Map<String, List<String>> _notRecalculated = {};
 
+  /// Workers with hours on the saved sheets but no payslip for this period
+  /// yet (e.g. Save stopped at the leave question). Shown as a banner with a
+  /// "Make payslips" button so the sheet never looks done when it isn't.
+  Set<String> _noPayslip = {};
+
+  /// Payslips that failed to save on the last Save (shown, never swallowed).
+  int _saveFailures = 0;
+
   PayslipProvider get _prov =>
       Provider.of<PayslipProvider>(context, listen: false);
 
@@ -135,9 +143,43 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     _sheets = entries;
     _loadedWorkerIds = entries.keys.toSet();
     _badCells.clear();
-    _notRecalculated = {};
     _codeTarget.value = null;
     _dirty = false;
+    _checkPayslips();
+  }
+
+  static bool _hasWork(WorkerTotals t) =>
+      t.normalHours > 0 ||
+      t.leaveDays > 0 ||
+      t.overtimeHours > 0 ||
+      t.pieceHours > 0 ||
+      t.units > 0;
+
+  /// Works out, from the sheets as loaded, which workers still need rates
+  /// and which have no payslip for this period yet — so the banners show
+  /// whenever the sheet is opened, not only right after a Save.
+  void _checkPayslips() {
+    final days = _period.dayKeys;
+    final missing = <String, List<String>>{};
+    final none = <String>{};
+    for (final e in _workers) {
+      final s = _sheets[e.id];
+      if (s == null || !_hasWork(totalsFor(s, days: days))) continue;
+      final f = payslipFiguresFor(
+        sheets: s,
+        days: days,
+        hourlyRate: e.normalHourlyRate,
+        rates: _rates,
+        pieceRate: _pieceRate,
+      );
+      if (!f.canCalculate) {
+        missing[e.id] = f.missingRates;
+      } else if (payslipFor(_prov.payslips, e.id, _period) == null) {
+        none.add(e.id);
+      }
+    }
+    _notRecalculated = missing;
+    _noPayslip = none;
   }
 
   Future<void> _switchPeriod(PayPeriodRecord p) async {
@@ -473,10 +515,20 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       final recalculated = await _recalculatePayslips();
       if (recalculated == null) {
         // User went back to edit leave — the sheets are saved, payslips not.
+        // Say so plainly and leave a banner with a way to finish.
         _dirty = false;
+        if (mounted) {
+          setState(_checkPayslips);
+          _toast(context.l10n.tsSavedNoPayslipsYet);
+        }
         return false;
       }
       if (!mounted) return false;
+      if (_saveFailures > 0) {
+        _toast(context.l10n.tsPayslipsSaveFailed(
+            _saveFailures, _prov.error ?? '?')); // l10n-ignore: unknown error
+        return false;
+      }
 
       final auth = Provider.of<AuthProvider>(context, listen: false);
       await _service.audit(widget.companyId, _period.id, 'save',
@@ -508,20 +560,13 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     final prov = _prov;
     final settings = prov.payrollSettings;
     final days = _period.dayKeys;
-    final notDone = <String, List<String>>{};
-
     // Figures per worker with anything on the sheets.
     final figures = <EmployeeModel, PayslipFigures>{};
+    _saveFailures = 0;
     for (final e in _workers) {
       final s = _sheets[e.id];
       if (s == null) continue;
-      final t = totalsFor(s, days: days);
-      final hasWork = t.normalHours > 0 ||
-          t.leaveDays > 0 ||
-          t.overtimeHours > 0 ||
-          t.pieceHours > 0 ||
-          t.units > 0;
-      if (!hasWork) continue;
+      if (!_hasWork(totalsFor(s, days: days))) continue;
       final f = payslipFiguresFor(
         sheets: s,
         days: days,
@@ -529,10 +574,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         rates: _rates,
         pieceRate: _pieceRate,
       );
-      if (!f.canCalculate) {
-        notDone[e.id] = f.missingRates;
-        continue;
-      }
+      if (!f.canCalculate) continue; // listed by _checkPayslips
       figures[e] = f;
     }
 
@@ -619,9 +661,13 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         companyAddress: settings?.companyAddress ?? '',
         uifRegNumber: settings?.uifRegNumber ?? '',
       );
-      if (await prov.savePayslip(ps) != null) saved++;
+      if (await prov.savePayslip(ps) != null) {
+        saved++;
+      } else {
+        _saveFailures++;
+      }
     }
-    if (mounted) setState(() => _notRecalculated = notDone);
+    if (mounted) setState(_checkPayslips);
     return saved;
   }
 
@@ -914,6 +960,8 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                       _tabs(),
                       _toolbar(),
                       if (_notRecalculated.isNotEmpty) _ratesBanner(),
+                      if (_noPayslip.isNotEmpty && !_period.finalised)
+                        _noPayslipBanner(),
                       if (_sheet == _Sheet.normal && _workers.isNotEmpty)
                         _leaveBar(),
                       Expanded(child: _grid()),
@@ -1109,6 +1157,33 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         TextButton(
             onPressed: _ratesNeededDialog,
             child: Text(context.l10n.setThemNow)),
+      ]),
+    );
+  }
+
+  Widget _noPayslipBanner() {
+    final names = [
+      for (final e in _workers)
+        if (_noPayslip.contains(e.id)) e.name,
+    ];
+    final list =
+        '${names.take(4).join(', ')}${names.length > 4 ? '…' : ''}'; // l10n-ignore: names list
+    return Container(
+      color: Colors.blue.shade50,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(children: [
+        Icon(Icons.receipt_long_outlined,
+            size: 18, color: Colors.blue.shade900),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(context.l10n.tsNoPayslipBanner(names.length, list),
+              style: TextStyle(fontSize: 13, color: Colors.blue.shade900)),
+        ),
+        FilledButton.icon(
+          onPressed: _saving ? null : () => _save(),
+          icon: const Icon(Icons.play_arrow, size: 18),
+          label: Text(context.l10n.tsMakePayslips),
+        ),
       ]),
     );
   }
@@ -1434,7 +1509,8 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                 Positioned(
                   bottom: 1,
                   child: IgnorePointer(
-                    child: Text('${formatHours(paidH)}h', // l10n-ignore: hours unit
+                    child: Text(
+                        '${formatHours(paidH)}h', // l10n-ignore: hours unit
                         style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w700,

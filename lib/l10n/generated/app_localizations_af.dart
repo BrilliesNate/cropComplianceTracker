@@ -5013,4 +5013,37 @@ class AppLocalizationsAf extends AppLocalizations {
   @override
   String get tsLeaveSettledToast =>
       'Jou keuses is op die tydstaat: deurgestreepte dae is onbetaal.';
+
+  @override
+  String get tsSavedNoPayslipsYet =>
+      'Tydstaat gestoor — maar nog geen salarisstrokies gemaak nie. Kies wat met die verlof moet gebeur (blou banier → Maak salarisstrokies).';
+
+  @override
+  String tsPayslipsSaveFailed(int count, String error) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Tydstaat gestoor, maar $count salarisstrokies kon nie gestoor word nie: $error',
+      one:
+          'Tydstaat gestoor, maar 1 salarisstrokie kon nie gestoor word nie: $error',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tsNoPayslipBanner(int count, String names) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count werkers het ure op hierdie tydstaat maar nog geen salarisstrokie nie ($names).',
+      one:
+          '1 werker het ure op hierdie tydstaat maar nog geen salarisstrokie nie ($names).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tsMakePayslips => 'Maak salarisstrokies';
 }

@@ -4982,4 +4982,34 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tsLeaveSettledToast =>
       'Your choices are on the timesheet: crossed-out days are unpaid.';
+
+  @override
+  String get tsSavedNoPayslipsYet =>
+      'Timesheet saved — but no payslips were made yet. Choose what to do with the leave (blue banner → Make payslips).';
+
+  @override
+  String tsPayslipsSaveFailed(int count, String error) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Timesheet saved, but $count payslips could not be saved: $error',
+      one: 'Timesheet saved, but 1 payslip could not be saved: $error',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tsNoPayslipBanner(int count, String names) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count workers have hours on this timesheet but no payslip yet ($names).',
+      one: '1 worker has hours on this timesheet but no payslip yet ($names).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tsMakePayslips => 'Make payslips';
 }
