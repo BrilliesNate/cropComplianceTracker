@@ -18,14 +18,35 @@ void exitAdminFarm(BuildContext context) {
 }
 
 /// Pick another farm and open its dashboard.
+/// Pages that belong to one farm and take no route arguments, so they can be
+/// reopened for another farm. An admin needs a farm open to see them.
+const adminFarmPages = {
+  RouteConstants.dashboard,
+  RouteConstants.auditTracker,
+  RouteConstants.complianceReport,
+  RouteConstants.auditIndex,
+  RouteConstants.payslipManager,
+  RouteConstants.sprayRecords,
+  RouteConstants.farmRegister,
+  RouteConstants.farmMap,
+};
+
+/// Picks another farm. If the admin is on a farm page (e.g. Payslip Manager)
+/// that page reopens for the new farm; otherwise they land on its dashboard.
 Future<void> switchAdminFarm(BuildContext context) async {
   final auth = Provider.of<AuthProvider>(context, listen: false);
   final nav = Navigator.of(context);
+  final here = ModalRoute.of(context)?.settings.name;
   final farm = await showFarmPickerSheet(context,
       title: context.l10n.farmSwitchFarm, currentId: auth.selectedCompany?.id);
   if (farm == null) return;
   auth.setSelectedCompany(farm);
   nav.pushNamedAndRemoveUntil(RouteConstants.dashboard, (_) => false);
+  if (here != null &&
+      here != RouteConstants.dashboard &&
+      adminFarmPages.contains(here)) {
+    nav.pushNamed(here);
+  }
 }
 
 /// The orange "which farm am I in" badge an admin sees in the top bar of

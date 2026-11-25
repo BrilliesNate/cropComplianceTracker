@@ -37,6 +37,7 @@ PayslipModel buildTimesheetPayslip({
   required String uifRegNumber,
   double? sickLeaveHours,
   double? holidayLeaveHours,
+  double? familyLeaveHours,
 }) {
   final rate = employee.normalHourlyRate;
   final keptEarnings = (existing?.additionalEarnings ?? const [])
@@ -70,7 +71,8 @@ PayslipModel buildTimesheetPayslip({
         publicHolidayHours: figures.publicHolidayHours,
         sickLeaveHours: sickLeaveHours ?? figures.sickLeaveHours,
         holidayLeaveHours: holidayLeaveHours ?? figures.holidayLeaveHours,
-        familyLeaveHours: existing?.familyLeaveHours ?? 0,
+        // FL days on the Normal-hours sheet (the timesheet decides, like SL/HL).
+        familyLeaveHours: familyLeaveHours ?? figures.familyLeaveHours,
         normalRate: rate,
         overtimeRate: figures.overtimeRate ?? existing?.overtimeRate ?? 0,
         doubleTimeRate: figures.sundayHours > 0

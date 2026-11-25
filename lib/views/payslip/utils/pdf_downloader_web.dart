@@ -15,10 +15,24 @@ Future<void> triggerPdfDownload(Uint8List bytes, String name) async {
       const Duration(seconds: 30), () => html.Url.revokeObjectUrl(url));
 }
 
-Future<void> openPdfInBrowser(Uint8List bytes) async {
+/// Opens the PDF in a new tab. Browsers often block that tab (the PDF is
+/// built first, so it isn't a direct click any more) — then it downloads
+/// instead, so the button never silently does nothing.
+Future<void> openPdfInBrowser(Uint8List bytes, [String? name]) async {
   final blob = html.Blob([bytes], 'application/pdf');
   final url = html.Url.createObjectUrlFromBlob(blob);
-  html.window.open(url, '_blank');
+  var opened = false;
+  try {
+    final w = html.window.open(url, '_blank');
+    opened = w.closed != true;
+  } catch (_) {
+    opened = false;
+  }
+  if (!opened) {
+    html.Url.revokeObjectUrl(url);
+    await triggerPdfDownload(bytes, name ?? 'payslip.pdf'); // l10n-ignore: file name fallback
+    return;
+  }
   Future.delayed(
       const Duration(minutes: 2), () => html.Url.revokeObjectUrl(url));
 }

@@ -13,9 +13,9 @@ Future<void> triggerPdfDownload(Uint8List bytes, String name) async {
   await OpenFile.open(file.path);
 }
 
-Future<void> openPdfInBrowser(Uint8List bytes) async {
+Future<void> openPdfInBrowser(Uint8List bytes, [String? name]) async {
   // No browser on mobile — fall back to same open-in-viewer behaviour.
-  await triggerPdfDownload(bytes, 'payslip.pdf');
+  await triggerPdfDownload(bytes, name ?? 'payslip.pdf');
 }
 
 /// Generic byte download — saves to temp dir then opens with the system viewer.

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:cropCompliance/providers/locale_provider.dart';
+import 'package:cropCompliance/views/payslip/utils/pdf_theme.dart';
 
 /// Builds an audit-ready Farm Register PDF from Farmable data:
 /// fields/blocks (crop, variety, hectares), equipment (with inspection dates)
@@ -43,7 +44,7 @@ class FarmableRegisterPdf {
     required List<({FarmableMember member, String role})> people,
     required DateTime generatedOn,
   }) async {
-    final doc = pw.Document();
+    final doc = pw.Document(theme: await pdfTheme());
     const accent = PdfColors.green800;
 
     final sortedFields = [...fields]..sort((a, b) => a.name.compareTo(b.name));

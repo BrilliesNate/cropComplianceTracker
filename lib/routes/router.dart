@@ -40,21 +40,13 @@ import '../views/document_management/document_form_screen.dart';
 import '../views/shared/role_guard.dart';
 import '../views/shared/admin_farm_gate.dart';
 import '../providers/locale_provider.dart';
+import '../views/shared/admin_farm_chip.dart';
 
 class AppRouter {
   static String get initialRoute => RouteConstants.login;
 
   /// Pages that show one farm's data (see [AdminFarmGate]).
-  static const _farmPages = {
-    RouteConstants.dashboard,
-    RouteConstants.auditTracker,
-    RouteConstants.complianceReport,
-    RouteConstants.auditIndex,
-    RouteConstants.payslipManager,
-    RouteConstants.sprayRecords,
-    RouteConstants.farmRegister,
-    RouteConstants.farmMap,
-  };
+  static const _farmPages = adminFarmPages;
 
   /// Resolves the route, then wraps its page in a [RoleGuard] so role
   /// restrictions (e.g. auditors → Audit Index only) apply to every screen.

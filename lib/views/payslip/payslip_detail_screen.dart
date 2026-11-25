@@ -54,8 +54,13 @@ class PayslipDetailScreen extends StatelessWidget {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.download_outlined, color: Colors.white),
+            tooltip: context.l10n.pdfDownloadBtn,
+            onPressed: () => _downloadPayslip(context, payslip),
+          ),
+          IconButton(
             icon: const Icon(Icons.print_outlined, color: Colors.white),
-            tooltip: context.l10n.printSavePdf,
+            tooltip: context.l10n.pdfOpenPrint,
             onPressed: () => _printPayslip(context, payslip),
           ),
           if (!payslip.isFinalised)
@@ -78,6 +83,24 @@ class PayslipDetailScreen extends StatelessWidget {
             _buildPayslipDocument(context, payslip, primaryColor),
             const SizedBox(height: 16),
             _buildStatusBanner(payslip),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                FilledButton.icon(
+                  onPressed: () => _downloadPayslip(context, payslip),
+                  icon: const Icon(Icons.download_outlined, size: 18),
+                  label: Text(context.l10n.pdfDownloadBtn),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _printPayslip(context, payslip),
+                  icon: const Icon(Icons.print_outlined, size: 18),
+                  label: Text(context.l10n.pdfOpenPrint),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -215,7 +238,7 @@ class PayslipDetailScreen extends StatelessWidget {
           _detailRow(LocaleProvider.instance.l10n.psPeriodStart, _shortDate.format(p.payPeriodStart)),
           _detailRow(LocaleProvider.instance.l10n.psPeriodEnd, _shortDate.format(p.payPeriodEnd)),
           const SizedBox(height: 20),
-          _sectionHeader('VERDIENSTE', primaryColor),
+          _sectionHeader(LocaleProvider.instance.l10n.psEarningsCaps, primaryColor),
           _rateRow(LocaleProvider.instance.l10n.psHourlyRate, p.normalRate),
           if (p.overtimeHours > 0) _rateRow(LocaleProvider.instance.l10n.psOvertimeRate, p.overtimeRate),
           if (p.doubleTimeHours > 0)
@@ -238,6 +261,10 @@ class PayslipDetailScreen extends StatelessWidget {
           if (p.familyLeavePay > 0)
             _hoursRowColored(LocaleProvider.instance.l10n.psFamilyLeaveCoded, p.familyLeaveHours,
                 p.familyLeavePay, Colors.purple.shade700),
+          // Timesheet lines (night-shift allowance, Sunday minimum, public
+          // holidays worked, piece pay, top-up) and any extra income.
+          for (final x in p.additionalEarnings)
+            _deductionRow(x.description, x.amount),
           const Divider(),
           _totalRow(LocaleProvider.instance.l10n.payslipTotalEarnings, p.totalEarnings, primaryColor),
         ],
@@ -258,10 +285,16 @@ class PayslipDetailScreen extends StatelessWidget {
           _detailRow(
               LocaleProvider.instance.l10n.psUifRegNr, p.uifRegNumber.isNotEmpty ? p.uifRegNumber : '-'),
           const SizedBox(height: 20),
-          _sectionHeader('AFTREKKINGS', primaryColor),
+          _sectionHeader(LocaleProvider.instance.l10n.psDeductionsCaps, primaryColor),
           _deductionRow(LocaleProvider.instance.l10n.payslipUifEmployee, p.uifDeduction),
-          if (p.payeDeduction > 0)
-            _deductionRow(LocaleProvider.instance.l10n.payslipPayeTax, p.payeDeduction),
+          // Always shown, so R 0.00 reads as "worked out — nothing due".
+          _deductionRow(LocaleProvider.instance.l10n.payslipPayeTax, p.payeDeduction),
+          if (p.payeDeduction == 0 && p.payeAutoCalculated)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(LocaleProvider.instance.l10n.psPayeBelowThreshold,
+                  style: TextStyle(fontSize: 11.5, color: Colors.grey[600])),
+            ),
           for (final d in p.additionalDeductions)
             _deductionRow(d.description, d.amount),
           const Divider(),
@@ -447,6 +480,21 @@ class PayslipDetailScreen extends StatelessWidget {
   }
 
   // ── PDF ───────────────────────────────────────────────────────────────────
+
+  Future<void> _downloadPayslip(BuildContext context, PayslipModel p) async {
+    try {
+      await PayslipPdfBuilder.downloadFile(p);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.pdfGenerateFailed('$e')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   Future<void> _printPayslip(BuildContext context, PayslipModel p) async {
     try {

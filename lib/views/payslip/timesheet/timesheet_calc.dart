@@ -10,8 +10,55 @@ import 'package:cropCompliance/providers/locale_provider.dart';
 
 // ── Leave codes on the Normal-hours sheet ──────────────────────────────────
 
-/// SL sick · AL annual · PH public holiday · A absent (unpaid).
-const Set<String> leaveCodes = {'SL', 'AL', 'PH', 'A'};
+/// SL sick · HL holiday (annual) · FL family responsibility ·
+/// PH public holiday · A absent (unpaid). Stored on the sheet as these codes
+/// whatever the app language.
+const List<String> leaveCodes = ['SL', 'HL', 'FL', 'PH', 'A'];
+
+/// Other spellings people type, mapped to the stored code: AL (the old annual
+/// leave code — earlier sheets were saved with it) and the Afrikaans codes the
+/// Payslip Manager shows (SV siekverlof, VV vakansieverlof, GV
+/// gesinsverantwoordelikheidsverlof, OV openbare vakansiedag).
+const Map<String, String> leaveCodeAliases = {
+  'AL': 'HL',
+  'SV': 'SL',
+  'VV': 'HL',
+  'GV': 'FL',
+  'OV': 'PH',
+};
+
+/// The code as shown in the app language (SV / VV / GV / OV in Afrikaans);
+/// the sheet always stores the English code.
+String leaveCodeLabel(String code) {
+  final l10n = LocaleProvider.instance.l10n;
+  return switch (code) {
+    'SL' => l10n.leaveCodeSL,
+    'HL' => l10n.leaveCodeHL,
+    'FL' => l10n.leaveCodeFL,
+    'PH' => l10n.leaveCodePH,
+    'A' => l10n.leaveCodeA,
+    _ => code,
+  };
+}
+
+/// What a leave code means, e.g. "Holiday leave".
+String leaveCodeName(String code) {
+  final l10n = LocaleProvider.instance.l10n;
+  return switch (code) {
+    'SL' => l10n.tsCodeSL,
+    'HL' => l10n.tsCodeHL,
+    'FL' => l10n.tsCodeFL,
+    'PH' => l10n.tsCodePH,
+    _ => l10n.tsCodeA,
+  };
+}
+
+/// The stored code for what was typed, or null when it isn't a leave code.
+String? normaliseLeaveCode(String raw) {
+  final upper = raw.trim().toUpperCase();
+  if (leaveCodes.contains(upper)) return upper;
+  return leaveCodeAliases[upper];
+}
 
 /// One day on the Normal-hours sheet: ordinary hours OR a leave code.
 class NormalDay {
@@ -26,7 +73,9 @@ class NormalDay {
 
   static NormalDay fromMap(Map m) => NormalDay(
         hours: (m['h'] as num?)?.toDouble(),
-        code: m['c'] as String?,
+        code: m['c'] == null
+            ? null
+            : normaliseLeaveCode(m['c'] as String) ?? m['c'] as String,
       );
 }
 
@@ -36,11 +85,12 @@ class NormalDay {
 NormalDay? parseNormalCell(String raw) {
   final t = raw.trim();
   if (t.isEmpty || t == '-' || t == '–') return null;
-  final upper = t.toUpperCase();
-  if (leaveCodes.contains(upper)) return NormalDay(code: upper);
+  final code = normaliseLeaveCode(t);
+  if (code != null) return NormalDay(code: code);
   final v = double.tryParse(t.replaceAll(',', '.'));
   if (v == null || v < 0 || v > 24) {
-    throw const FormatException('Type hours (e.g. 9) or SL / AL / PH / A'); // l10n-ignore: not shown
+    throw const FormatException(
+        'Type hours (e.g. 9) or SL / HL / FL / PH / A'); // l10n-ignore: not shown
   }
   return v == 0 ? null : NormalDay(hours: v);
 }
@@ -51,8 +101,9 @@ String formatNormalCell(NormalDay? d) {
   return formatHours(d.hours ?? 0);
 }
 
-String formatHours(double v) =>
-    v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2).replaceAll(RegExp(r'0$'), '');
+String formatHours(double v) => v == v.roundToDouble()
+    ? v.toStringAsFixed(0)
+    : v.toStringAsFixed(2).replaceAll(RegExp(r'0$'), '');
 
 /// Parses an hours field (overtime / piece hours). Blank → null.
 double? parseHours(String raw) {
@@ -60,7 +111,8 @@ double? parseHours(String raw) {
   if (t.isEmpty) return null;
   final v = double.tryParse(t.replaceAll(',', '.'));
   if (v == null || v < 0 || v > 24) {
-    throw const FormatException('Type hours, e.g. 2 or 1.5'); // l10n-ignore: not shown
+    throw const FormatException(
+        'Type hours, e.g. 2 or 1.5'); // l10n-ignore: not shown
   }
   return v == 0 ? null : v;
 }
@@ -70,7 +122,9 @@ double? parseUnits(String raw) {
   final t = raw.trim();
   if (t.isEmpty) return null;
   final v = double.tryParse(t.replaceAll(',', '.'));
-  if (v == null || v < 0) throw const FormatException('Type a number of units'); // l10n-ignore: not shown
+  if (v == null || v < 0)
+    throw const FormatException(
+        'Type a number of units'); // l10n-ignore: not shown
   return v == 0 ? null : v;
 }
 
@@ -93,10 +147,12 @@ String? parseFinishTime(String raw) {
     h = int.parse(t);
     m = 0;
   } else {
-    throw const FormatException('Type the finish time, e.g. 21:30'); // l10n-ignore: not shown
+    throw const FormatException(
+        'Type the finish time, e.g. 21:30'); // l10n-ignore: not shown
   }
   if (h < 0 || h > 23 || m < 0 || m > 59) {
-    throw const FormatException('Type the finish time, e.g. 21:30'); // l10n-ignore: not shown
+    throw const FormatException(
+        'Type the finish time, e.g. 21:30'); // l10n-ignore: not shown
   }
   return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
 }
@@ -166,7 +222,7 @@ class WorkerSheets {
 
 class WorkerTotals {
   final double normalHours;
-  final int sickDays, annualDays, publicHolidayDays, absentDays;
+  final int sickDays, holidayDays, familyDays, publicHolidayDays, absentDays;
   final double overtimeHours;
   final int nightShiftDays;
   final double pieceHours;
@@ -175,7 +231,8 @@ class WorkerTotals {
   const WorkerTotals({
     this.normalHours = 0,
     this.sickDays = 0,
-    this.annualDays = 0,
+    this.holidayDays = 0,
+    this.familyDays = 0,
     this.publicHolidayDays = 0,
     this.absentDays = 0,
     this.overtimeHours = 0,
@@ -184,29 +241,43 @@ class WorkerTotals {
     this.units = 0,
   });
 
-  int get leaveDays => sickDays + annualDays + publicHolidayDays + absentDays;
+  int get leaveDays =>
+      sickDays + holidayDays + familyDays + publicHolidayDays + absentDays;
 
-  /// "SL 1 · AL 2" style summary for the Leave column.
-  String get leaveSummary => [
-        if (sickDays > 0) 'SL $sickDays', // l10n-ignore: sheet codes
-        if (annualDays > 0) 'AL $annualDays', // l10n-ignore: sheet codes
-        if (publicHolidayDays > 0) 'PH $publicHolidayDays', // l10n-ignore: sheet codes
-        if (absentDays > 0) 'A $absentDays',
-      ].join(' · ');
+  /// Days per leave code, in the order of [leaveCodes]; codes not used are
+  /// left out.
+  Map<String, int> get leaveByCode => {
+        for (final e in {
+          'SL': sickDays,
+          'HL': holidayDays,
+          'FL': familyDays,
+          'PH': publicHolidayDays,
+          'A': absentDays,
+        }.entries)
+          if (e.value > 0) e.key: e.value,
+      };
+
+  /// "SL 1 · HL 2" style summary for the Leave column.
+  String get leaveSummary =>
+      leaveByCode.entries.map((e) => '${e.key} ${e.value}').join(' · ');
 }
 
 WorkerTotals totalsFor(WorkerSheets s, {Iterable<String>? days}) {
   bool inPeriod(String d) => days == null || days.contains(d);
   double nh = 0, ot = 0, ph = 0, units = 0;
-  int sl = 0, al = 0, pub = 0, ab = 0, ns = 0;
+  int sl = 0, hl = 0, fl = 0, pub = 0, ab = 0, ns = 0;
   s.normal.forEach((d, v) {
     if (!inPeriod(d)) return;
     switch (v.code) {
       case 'SL':
         sl++;
         break;
-      case 'AL':
-        al++;
+      case 'HL':
+      case 'AL': // older sheets
+        hl++;
+        break;
+      case 'FL':
+        fl++;
         break;
       case 'PH':
         pub++;
@@ -231,7 +302,8 @@ WorkerTotals totalsFor(WorkerSheets s, {Iterable<String>? days}) {
   return WorkerTotals(
     normalHours: nh,
     sickDays: sl,
-    annualDays: al,
+    holidayDays: hl,
+    familyDays: fl,
     publicHolidayDays: pub,
     absentDays: ab,
     overtimeHours: ot,
@@ -255,7 +327,7 @@ class TimesheetRates {
   /// Farm-worker minimum wage per ordinary hour for the period (NMWA).
   final double? minimumHourlyWage;
 
-  /// Ordinary hours in a working day — used for leave days (SL/AL/PH) and
+  /// Ordinary hours in a working day — used for leave days (SL/HL/FL/PH) and
   /// the "ordinary daily wage" behind the night-shift allowance.
   final double ordinaryDayHours;
 
@@ -337,11 +409,14 @@ class PieceRateInfo {
 /// the user added by hand.
 // Generated lines are now marked (AdditionalEarning.generated). These English
 // prefixes still recognise lines saved before that, so they get replaced too.
-const String nightAllowancePrefix = 'Night-shift allowance'; // l10n-ignore: legacy match
+const String nightAllowancePrefix =
+    'Night-shift allowance'; // l10n-ignore: legacy match
 const String piecePayPrefix = 'Piecework'; // l10n-ignore: legacy match
 const String topUpPrefix = 'Minimum wage top-up'; // l10n-ignore: legacy match
-const String sundayMinimumPrefix = 'Sunday minimum pay'; // l10n-ignore: legacy match
-const String publicHolidayWorkedPrefix = 'Public holiday worked'; // l10n-ignore: legacy match
+const String sundayMinimumPrefix =
+    'Sunday minimum pay'; // l10n-ignore: legacy match
+const String publicHolidayWorkedPrefix =
+    'Public holiday worked'; // l10n-ignore: legacy match
 /// Ids of the rates a payslip may still be missing (see [PayslipFigures.missingRates]).
 const missingOvertime = 'overtime';
 const missingNight = 'night';
@@ -368,6 +443,7 @@ class PayslipFigures {
   final double overtimeHours;
   final double sickLeaveHours;
   final double holidayLeaveHours;
+  final double familyLeaveHours;
   final double publicHolidayHours;
 
   /// Hours worked on Sundays — paid at double the ordinary wage (SD13).
@@ -385,6 +461,7 @@ class PayslipFigures {
     required this.overtimeHours,
     required this.sickLeaveHours,
     required this.holidayLeaveHours,
+    this.familyLeaveHours = 0,
     required this.publicHolidayHours,
     this.sundayHours = 0,
     required this.overtimeRate,
@@ -471,16 +548,17 @@ PayslipFigures payslipFiguresFor({
           : dailyWage + hoursPay;
       earnings.add(EarningLine(
           normallyWorked
-              ? LocaleProvider.instance.l10n.tsLinePhWorkedNormal(d, formatHours(worked),
-                  _rand(dailyWage), _rand(hourlyRate))
-              : LocaleProvider.instance.l10n.tsLinePhWorkedOff(d, formatHours(worked),
-                  _rand(dailyWage), _rand(hourlyRate)),
+              ? LocaleProvider.instance.l10n.tsLinePhWorkedNormal(
+                  d, formatHours(worked), _rand(dailyWage), _rand(hourlyRate))
+              : LocaleProvider.instance.l10n.tsLinePhWorkedOff(
+                  d, formatHours(worked), _rand(dailyWage), _rand(hourlyRate)),
           _r2(amount)));
     }
   }
   if (sundayTopUp > 0) {
     earnings.add(EarningLine(
-        LocaleProvider.instance.l10n.tsLineSundayMin(sundayTopUpDays, _rand(dailyWage)),
+        LocaleProvider.instance.l10n
+            .tsLineSundayMin(sundayTopUpDays, _rand(dailyWage)),
         _r2(sundayTopUp)));
   }
 
@@ -499,7 +577,8 @@ PayslipFigures payslipFiguresFor({
     } else {
       final perDay = dailyWage * rates.nightAllowancePercent! / 100;
       earnings.add(EarningLine(
-          LocaleProvider.instance.l10n.tsLineNight(t.nightShiftDays, _rand(perDay)),
+          LocaleProvider.instance.l10n
+              .tsLineNight(t.nightShiftDays, _rand(perDay)),
           _r2(perDay * t.nightShiftDays)));
     }
   }
@@ -511,8 +590,8 @@ PayslipFigures payslipFiguresFor({
     } else {
       pieceEarnings = _r2(t.units * pieceRate.rate);
       earnings.add(EarningLine(
-          LocaleProvider.instance.l10n.tsLinePiece(formatHours(t.units), pieceRate.unitType,
-              _rand(pieceRate.rate), pieceRate.taskOrCrop),
+          LocaleProvider.instance.l10n.tsLinePiece(formatHours(t.units),
+              pieceRate.unitType, _rand(pieceRate.rate), pieceRate.taskOrCrop),
           pieceEarnings));
     }
     if (rates.minimumHourlyWage == null) {
@@ -555,8 +634,10 @@ PayslipFigures payslipFiguresFor({
       if (topUp > 0) {
         earnings.add(EarningLine(
             perDay
-                ? LocaleProvider.instance.l10n.tsLineTopUpDays(short, _rand(rates.minimumHourlyWage!))
-                : LocaleProvider.instance.l10n.tsLineTopUpWeeks(short, _rand(rates.minimumHourlyWage!)),
+                ? LocaleProvider.instance.l10n
+                    .tsLineTopUpDays(short, _rand(rates.minimumHourlyWage!))
+                : LocaleProvider.instance.l10n
+                    .tsLineTopUpWeeks(short, _rand(rates.minimumHourlyWage!)),
             topUp));
       }
     }
@@ -567,7 +648,8 @@ PayslipFigures payslipFiguresFor({
     normalHours: normalHours,
     overtimeHours: overtimeHours,
     sickLeaveHours: t.sickDays * dayH,
-    holidayLeaveHours: t.annualDays * dayH,
+    holidayLeaveHours: t.holidayDays * dayH,
+    familyLeaveHours: t.familyDays * dayH,
     publicHolidayHours: t.publicHolidayDays * dayH,
     sundayHours: sundayHours,
     overtimeRate: otRate,

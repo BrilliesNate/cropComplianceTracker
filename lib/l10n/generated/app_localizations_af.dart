@@ -2838,7 +2838,7 @@ class AppLocalizationsAf extends AppLocalizations {
 
   @override
   String get tsHelpNormal =>
-      'Tik ure (9, 7.5…) of ’n kode: SL siekverlof · AL jaarlikse verlof · PH openbare vakansiedag · A afwesig (onbetaald). Oortyd en stukwerk gaan op hul eie blaaie.';
+      'Tik die ure gewerk (9, 7.5…) in elke dag. Verlof gaan in met die verlofkodes bo die rooster. Oortyd en stukwerk gaan op hul eie blaaie.';
 
   @override
   String get tsHelpOvertime =>
@@ -4866,4 +4866,119 @@ class AppLocalizationsAf extends AppLocalizations {
   @override
   String get frSource =>
       'Bron: Farmable Partner API v2.0. Deur Crop Compliance opgestel as ouditbewys.';
+
+  @override
+  String get leaveCodePH => 'OV';
+
+  @override
+  String get leaveCodeA => 'A';
+
+  @override
+  String get tsLeaveCodesTitle => 'Verlofkodes';
+
+  @override
+  String get tsLeaveHintPick =>
+      'Klik op ’n dag in die rooster, dan op ’n kode — of tik die kode reg in die dag.';
+
+  @override
+  String tsLeaveHintTarget(String name, String day) {
+    return 'Vul $name · $day in — skuif na die volgende dag ná elke kode.';
+  }
+
+  @override
+  String get tsLeavePickDayFirst =>
+      'Klik eers op die dag in die rooster, dan op die verlofkode.';
+
+  @override
+  String get tsCodeSL => 'Siekverlof';
+
+  @override
+  String get tsCodeHL => 'Vakansieverlof';
+
+  @override
+  String get tsCodeFL => 'Gesinsverantwoordelikheid';
+
+  @override
+  String get tsCodePH => 'Openbare vakansiedag';
+
+  @override
+  String get tsCodeA => 'Afwesig (onbetaald)';
+
+  @override
+  String get tsCodeClear => 'Maak dag skoon';
+
+  @override
+  String tsCodeTipSL(String hours) {
+    return 'Betaal as een gewone dag ($hours h) en van die werknemer se siekverlofsaldo afgetrek.';
+  }
+
+  @override
+  String tsCodeTipHL(String hours) {
+    return 'Betaal as een gewone dag ($hours h) en van die werknemer se vakansieverlofsaldo afgetrek.';
+  }
+
+  @override
+  String tsCodeTipFL(String hours) {
+    return 'Betaal as een gewone dag ($hours h) en van die werknemer se gesinsverantwoordelikheidsverlof-saldo afgetrek.';
+  }
+
+  @override
+  String tsCodeTipPH(String hours) {
+    return 'Openbare vakansiedag nie gewerk nie: betaal as een gewone dag ($hours h). As hulle gewerk het, tik eerder hul ure.';
+  }
+
+  @override
+  String get tsCodeTipA => 'Afwesig — hierdie dag word nie betaal nie.';
+
+  @override
+  String get tsCodeTipClear => 'Maak die gekose dag leeg.';
+
+  @override
+  String get farmChooseToContinue => 'Kies ’n plaas';
+
+  @override
+  String get pdfDownloadBtn => 'Laai PDF af';
+
+  @override
+  String get pdfOpenPrint => 'Maak oop / druk';
+
+  @override
+  String get psPayeBelowThreshold =>
+      'Onder die belastingdrempel — geen PAYE vir hierdie tydperk nie';
+
+  @override
+  String get psEarningsCaps => 'VERDIENSTE';
+
+  @override
+  String get psDeductionsCaps => 'AFTREKKINGS';
+
+  @override
+  String tsPdfFile(String company, String start) {
+    return 'Tydstaat $company $start.pdf';
+  }
+
+  @override
+  String tsPdfHeading(String sheet) {
+    return 'Tydstaat · $sheet';
+  }
+
+  @override
+  String get tsPdfDraft => 'Konsep — nie gefinaliseer nie';
+
+  @override
+  String tsPdfPrinted(String date) {
+    return 'Gedruk $date';
+  }
+
+  @override
+  String get tsPdfChecked =>
+      'Nagegaan deur: ______________________________      Handtekening: ______________________________      Datum: ____________________';
+
+  @override
+  String tsPdfPieceLegend(String unit) {
+    return 'Elke dag: ure gewerk (h) en $unit gepluk.';
+  }
+
+  @override
+  String get tsPdfDownloading => 'Maak die tydstaat-PDF…';
 }

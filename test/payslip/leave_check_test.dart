@@ -2,8 +2,8 @@ import 'package:cropCompliance/views/payslip/utils/leave_check.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  List<LeaveShortfall> check(Map<LeaveType, double> req,
-          Map<LeaveType, double> avail) =>
+  List<LeaveShortfall> check(
+          Map<LeaveType, double> req, Map<LeaveType, double> avail) =>
       findLeaveShortfalls(
           employeeId: 'e1',
           employeeName: 'Test Worker',

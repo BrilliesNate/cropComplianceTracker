@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cropCompliance/core/constants/route_constants.dart';
 import 'package:cropCompliance/models/company_model.dart';
 import 'package:cropCompliance/models/employee_model.dart';
@@ -15,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:cropCompliance/providers/locale_provider.dart';
+import 'package:cropCompliance/views/shared/admin_farm_chip.dart';
 
 // ── Draft snapshot ─────────────────────────────────────────────────────────────
 
@@ -213,7 +213,6 @@ class PayslipManagerScreen extends StatefulWidget {
 }
 
 class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
-  List<CompanyModel> _companies = [];
   CompanyModel? _selectedCompany;
   bool _loadingCompanies = true;
   bool _isAdminMode = false;
@@ -401,24 +400,9 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       final Future<void>? earlyLoad =
           known != null ? prov.loadForCompany(known.id) : null;
 
-      List<CompanyModel> companies = [];
-      if (auth.isAdmin) {
-        final snap = await FirebaseFirestore.instance
-            .collection('companies').orderBy('name').get();
-        companies = snap.docs
-            .map((d) => CompanyModel.fromMap(d.data(), d.id)).toList();
-      } else if (known != null) {
-        companies = [known];
-      }
-
-      CompanyModel? pre;
-      if (auth.isAdmin && auth.isManagingCompany) {
-        pre = companies.firstWhere(
-            (c) => c.id == auth.selectedCompany!.id,
-            orElse: () => companies.first);
-      } else if (companies.isNotEmpty) {
-        pre = companies.first;
-      }
+      // One farm only: the user's own, or for an admin the farm open in the
+      // app bar (switched there, so the two can never disagree).
+      final CompanyModel? pre = known;
 
       if (pre != null) {
         // Wait for the data BEFORE revealing the screen, so it opens finished.
@@ -429,7 +413,6 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
 
       if (mounted) {
         setState(() {
-          _companies = companies;
           _selectedCompany = pre;
           _loadingCompanies = false;
         });
@@ -438,13 +421,6 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
     } catch (_) {
       if (mounted) setState(() => _loadingCompanies = false);
     }
-  }
-
-  Future<void> _loadForCompany(String id) async {
-    final prov = Provider.of<PayslipProvider>(context, listen: false);
-    await prov.loadForCompany(id);
-    if (!mounted) return;
-    _applyCompanyData(prov);
   }
 
   void _applyCompanyData(PayslipProvider prov) {
@@ -508,11 +484,6 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       r.newPeriodEnd   = _periodEnd;
       r.isEditingExisting = false;
     }
-  }
-
-  Future<void> _selectCompany(CompanyModel c) async {
-    setState(() { _selectedCompany = c; _searchCtrl.clear(); _editingUif = false; });
-    await _loadForCompany(c.id);
   }
 
   // ── Filter ─────────────────────────────────────────────────────────────────
@@ -1399,7 +1370,6 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_isAdminMode) _buildCompanyBar(),
           if (_selectedCompany != null) ...[
             _buildPeriodBar(),
             Consumer<PayslipProvider>(
@@ -1420,42 +1390,6 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  // ── Company bar ────────────────────────────────────────────────────────────
-
-  Widget _buildCompanyBar() {
-    if (_loadingCompanies) return const LinearProgressIndicator();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
-      child: Row(children: [
-        const Icon(Icons.business_outlined, size: 18, color: Colors.black87),
-        const SizedBox(width: 10),
-        Text(context.l10n.companyColon,
-            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-        const SizedBox(width: 10),
-        Expanded(
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<CompanyModel>(
-              value: _selectedCompany,
-              hint: Text(context.l10n.selectCompany,
-                  style: TextStyle(fontSize: 13)),
-              isExpanded: true,
-              items: _companies.map((c) => DropdownMenuItem(
-                value: c,
-                child: Text(c.name,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13)),
-              )).toList(),
-              onChanged: (c) { if (c != null) _selectCompany(c); },
-            ),
-          ),
-        ),
-      ]),
     );
   }
 
@@ -2450,6 +2384,14 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
       const SizedBox(height: 16),
       Text(context.l10n.selectCompanyForPayslips,
           style: TextStyle(color: Colors.grey[500], fontSize: 15)),
+      if (_isAdminMode) ...[
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: () => switchAdminFarm(context),
+          icon: const Icon(Icons.business, size: 18),
+          label: Text(context.l10n.farmChooseToContinue),
+        ),
+      ],
     ]),
   );
 

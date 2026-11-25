@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:cropCompliance/providers/locale_provider.dart';
+import 'package:cropCompliance/views/payslip/utils/pdf_theme.dart';
 
 /// One employee's leave standing, for the Leave Records report.
 /// All values are in HOURS; the report also shows days (÷8).
@@ -65,13 +66,13 @@ class PayslipPdfBuilder {
   /// Opens the PDF in a new browser tab (web) or PDF viewer (mobile).
   static Future<void> openInBrowser(PayslipModel payslip) async {
     final bytes = await buildBytes(payslip);
-    await openPdfInBrowser(bytes);
+    await openPdfInBrowser(bytes, fileName(payslip));
   }
 
   /// Merges all payslips into a single PDF (one page per employee) and downloads it.
   static Future<void> downloadAllAsSinglePdf(
       List<PayslipModel> payslips, String name) async {
-    final doc = pw.Document();
+    final doc = pw.Document(theme: await pdfTheme());
     for (final p in payslips) {
       doc.addPage(_buildPayslipPage(p));
     }
@@ -117,7 +118,7 @@ class PayslipPdfBuilder {
   // ── Single payslip PDF ────────────────────────────────────────────────────
 
   static Future<List<int>> _buildPdf(PayslipModel p) async {
-    final doc = pw.Document();
+    final doc = pw.Document(theme: await pdfTheme());
     doc.addPage(_buildPayslipPage(p));
     return doc.save();
   }
@@ -240,7 +241,7 @@ class PayslipPdfBuilder {
             detailRow(LocaleProvider.instance.l10n.psPeriodStart, _shortDate.format(p.payPeriodStart)),
             detailRow(LocaleProvider.instance.l10n.psPeriodEnd, _shortDate.format(p.payPeriodEnd)),
             pw.SizedBox(height: 14),
-            sectionHeader('VERDIENSTE'),
+            sectionHeader(LocaleProvider.instance.l10n.psEarningsCaps),
             rateRow(LocaleProvider.instance.l10n.psHourlyRate, p.normalRate),
             if (p.overtimeHours > 0) rateRow(LocaleProvider.instance.l10n.psOvertimeRate, p.overtimeRate),
             if (p.doubleTimeHours > 0)
@@ -278,10 +279,17 @@ class PayslipPdfBuilder {
             detailRow(LocaleProvider.instance.l10n.psUifRegNr,
                 p.uifRegNumber.isNotEmpty ? p.uifRegNumber : '-'),
             pw.SizedBox(height: 14),
-            sectionHeader('AFTREKKINGS'),
+            sectionHeader(LocaleProvider.instance.l10n.psDeductionsCaps),
             deductionRow(LocaleProvider.instance.l10n.payslipUifEmployee, p.uifDeduction),
-            if (p.payeDeduction > 0)
-              deductionRow(LocaleProvider.instance.l10n.payslipPayeTax, p.payeDeduction),
+            // Always shown, so R 0.00 reads as "worked out — nothing due".
+            deductionRow(LocaleProvider.instance.l10n.payslipPayeTax, p.payeDeduction),
+            if (p.payeDeduction == 0 && p.payeAutoCalculated)
+              pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 3),
+                child: pw.Text(LocaleProvider.instance.l10n.psPayeBelowThreshold,
+                    style: const pw.TextStyle(
+                        fontSize: 7.5, color: PdfColors.grey600)),
+              ),
             for (final d in p.additionalDeductions)
               deductionRow(d.description, d.amount),
             pw.Divider(),
@@ -402,7 +410,7 @@ class PayslipPdfBuilder {
     required DateTime periodEnd,
     required List<PayslipModel> payslips,
   }) async {
-    final doc = pw.Document();
+    final doc = pw.Document(theme: await pdfTheme());
     const accentColor = PdfColors.green800;
 
     // FIXED: sum totals per employee for the whole period — previously
@@ -649,7 +657,7 @@ class PayslipPdfBuilder {
     required DateTime generatedOn,
     required List<LeaveReportRow> rows,
   }) async {
-    final doc = pw.Document();
+    final doc = pw.Document(theme: await pdfTheme());
     const accentColor = PdfColors.green800;
 
     final sorted = [...rows]

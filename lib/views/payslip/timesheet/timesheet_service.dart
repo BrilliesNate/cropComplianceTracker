@@ -114,7 +114,10 @@ class TimesheetService {
   }
 
   Future<void> savePeriod(PayPeriodRecord p) => commitWrite(
-      _db.collection('payPeriods').doc(p.id).set(p.toMap(), SetOptions(merge: true)),
+      _db
+          .collection('payPeriods')
+          .doc(p.id)
+          .set(p.toMap(), SetOptions(merge: true)),
       label: 'pay period'); // l10n-ignore: log label
 
   // ── Entries ───────────────────────────────────────────────────────────────
@@ -161,7 +164,8 @@ class TimesheetService {
       final batch = _db.batch();
       for (final e in entries.skip(i).take(400)) {
         final s = e.value;
-        batch.set(_db.collection('timesheetEntries').doc(_entryId(periodId, e.key)), {
+        batch.set(
+            _db.collection('timesheetEntries').doc(_entryId(periodId, e.key)), {
           'companyId': companyId,
           'periodId': periodId,
           'employeeId': e.key,
@@ -177,7 +181,8 @@ class TimesheetService {
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
-      await commitWrite(batch.commit(), label: 'timesheet entries'); // l10n-ignore: log label
+      await commitWrite(batch.commit(),
+          label: 'timesheet entries'); // l10n-ignore: log label
     }
   }
 
@@ -200,18 +205,20 @@ class TimesheetService {
       ..sort((a, b) => a.label.compareTo(b.label));
   }
 
-  Future<PieceRateInfo> addPieceRate(String companyId, String taskOrCrop,
-      String unitType, double rate) async {
+  Future<PieceRateInfo> addPieceRate(
+      String companyId, String taskOrCrop, String unitType, double rate) async {
     final ref = _db.collection('pieceRates').doc();
-    await commitWrite(ref.set({
-      'companyId': companyId,
-      'taskOrCrop': taskOrCrop,
-      'unitType': unitType,
-      'rate': rate,
-      'validFrom': Timestamp.fromDate(DateTime.now()),
-      'validTo': null,
-      'active': true,
-    }), label: 'piece rate'); // l10n-ignore: log label
+    await commitWrite(
+        ref.set({
+          'companyId': companyId,
+          'taskOrCrop': taskOrCrop,
+          'unitType': unitType,
+          'rate': rate,
+          'validFrom': Timestamp.fromDate(DateTime.now()),
+          'validTo': null,
+          'active': true,
+        }),
+        label: 'piece rate'); // l10n-ignore: log label
     return PieceRateInfo(
         id: ref.id, taskOrCrop: taskOrCrop, unitType: unitType, rate: rate);
   }
@@ -235,15 +242,17 @@ class TimesheetService {
   Future<void> audit(String companyId, String periodId, String action,
       {String? actorId, String? actorName, String? detail}) async {
     try {
-      await commitWrite(_db.collection('timesheetAudit').doc().set({
-        'companyId': companyId,
-        'periodId': periodId,
-        'action': action, // save | finalise | unfinalise
-        'actorId': actorId,
-        'actorName': actorName,
-        if (detail != null) 'detail': detail,
-        'at': FieldValue.serverTimestamp(),
-      }), label: 'timesheet audit'); // l10n-ignore: log label
+      await commitWrite(
+          _db.collection('timesheetAudit').doc().set({
+            'companyId': companyId,
+            'periodId': periodId,
+            'action': action, // save | finalise | unfinalise
+            'actorId': actorId,
+            'actorName': actorName,
+            if (detail != null) 'detail': detail,
+            'at': FieldValue.serverTimestamp(),
+          }),
+          label: 'timesheet audit'); // l10n-ignore: log label
     } catch (_) {
       // The log must never stop the user from saving.
     }

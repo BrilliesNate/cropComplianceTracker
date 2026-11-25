@@ -14,6 +14,7 @@ import 'timesheet_calc.dart';
 import 'timesheet_payslips.dart';
 import 'timesheet_service.dart';
 import 'package:cropCompliance/providers/locale_provider.dart';
+import 'timesheet_pdf.dart';
 
 /// Payslip Manager · Timesheet.
 ///
@@ -40,8 +41,10 @@ enum _Sheet { normal, overtime, piece }
 
 class _TimesheetScreenState extends State<TimesheetScreen> {
   static const _green = Color(0xFF2E7D32);
-  static DateFormat get _rangeFmt => DateFormat('d MMM yyyy'); // follows the app language
-  static DateFormat get _dayName => DateFormat('EEE'); // follows the app language
+  static DateFormat get _rangeFmt =>
+      DateFormat('d MMM yyyy'); // follows the app language
+  static DateFormat get _dayName =>
+      DateFormat('EEE'); // follows the app language
 
   final _service = TimesheetService();
 
@@ -67,6 +70,13 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
   final Map<String, ValueNotifier<int>> _rowTick = {};
   final ValueNotifier<int> _footerTick = ValueNotifier(0);
 
+  /// The Normal-hours day the leave-code bar fills: (employee id, day key).
+  final ValueNotifier<(String, String)?> _codeTarget = ValueNotifier(null);
+
+  /// Bumped when a cell's value is set from outside its text field (the
+  /// leave-code bar), so the field shows the new value.
+  final Map<String, int> _cellRev = {};
+
   /// Workers whose payslips couldn't be recalculated on the last Save, and why.
   Map<String, List<String>> _notRecalculated = {};
 
@@ -88,6 +98,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       n.dispose();
     }
     _footerTick.dispose();
+    _codeTarget.dispose();
     super.dispose();
   }
 
@@ -125,6 +136,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     _loadedWorkerIds = entries.keys.toSet();
     _badCells.clear();
     _notRecalculated = {};
+    _codeTarget.value = null;
     _dirty = false;
   }
 
@@ -145,8 +157,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(context.l10n.unsavedChanges),
-        content: Text(
-            context.l10n.tsUnsavedBody),
+        content: Text(context.l10n.tsUnsavedBody),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -176,6 +187,199 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     if (bad == had) return;
     setState(() => bad ? _badCells.add(key) : _badCells.remove(key));
   }
+
+  // ── Leave codes ───────────────────────────────────────────────────────────
+
+  /// Colours per leave code — the bar's chips and the days that use them.
+  static ({Color bg, Color fg}) _codeStyle(String code) => switch (code) {
+        'SL' => (bg: const Color(0xFFE0F2F1), fg: const Color(0xFF00796B)),
+        'HL' => (bg: const Color(0xFFE3F2FD), fg: const Color(0xFF1565C0)),
+        'FL' => (bg: const Color(0xFFEDE7F6), fg: const Color(0xFF5E35B1)),
+        'PH' => (bg: const Color(0xFFFDE2E1), fg: const Color(0xFFC62828)),
+        _ => (bg: const Color(0xFFEEEEEE), fg: const Color(0xFF616161)),
+      };
+
+  /// The code as shown in the app language (stored codes stay English).
+  String _codeLabel(String code) => leaveCodeLabel(code);
+
+  String _codeName(String code) => leaveCodeName(code);
+
+  String _codeTip(String code) {
+    final h = formatHours(_rates.ordinaryDayHours);
+    return switch (code) {
+      'SL' => context.l10n.tsCodeTipSL(h),
+      'HL' => context.l10n.tsCodeTipHL(h),
+      'FL' => context.l10n.tsCodeTipFL(h),
+      'PH' => context.l10n.tsCodeTipPH(h),
+      _ => context.l10n.tsCodeTipA,
+    };
+  }
+
+  String _cellText(NormalDay? d) =>
+      d?.code != null ? _codeLabel(d!.code!) : formatNormalCell(d);
+
+  void _setCodeTarget(String empId, String day) {
+    final old = _codeTarget.value;
+    if (old != null && old.$1 == empId && old.$2 == day) return;
+    _codeTarget.value = (empId, day);
+    if (old != null && old.$1 != empId) _tick(old.$1).value++;
+    _tick(empId).value++;
+  }
+
+  /// Puts [code] (null = clear) on the selected day, then moves to the next
+  /// day so a run of leave days is a few clicks.
+  void _applyCode(String? code) {
+    final target = _codeTarget.value;
+    if (target == null) {
+      _toast(context.l10n.tsLeavePickDayFirst);
+      return;
+    }
+    final (empId, day) = target;
+    final s = _sheetsOf(empId);
+    if (code == null) {
+      s.normal.remove(day);
+    } else {
+      s.normal[day] = NormalDay(code: code);
+    }
+    final cellKey = '${_period.id}|$empId|$day|n';
+    _cellRev[cellKey] = (_cellRev[cellKey] ?? 0) + 1;
+    _setBad(cellKey, false);
+    final days = _period.dayKeys;
+    final i = days.indexOf(day);
+    if (i >= 0 && i < days.length - 1) _codeTarget.value = (empId, days[i + 1]);
+    _changed(empId);
+  }
+
+  Widget _leaveBar() {
+    final locked = _period.finalised;
+    final dayFmt = DateFormat('EEE d MMM');
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFDDE7DD)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.event_note_outlined, size: 18, color: _green),
+          const SizedBox(width: 6),
+          Text(context.l10n.tsLeaveCodesTitle,
+              style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1B5E20))),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ValueListenableBuilder<(String, String)?>(
+              valueListenable: _codeTarget,
+              builder: (_, target, __) {
+                String? name;
+                if (target != null) {
+                  for (final e in _prov.employees) {
+                    if (e.id == target.$1) name = e.name;
+                  }
+                }
+                final active = target != null && name != null && !locked;
+                return Text(
+                  active
+                      ? context.l10n.tsLeaveHintTarget(
+                          name, dayFmt.format(DateTime.parse(target.$2)))
+                      : context.l10n.tsLeaveHintPick,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: active ? FontWeight.w600 : null,
+                      color: active ? _green : Colors.grey.shade700),
+                );
+              },
+            ),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        Opacity(
+          opacity: locked ? 0.5 : 1,
+          child: Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final c in leaveCodes) _codeChip(c, locked),
+            Tooltip(
+              message: context.l10n.tsCodeTipClear,
+              child: OutlinedButton.icon(
+                onPressed: locked ? null : () => _applyCode(null),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  shape: const StadiumBorder(),
+                  foregroundColor: Colors.grey.shade800,
+                ),
+                icon: const Icon(Icons.backspace_outlined, size: 16),
+                label: Text(context.l10n.tsCodeClear,
+                    style: const TextStyle(fontSize: 13)),
+              ),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _codeChip(String code, bool locked) {
+    final st = _codeStyle(code);
+    return Tooltip(
+      message: _codeTip(code),
+      child: Material(
+        color: st.bg,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: locked ? null : () => _applyCode(code),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 14, 4),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                constraints: const BoxConstraints(minWidth: 32),
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: st.fg,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(_codeLabel(code),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800)),
+              ),
+              const SizedBox(width: 8),
+              Text(_codeName(code),
+                  style: TextStyle(
+                      color: st.fg, fontSize: 13, fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Small coloured "SL 1" badges for the Leave column.
+  Widget _leaveBadges(WorkerTotals t) => FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          for (final e in t.leaveByCode.entries)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: _codeStyle(e.key).bg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text('${_codeLabel(e.key)} ${e.value}',
+                  style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: _codeStyle(e.key).fg)),
+            ),
+        ]),
+      );
 
   // ── Save / Finalise ───────────────────────────────────────────────────────
 
@@ -222,7 +426,8 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       await _service.audit(widget.companyId, _period.id, 'save',
           actorId: auth.currentUser?.id,
           actorName: auth.currentUser?.name,
-          detail: '$recalculated payslip(s) recalculated'); // l10n-ignore: audit log
+          detail:
+              '$recalculated payslip(s) recalculated'); // l10n-ignore: audit log
 
       _dirty = false;
       if (!quiet) {
@@ -275,7 +480,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       figures[e] = f;
     }
 
-    // Leave check (same rule as the Payslip Manager): SL / AL beyond the
+    // Leave check (same rule as the Payslip Manager): SL / HL / FL beyond the
     // balance → ask: pay available / take off / override & pay.
     final shortfalls = <LeaveShortfall>[];
     for (final entry in figures.entries) {
@@ -287,12 +492,15 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         requested: {
           LeaveType.sick: entry.value.sickLeaveHours,
           LeaveType.holiday: entry.value.holidayLeaveHours,
+          LeaveType.family: entry.value.familyLeaveHours,
         },
         available: {
           LeaveType.sick:
               prov.sickLeaveBalance(e.id) + (existing?.sickLeaveHours ?? 0),
           LeaveType.holiday: prov.holidayLeaveBalance(e.id) +
               (existing?.holidayLeaveHours ?? 0),
+          LeaveType.family:
+              prov.familyLeaveBalance(e.id) + (existing?.familyLeaveHours ?? 0),
         },
       ));
     }
@@ -321,6 +529,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         uifRegNumber: settings?.uifRegNumber ?? '',
         sickLeaveHours: leaveHours[e.id]?[LeaveType.sick],
         holidayLeaveHours: leaveHours[e.id]?[LeaveType.holiday],
+        familyLeaveHours: leaveHours[e.id]?[LeaveType.family],
       );
       if (await prov.savePayslip(ps) != null) saved++;
     }
@@ -392,16 +601,15 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       _periods = [
         for (final p in _periods) p.id == _period.id ? _period : p,
       ];
-      final status =
-          finalised ? PayslipStatus.finalised : PayslipStatus.draft;
+      final status = finalised ? PayslipStatus.finalised : PayslipStatus.draft;
       for (final e in _workers) {
         final p = payslipFor(_prov.payslips, e.id, _period);
         if (p != null && p.status != status) {
           await _prov.savePayslip(withStatus(p, status));
         }
       }
-      await _service.audit(widget.companyId, _period.id,
-          finalised ? 'finalise' : 'unfinalise',
+      await _service.audit(
+          widget.companyId, _period.id, finalised ? 'finalise' : 'unfinalise',
           actorId: auth.currentUser?.id, actorName: auth.currentUser?.name);
       _toast(finalised
           ? context.l10n.tsFinalisedToast
@@ -491,7 +699,9 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     // Existing periods of this type first, then the next one to start.
     options.addAll(_periods.where((p) => p.type == _type).take(8));
     final next = options.isEmpty
-        ? PayPeriodRecord.draft(widget.companyId, _type,
+        ? PayPeriodRecord.draft(
+            widget.companyId,
+            _type,
             _type == PeriodType.monthly
                 ? DateTime(now.year, now.month, 1)
                 : DateTime(now.year, now.month, now.day - (now.weekday - 1)))
@@ -517,8 +727,8 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                       size: 16, color: Colors.grey.shade600)
                 else if (!_periods.any((x) => x.id == p.id))
                   Text('new',
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600)),
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade600)),
               ]),
             ),
           const Divider(),
@@ -550,6 +760,23 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       await _switchPeriod(existing.isNotEmpty
           ? existing.first
           : PayPeriodRecord.draft(widget.companyId, _type, d));
+    }
+  }
+
+  /// The sheets as on screen (unsaved edits included) as a PDF.
+  Future<void> _downloadPdf() async {
+    _toast(context.l10n.tsPdfDownloading);
+    try {
+      await TimesheetPdf.download(
+        companyName: widget.companyName,
+        period: _period,
+        workers: _workers,
+        sheets: _sheets,
+        rates: _rates,
+        pieceRate: _pieceRate,
+      );
+    } catch (e) {
+      _toast(context.l10n.pdfGenerateFailed('$e'));
     }
   }
 
@@ -599,6 +826,8 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                       _tabs(),
                       _toolbar(),
                       if (_notRecalculated.isNotEmpty) _ratesBanner(),
+                      if (_sheet == _Sheet.normal && _workers.isNotEmpty)
+                        _leaveBar(),
                       Expanded(child: _grid()),
                       _footer(),
                       _legend(),
@@ -695,14 +924,18 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
             label: Text(
                 '${_rangeFmt.format(_period.start)} – ${_rangeFmt.format(_period.end)}'),
           ),
-          Text(
-              context.l10n.tsDaysWorkers(_workers.length, _period.days.length),
+          Text(context.l10n.tsDaysWorkers(_workers.length, _period.days.length),
               style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
           if (_sheet == _Sheet.piece) _pieceRatePicker(locked),
           if (_sheet == _Sheet.overtime)
             Text(context.l10n.tsNsLegend,
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
           const SizedBox(width: 12),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _downloadPdf,
+            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+            label: Text(context.l10n.pdfDownloadBtn),
+          ),
           if (_saving)
             const SizedBox(
                 width: 18,
@@ -711,12 +944,12 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           else if (locked) ...[
             Chip(
               avatar: const Icon(Icons.lock_outline, size: 16),
-              label: Text(
-                  _period.finalisedBy != null
-                      ? context.l10n.tsFinalisedBy(_period.finalisedBy!)
-                      : context.l10n.tsFinalised),
+              label: Text(_period.finalisedBy != null
+                  ? context.l10n.tsFinalisedBy(_period.finalisedBy!)
+                  : context.l10n.tsFinalised),
             ),
-            TextButton(onPressed: _unlock, child: Text(context.l10n.actionUnlock)),
+            TextButton(
+                onPressed: _unlock, child: Text(context.l10n.actionUnlock)),
           ] else ...[
             FilledButton(
               onPressed: () => _save(),
@@ -730,8 +963,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           ],
           if (_dirty && !locked)
             Text(context.l10n.unsavedChanges,
-                style: TextStyle(
-                    fontSize: 12, color: Colors.orange.shade800)),
+                style: TextStyle(fontSize: 12, color: Colors.orange.shade800)),
         ],
       ),
     );
@@ -752,7 +984,8 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
             DropdownMenuItem(
                 value: r.id,
                 child: Text('${r.label} · R ${r.rate.toStringAsFixed(2)}')),
-          DropdownMenuItem(value: '__add', child: Text(context.l10n.tsAddPieceRateMenu)),
+          DropdownMenuItem(
+              value: '__add', child: Text(context.l10n.tsAddPieceRateMenu)),
         ],
         onChanged: locked
             ? null
@@ -785,7 +1018,9 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
               context.l10n.tsNotUpdatedBanner(n, _missingLabels(missing)),
               style: TextStyle(fontSize: 13, color: Colors.amber.shade900)),
         ),
-        TextButton(onPressed: _ratesNeededDialog, child: Text(context.l10n.setThemNow)),
+        TextButton(
+            onPressed: _ratesNeededDialog,
+            child: Text(context.l10n.setThemNow)),
       ]),
     );
   }
@@ -793,6 +1028,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
   // ── Grid ──────────────────────────────────────────────────────────────────
 
   static const double _nameW = 190;
+
   /// Missing-rate ids (from the calculation) as words, joined.
   String _missingLabels(Iterable<String> ids) {
     final l10n = context.l10n;
@@ -817,7 +1053,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       case _Sheet.normal:
         return [
           (label: context.l10n.colHours, width: 60),
-          (label: context.l10n.colLeave, width: 90),
+          (label: context.l10n.colLeave, width: 130),
           (label: context.l10n.colComment, width: 170),
           (label: '', width: 100),
         ];
@@ -856,7 +1092,8 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     const headerH = 44.0;
 
     final nameCol = Column(children: [
-      _headerCell(context.l10n.colWorker, _nameW, headerH, align: Alignment.centerLeft),
+      _headerCell(context.l10n.colWorker, _nameW, headerH,
+          align: Alignment.centerLeft),
       for (final e in workers) _nameCell(e),
     ]);
 
@@ -868,18 +1105,19 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
             isSaPublicHoliday(d)
                 ? Tooltip(
                     message: context.l10n.tsPhTooltip,
-                    child: _headerCell('PH\n${d.day}', _dayW, headerH, // l10n-ignore: sheet code
+                    child: _headerCell(
+                        '${context.l10n.leaveCodePH}\n${d.day}', _dayW, headerH,
                         holiday: true),
                   )
                 : d.weekday == DateTime.sunday
                     ? Tooltip(
                         message: context.l10n.tsSundayTooltip,
-                        child: _headerCell(
-                            '${_dayName.format(d)} 2×\n${d.day}', _dayW, headerH,
+                        child: _headerCell('${_dayName.format(d)} 2×\n${d.day}',
+                            _dayW, headerH,
                             weekend: true),
                       )
-                    : _headerCell('${_dayName.format(d)}\n${d.day}', _dayW,
-                        headerH,
+                    : _headerCell(
+                        '${_dayName.format(d)}\n${d.day}', _dayW, headerH,
                         weekend: d.weekday >= 6),
           for (final c in _totalCols) _headerCell(c.label, c.width, headerH),
         ]),
@@ -962,9 +1200,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
             child: Row(children: [
               Expanded(
                 child: Tooltip(
-                  message: below
-                      ? context.l10n.tsBelowMinTooltip
-                      : '',
+                  message: below ? context.l10n.tsBelowMinTooltip : '',
                   child: Text(e.name,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -974,8 +1210,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                 ),
               ),
               if (below)
-                Icon(Icons.trending_down,
-                    size: 18, color: Colors.red.shade700),
+                Icon(Icons.trending_down, size: 18, color: Colors.red.shade700),
               if (warnings.isNotEmpty)
                 Tooltip(
                   message: warnings.join('\n'),
@@ -1008,6 +1243,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     required Widget child,
     bool weekend = false,
     bool bad = false,
+    bool selected = false,
     Color? tint,
   }) =>
       Container(
@@ -1018,8 +1254,16 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
               ? Colors.red.shade50
               : tint ?? (weekend ? const Color(0xFFFAF8F3) : null),
           border: Border.all(
-              color: bad ? Colors.red.shade400 : Colors.grey.shade200,
-              width: bad ? 1.2 : 0.5),
+              color: bad
+                  ? Colors.red.shade400
+                  : selected
+                      ? _green
+                      : Colors.grey.shade200,
+              width: bad
+                  ? 1.2
+                  : selected
+                      ? 2
+                      : 0.5),
         ),
         child: child,
       );
@@ -1040,37 +1284,49 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       case _Sheet.normal:
         final cellKey = '$base|n';
         final v = s.normal[key];
+        final style = v?.code != null ? _codeStyle(v!.code!) : null;
+        final target = _codeTarget.value;
+        final selected =
+            !locked && target != null && target.$1 == e.id && target.$2 == key;
         return _cellBox(
           width: _dayW,
           weekend: weekend,
           bad: _badCells.contains(cellKey),
-          tint: v?.code != null ? Colors.blue.shade50 : null,
+          selected: selected,
+          tint: style?.bg,
           child: Center(
-            child: TextFormField(
-              key: ValueKey(cellKey),
-              initialValue: formatNormalCell(v),
-              readOnly: locked,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight:
-                      v?.code != null ? FontWeight.w700 : FontWeight.w500,
-                  color: v?.code != null ? Colors.blue.shade800 : null),
-              decoration: _cellDeco,
-              onChanged: (raw) {
-                try {
-                  final parsed = parseNormalCell(raw);
-                  if (parsed == null) {
-                    s.normal.remove(key);
-                  } else {
-                    s.normal[key] = parsed;
-                  }
-                  _setBad(cellKey, false);
-                } on FormatException {
-                  _setBad(cellKey, true);
-                }
-                _changed(e.id);
+            child: Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
+              onFocusChange: (f) {
+                if (f) _setCodeTarget(e.id, key);
               },
+              child: TextFormField(
+                key: ValueKey('$cellKey#${_cellRev[cellKey] ?? 0}'),
+                initialValue: _cellText(v),
+                readOnly: locked,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight:
+                        v?.code != null ? FontWeight.w800 : FontWeight.w500,
+                    color: style?.fg),
+                decoration: _cellDeco,
+                onChanged: (raw) {
+                  try {
+                    final parsed = parseNormalCell(raw);
+                    if (parsed == null) {
+                      s.normal.remove(key);
+                    } else {
+                      s.normal[key] = parsed;
+                    }
+                    _setBad(cellKey, false);
+                  } on FormatException {
+                    _setBad(cellKey, true);
+                  }
+                  _changed(e.id);
+                },
+              ),
             ),
           ),
         );
@@ -1185,10 +1441,12 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
               height: 24,
               child: TextFormField(
                 key: ValueKey(hKey),
-                initialValue: v != null && v.hours > 0 ? formatHours(v.hours) : '',
+                initialValue:
+                    v != null && v.hours > 0 ? formatHours(v.hours) : '',
                 readOnly: locked,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                 decoration: _cellDeco.copyWith(
                     hintText: 'h', contentPadding: EdgeInsets.zero),
                 onChanged: (raw) {
@@ -1206,7 +1464,8 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
               height: 20,
               child: TextFormField(
                 key: ValueKey(uKey),
-                initialValue: v != null && v.units > 0 ? formatHours(v.units) : '',
+                initialValue:
+                    v != null && v.units > 0 ? formatHours(v.units) : '',
                 readOnly: locked,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
@@ -1251,7 +1510,10 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       case _Sheet.normal:
         return [
           total(formatHours(t.normalHours), cols[0].width),
-          total(t.leaveSummary, cols[1].width, bold: false, color: Colors.black87),
+          _cellBox(
+              width: cols[1].width,
+              tint: const Color(0xFFF3F8F3),
+              child: Center(child: _leaveBadges(t))),
           _cellBox(
             width: cols[2].width,
             child: TextFormField(
@@ -1290,7 +1552,10 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         return [
           total(formatHours(t.pieceHours), cols[0].width),
           total(formatHours(t.units), cols[1].width),
-          total(pay == null ? (f == null ? '' : 'R —') : 'R ${pay.toStringAsFixed(0)}',
+          total(
+              pay == null
+                  ? (f == null ? '' : 'R —')
+                  : 'R ${pay.toStringAsFixed(0)}',
               cols[2].width),
           _cellBox(
             width: cols[3].width,
@@ -1308,7 +1573,10 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                                 : Colors.green.shade50,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Text(top > 0 ? context.l10n.colTopUp : context.l10n.tsOk,
+                          child: Text(
+                              top > 0
+                                  ? context.l10n.colTopUp
+                                  : context.l10n.tsOk,
                               style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
@@ -1372,7 +1640,9 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
               break;
             case _Sheet.piece:
               text = context.l10n.tsSummaryPiece(formatHours(units)) +
-                  (_pieceRate == null ? context.l10n.tsChoosePieceRateSuffix : '');
+                  (_pieceRate == null
+                      ? context.l10n.tsChoosePieceRateSuffix
+                      : '');
               break;
           }
           return Container(
@@ -1423,12 +1693,12 @@ class _RatesDialogState extends State<_RatesDialog> {
       text: widget.initial.nightAllowancePercent?.toString() ?? '');
   late final _min = TextEditingController(
       text: widget.initial.minimumHourlyWage?.toString() ?? '');
-  late final _day = TextEditingController(
-      text: widget.initial.ordinaryDayHours.toString());
+  late final _day =
+      TextEditingController(text: widget.initial.ordinaryDayHours.toString());
   late final _week = TextEditingController(
       text: widget.initial.weeklyOvertimeLimit.toString());
-  late final _daily = TextEditingController(
-      text: widget.initial.dailyHoursLimit.toString());
+  late final _daily =
+      TextEditingController(text: widget.initial.dailyHoursLimit.toString());
   late String? _topUp = widget.initial.topUpPeriod;
   late final Set<int> _workDays = {...?widget.initial.ordinaryWorkDays};
 
@@ -1454,8 +1724,7 @@ class _RatesDialogState extends State<_RatesDialog> {
         _daily.text = '12';
       });
 
-  Widget _field(TextEditingController c, String label, String help) =>
-      Padding(
+  Widget _field(TextEditingController c, String label, String help) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: TextField(
           controller: c,
@@ -1505,7 +1774,8 @@ class _RatesDialogState extends State<_RatesDialog> {
               _field(_ns, context.l10n.tsNightAllowance,
                   context.l10n.tsNightAllowanceHelp),
               _field(_min, context.l10n.tsMinWage, context.l10n.tsMinWageHelp),
-              _field(_day, context.l10n.tsDayHours, context.l10n.tsDayHoursHelp),
+              _field(
+                  _day, context.l10n.tsDayHours, context.l10n.tsDayHoursHelp),
               _field(_week, context.l10n.tsWarnWeekLabel,
                   context.l10n.tsWarnWeekHelp),
               _field(_daily, context.l10n.tsWarnDayLabel,
@@ -1513,15 +1783,15 @@ class _RatesDialogState extends State<_RatesDialog> {
               const SizedBox(height: 4),
               Text(context.l10n.tsTopUpTitle,
                   style: TextStyle(fontWeight: FontWeight.w600)),
-              Text(
-                  context.l10n.tsTopUpHelp,
+              Text(context.l10n.tsTopUpHelp,
                   style: TextStyle(fontSize: 12, color: Colors.black54)),
               const SizedBox(height: 6),
               SegmentedButton<String>(
                 emptySelectionAllowed: true,
                 segments: [
                   ButtonSegment(value: 'day', label: Text(context.l10n.perDay)),
-                  ButtonSegment(value: 'week', label: Text(context.l10n.perWeek)),
+                  ButtonSegment(
+                      value: 'week', label: Text(context.l10n.perWeek)),
                 ],
                 selected: {if (_topUp != null) _topUp!},
                 onSelectionChanged: (v) =>
@@ -1530,18 +1800,17 @@ class _RatesDialogState extends State<_RatesDialog> {
               const SizedBox(height: 16),
               Text(context.l10n.tsWorkDaysTitle,
                   style: TextStyle(fontWeight: FontWeight.w600)),
-              Text(
-                  context.l10n.tsWorkDaysHelp,
+              Text(context.l10n.tsWorkDaysHelp,
                   style: TextStyle(fontSize: 12, color: Colors.black54)),
               const SizedBox(height: 6),
               Wrap(spacing: 6, runSpacing: 6, children: [
                 for (var wd = 1; wd <= 7; wd++)
                   FilterChip(
-                    label: Text(DateFormat.E()
-                        .format(DateTime(2023, 1, 1 + wd))),
+                    label:
+                        Text(DateFormat.E().format(DateTime(2023, 1, 1 + wd))),
                     selected: _workDays.contains(wd),
-                    onSelected: (on) => setState(() =>
-                        on ? _workDays.add(wd) : _workDays.remove(wd)),
+                    onSelected: (on) => setState(
+                        () => on ? _workDays.add(wd) : _workDays.remove(wd)),
                   ),
               ]),
             ],
@@ -1563,9 +1832,8 @@ class _RatesDialogState extends State<_RatesDialog> {
               weeklyOvertimeLimit: _num(_week) ?? 15,
               dailyHoursLimit: _num(_daily) ?? 12,
               topUpPeriod: _topUp,
-              ordinaryWorkDays: _workDays.isEmpty
-                  ? null
-                  : (_workDays.toList()..sort()),
+              ordinaryWorkDays:
+                  _workDays.isEmpty ? null : (_workDays.toList()..sort()),
             ),
           ),
           child: Text(context.l10n.tsSaveRates),
@@ -1611,14 +1879,16 @@ class _PieceRateDialogState extends State<_PieceRateDialog> {
             TextFormField(
               controller: _task,
               decoration: InputDecoration(
-                  labelText: context.l10n.tsTaskOrCrop, hintText: context.l10n.tsTaskHint),
+                  labelText: context.l10n.tsTaskOrCrop,
+                  hintText: context.l10n.tsTaskHint),
               validator: (v) =>
                   (v ?? '').trim().isEmpty ? context.l10n.tsTaskRequired : null,
             ),
             TextFormField(
               controller: _unit,
               decoration: InputDecoration(
-                  labelText: context.l10n.tsUnit, hintText: context.l10n.tsUnitHint),
+                  labelText: context.l10n.tsUnit,
+                  hintText: context.l10n.tsUnitHint),
               validator: (v) =>
                   (v ?? '').trim().isEmpty ? context.l10n.tsUnitRequired : null,
             ),

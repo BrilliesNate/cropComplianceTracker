@@ -42,8 +42,10 @@ void main() {
     final s = WorkerSheets(normal: {
       '2026-08-04': const NormalDay(hours: 9),
       '2026-08-05': const NormalDay(code: 'SL'),
-      '2026-08-06': const NormalDay(code: 'AL'),
+      '2026-08-06': const NormalDay(code: 'HL'),
       '2026-08-07': const NormalDay(code: 'A'),
+      '2026-08-10': const NormalDay(code: 'FL'),
+      '2026-08-11': const NormalDay(code: 'AL'), // older sheets
     }, overtime: {
       '2026-08-04': const OvertimeDay(hours: 2, finish: '19:00'),
       '2026-08-07': const OvertimeDay(hours: 1.5, finish: '21:30'),
@@ -53,17 +55,44 @@ void main() {
     final t = totalsFor(s);
     expect(t.normalHours, 9);
     expect(t.sickDays, 1);
-    expect(t.annualDays, 1);
+    expect(t.holidayDays, 2);
+    expect(t.familyDays, 1);
     expect(t.absentDays, 1);
     expect(t.overtimeHours, 3.5);
     expect(t.nightShiftDays, 1);
     expect(t.units, 14);
-    expect(t.leaveSummary, 'SL 1 · AL 1 · A 1');
+    expect(t.leaveSummary, 'SL 1 · HL 2 · FL 1 · A 1');
+  });
+
+  test('leave codes: HL / FL, old AL and Afrikaans spellings', () {
+    expect(parseNormalCell('hl')!.code, 'HL');
+    expect(parseNormalCell('FL')!.code, 'FL');
+    expect(parseNormalCell('AL')!.code, 'HL');
+    expect(parseNormalCell('sv')!.code, 'SL');
+    expect(parseNormalCell('VV')!.code, 'HL');
+    expect(parseNormalCell('GV')!.code, 'FL');
+    expect(parseNormalCell('OV')!.code, 'PH');
+    expect(NormalDay.fromMap({'c': 'AL'}).code, 'HL');
+    expect(() => parseNormalCell('XL'), throwsFormatException);
+  });
+
+  test('family responsibility leave is paid as ordinary days', () {
+    final s = WorkerSheets(normal: {
+      '2026-08-04': const NormalDay(code: 'FL'),
+      '2026-08-05': const NormalDay(code: 'HL'),
+    });
+    final f = payslipFiguresFor(
+        sheets: s,
+        days: ['2026-08-04', '2026-08-05'],
+        hourlyRate: 30,
+        rates: const TimesheetRates(ordinaryDayHours: 9));
+    expect(f.familyLeaveHours, 9);
+    expect(f.holidayLeaveHours, 9);
   });
 
   group('payslip figures use configured rates only', () {
-    final days = daysBetween(DateTime(2026, 8, 4), DateTime(2026, 8, 17))
-        .map(dayKey);
+    final days =
+        daysBetween(DateTime(2026, 8, 4), DateTime(2026, 8, 17)).map(dayKey);
 
     test('missing rates are reported, not guessed', () {
       final s = WorkerSheets(
@@ -73,13 +102,15 @@ void main() {
       final f = payslipFiguresFor(
           sheets: s, days: days, hourlyRate: 30, rates: const TimesheetRates());
       expect(f.canCalculate, isFalse);
-      expect(f.missingRates, containsAll([
-        missingOvertime,
-        missingNight,
-        missingPieceRate,
-        missingMinWage,
-        missingTopUpPeriod,
-      ]));
+      expect(
+          f.missingRates,
+          containsAll([
+            missingOvertime,
+            missingNight,
+            missingPieceRate,
+            missingMinWage,
+            missingTopUpPeriod,
+          ]));
     });
 
     test('overtime, night allowance, leave days', () {
@@ -90,7 +121,9 @@ void main() {
         '2026-08-06': const OvertimeDay(hours: 2, finish: '21:30'),
       });
       const rates = TimesheetRates(
-          overtimeMultiplier: 1.5, nightAllowancePercent: 10, ordinaryDayHours: 8);
+          overtimeMultiplier: 1.5,
+          nightAllowancePercent: 10,
+          ordinaryDayHours: 8);
       final f = payslipFiguresFor(
           sheets: s, days: days, hourlyRate: 30, rates: rates);
       expect(f.canCalculate, isTrue);
@@ -135,10 +168,10 @@ void main() {
   });
 
   group('confirmed client rules (13 Nov 2026)', () {
-    final days = daysBetween(DateTime(2026, 8, 4), DateTime(2026, 8, 17))
-        .map(dayKey);
-    const harvest =
-        PieceRateInfo(id: 'r', taskOrCrop: 'Harvest', unitType: 'bins', rate: 20);
+    final days =
+        daysBetween(DateTime(2026, 8, 4), DateTime(2026, 8, 17)).map(dayKey);
+    const harvest = PieceRateInfo(
+        id: 'r', taskOrCrop: 'Harvest', unitType: 'bins', rate: 20);
 
     test('top-up per day vs per week', () {
       // Tue: 20 bins = R400 for 9 h (floor R270) → fine.
@@ -165,7 +198,8 @@ void main() {
           sheets: s,
           days: days,
           hourlyRate: 30,
-          rates: const TimesheetRates(minimumHourlyWage: 30, topUpPeriod: 'week'),
+          rates:
+              const TimesheetRates(minimumHourlyWage: 30, topUpPeriod: 'week'),
           pieceRate: harvest);
       expect(f.belowMinimumWage, isFalse);
     });
@@ -214,7 +248,8 @@ void main() {
           sheets: s,
           days: days,
           hourlyRate: 30,
-          rates: TimesheetRates(ordinaryDayHours: 8, ordinaryWorkDays: workDays));
+          rates:
+              TimesheetRates(ordinaryDayHours: 8, ordinaryWorkDays: workDays));
       // Mon is a normal work day: greater of 2 × 240 = 480 or 240 + 120.
       final normal = run([1, 2, 3, 4, 5]);
       expect(normal.normalHours, 0);
@@ -283,8 +318,8 @@ void main() {
     final start = DateTime(2026, 8, 4);
     expect(PeriodType.weekly.endFor(start), DateTime(2026, 8, 10));
     expect(PeriodType.fortnightly.endFor(start), DateTime(2026, 8, 17));
-    expect(PeriodType.monthly.endFor(DateTime(2026, 8, 1)),
-        DateTime(2026, 8, 31));
+    expect(
+        PeriodType.monthly.endFor(DateTime(2026, 8, 1)), DateTime(2026, 8, 31));
     expect(daysBetween(start, DateTime(2026, 8, 17)).length, 14);
   });
 }
