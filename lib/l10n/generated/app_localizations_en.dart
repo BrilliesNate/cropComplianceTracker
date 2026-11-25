@@ -4950,4 +4950,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tsPdfDownloading => 'Making the timesheet PDF…';
+
+  @override
+  String tsLeaveUnpaidTip(String leave) {
+    return 'Unpaid — not enough $leave left (chosen when saving). Type the code again to have it checked again.';
+  }
+
+  @override
+  String tsLeavePartTip(String hours, String leave) {
+    return '$hours h paid, the rest unpaid — not enough $leave left (chosen when saving). Type the code again to have it checked again.';
+  }
+
+  @override
+  String tsLeaveOverrideTip(String leave) {
+    return 'Paid in full although the $leave balance was short (chosen when saving). Type the code again to have it checked again.';
+  }
+
+  @override
+  String tsUnpaidBadge(String hours) {
+    return '$hours h unpaid';
+  }
+
+  @override
+  String get tsLeaveUnpaidLegend =>
+      '= unpaid or partly paid — not enough leave left, as chosen when saving. Type the code again to have the day checked again.';
+
+  @override
+  String get tsPdfUnpaidLegend =>
+      'A number under a leave code = hours paid for that day (not enough leave left).';
+
+  @override
+  String get tsLeaveSettledToast =>
+      'Your choices are on the timesheet: crossed-out days are unpaid.';
 }

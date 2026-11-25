@@ -97,6 +97,9 @@ class TimesheetPdf {
       totalWidths: [38, 70, if (hasComment) 110],
       legend: [
         for (final c in leaveCodes) '${leaveCodeLabel(c)} ${leaveCodeName(c)}',
+        if (workers
+            .any((e) => keys.any((k) => of(e).normal[k]?.settled ?? false)))
+          l10n.tsPdfUnpaidLegend,
       ].join('   ·   '),
       rows: [
         for (final e in workers)
@@ -110,6 +113,15 @@ class TimesheetPdf {
                   () {
                     final d = s.normal[k];
                     if (d == null) return const _Cell('');
+                    if (d.settled) {
+                      final h = paidLeaveHours(d, rates.ordinaryDayHours);
+                      return _Cell(
+                          '${leaveCodeLabel(d.code!)}\n${formatHours(h)}h', // l10n-ignore: hours unit
+                          bg: h <= 0
+                              ? const PdfColor.fromInt(0xFFF0F0F0)
+                              : _codeBg(d.code!),
+                          bold: true);
+                    }
                     if (d.code != null) {
                       return _Cell(leaveCodeLabel(d.code!),
                           bg: _codeBg(d.code!), bold: true);
@@ -119,9 +131,13 @@ class TimesheetPdf {
               ],
               totals: [
                 formatHours(t.normalHours),
-                t.leaveByCode.entries
-                    .map((x) => '${leaveCodeLabel(x.key)} ${x.value}')
-                    .join('  '),
+                [
+                  ...t.leaveByCode.entries
+                      .map((x) => '${leaveCodeLabel(x.key)} ${x.value}'),
+                  if (unpaidLeaveHours(s, keys, rates.ordinaryDayHours) > 0)
+                    l10n.tsUnpaidBadge(formatHours(
+                        unpaidLeaveHours(s, keys, rates.ordinaryDayHours))),
+                ].join('  '),
                 if (hasComment) s.comment.trim(),
               ],
             );

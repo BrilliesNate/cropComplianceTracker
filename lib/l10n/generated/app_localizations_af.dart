@@ -4981,4 +4981,36 @@ class AppLocalizationsAf extends AppLocalizations {
 
   @override
   String get tsPdfDownloading => 'Maak die tydstaat-PDF…';
+
+  @override
+  String tsLeaveUnpaidTip(String leave) {
+    return 'Onbetaal — nie genoeg $leave oor nie (gekies met stoor). Tik die kode weer om dit weer te laat nagaan.';
+  }
+
+  @override
+  String tsLeavePartTip(String hours, String leave) {
+    return '$hours h betaal, die res onbetaal — nie genoeg $leave oor nie (gekies met stoor). Tik die kode weer om dit weer te laat nagaan.';
+  }
+
+  @override
+  String tsLeaveOverrideTip(String leave) {
+    return 'Ten volle betaal al was die $leave-saldo te min (gekies met stoor). Tik die kode weer om dit weer te laat nagaan.';
+  }
+
+  @override
+  String tsUnpaidBadge(String hours) {
+    return '$hours h onbetaal';
+  }
+
+  @override
+  String get tsLeaveUnpaidLegend =>
+      '= onbetaal of deels betaal — nie genoeg verlof oor nie, soos gekies met stoor. Tik die kode weer om die dag weer te laat nagaan.';
+
+  @override
+  String get tsPdfUnpaidLegend =>
+      '’n Getal onder ’n verlofkode = ure betaal vir daardie dag (nie genoeg verlof oor nie).';
+
+  @override
+  String get tsLeaveSettledToast =>
+      'Jou keuses is op die tydstaat: deurgestreepte dae is onbetaal.';
 }

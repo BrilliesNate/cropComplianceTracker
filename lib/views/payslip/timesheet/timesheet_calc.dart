@@ -60,23 +60,87 @@ String? normaliseLeaveCode(String raw) {
   return leaveCodeAliases[upper];
 }
 
+/// Leave codes paid from a balance (and checked against it when saving).
+const Set<String> balanceLeaveCodes = {'SL', 'HL', 'FL'};
+
 /// One day on the Normal-hours sheet: ordinary hours OR a leave code.
 class NormalDay {
   final double? hours;
   final String? code;
-  const NormalDay({this.hours, this.code});
+
+  /// For SL / HL / FL days: what was chosen in "Not enough leave left" —
+  /// the hours paid for this day (0 = unpaid; a full day = paid anyway).
+  /// null = no choice made: paid in full if the balance allows (checked on
+  /// every save). Typing the code again clears it.
+  final double? paid;
+
+  const NormalDay({this.hours, this.code, this.paid});
 
   bool get isEmpty => (hours == null || hours == 0) && code == null;
 
-  Map<String, dynamic> toMap() =>
-      code != null ? {'c': code} : {'h': hours ?? 0};
+  /// A choice was made for this leave day when saving.
+  bool get settled => paid != null && balanceLeaveCodes.contains(code);
+
+  Map<String, dynamic> toMap() => code != null
+      ? {'c': code, if (paid != null) 'p': paid}
+      : {'h': hours ?? 0};
 
   static NormalDay fromMap(Map m) => NormalDay(
         hours: (m['h'] as num?)?.toDouble(),
         code: m['c'] == null
             ? null
             : normaliseLeaveCode(m['c'] as String) ?? m['c'] as String,
+        paid: (m['p'] as num?)?.toDouble(),
       );
+}
+
+/// Hours paid for one leave day: the choice made when saving, else a full
+/// ordinary day.
+double paidLeaveHours(NormalDay d, double dayH) =>
+    d.settled ? d.paid!.clamp(0, dayH).toDouble() : dayH;
+
+/// [code] leave on one worker's Normal sheet, in hours: [pending] = days with
+/// no choice yet (checked against the balance on save), [settled] = hours
+/// already chosen to be paid.
+({double pending, double settled}) leaveHoursFor(
+    WorkerSheets s, Iterable<String> days, String code, double dayH) {
+  double pending = 0, settled = 0;
+  for (final k in days) {
+    final d = s.normal[k];
+    if (d == null || d.code != code) continue;
+    if (d.settled) {
+      settled += paidLeaveHours(d, dayH);
+    } else {
+      pending += dayH;
+    }
+  }
+  return (pending: pending, settled: settled);
+}
+
+/// Writes the "Not enough leave left" choice onto the [code] days that had no
+/// choice yet: pays up to [payHours] in date order — full days, then part of a
+/// day — and the remaining days are unpaid. Use [double.infinity] to pay all.
+void settleLeave(WorkerSheets s, Iterable<String> days, String code,
+    double dayH, double payHours) {
+  var left = payHours;
+  for (final k in [...days]..sort()) {
+    final d = s.normal[k];
+    if (d == null || d.code != code || d.settled) continue;
+    final pay = left >= dayH ? dayH : (left > 0 ? left : 0.0);
+    left -= pay;
+    s.normal[k] = NormalDay(code: code, paid: (pay * 100).round() / 100);
+  }
+}
+
+/// Leave hours not paid because the balance was short (settled days).
+double unpaidLeaveHours(WorkerSheets s, Iterable<String> days, double dayH) {
+  double total = 0;
+  for (final k in days) {
+    final d = s.normal[k];
+    if (d == null || !d.settled) continue;
+    total += dayH - paidLeaveHours(d, dayH);
+  }
+  return total;
 }
 
 /// Parses what the user typed in a Normal-hours cell: a number (9, 7.5,
@@ -647,9 +711,9 @@ PayslipFigures payslipFiguresFor({
   return PayslipFigures(
     normalHours: normalHours,
     overtimeHours: overtimeHours,
-    sickLeaveHours: t.sickDays * dayH,
-    holidayLeaveHours: t.holidayDays * dayH,
-    familyLeaveHours: t.familyDays * dayH,
+    sickLeaveHours: _paidOf(sheets, dayList, 'SL', dayH),
+    holidayLeaveHours: _paidOf(sheets, dayList, 'HL', dayH),
+    familyLeaveHours: _paidOf(sheets, dayList, 'FL', dayH),
     publicHolidayHours: t.publicHolidayDays * dayH,
     sundayHours: sundayHours,
     overtimeRate: otRate,
@@ -658,6 +722,12 @@ PayslipFigures payslipFiguresFor({
     topUp: topUp,
     missingRates: missing,
   );
+}
+
+double _paidOf(
+    WorkerSheets s, Iterable<String> days, String code, double dayH) {
+  final h = leaveHoursFor(s, days, code, dayH);
+  return h.pending + h.settled;
 }
 
 // ── South African public holidays ──────────────────────────────────────────

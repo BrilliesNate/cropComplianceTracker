@@ -76,6 +76,61 @@ void main() {
     expect(() => parseNormalCell('XL'), throwsFormatException);
   });
 
+  group('not enough leave: the choice is written onto the sheet', () {
+    const days = ['2026-08-04', '2026-08-05', '2026-08-06'];
+    const rates = TimesheetRates(ordinaryDayHours: 9);
+    WorkerSheets three() => WorkerSheets(normal: {
+          for (final d in days) d: const NormalDay(code: 'SL'),
+        });
+    PayslipFigures fig(WorkerSheets s) =>
+        payslipFiguresFor(sheets: s, days: days, hourlyRate: 30, rates: rates);
+
+    test('pay only the available hours: full day, part day, unpaid', () {
+      final s = three();
+      settleLeave(s, days, 'SL', 9, 10);
+      expect(s.normal['2026-08-04']!.paid, 9);
+      expect(s.normal['2026-08-05']!.paid, 1);
+      expect(s.normal['2026-08-06']!.paid, 0);
+      expect(fig(s).sickLeaveHours, 10);
+      expect(unpaidLeaveHours(s, days, 9), 17);
+      final h = leaveHoursFor(s, days, 'SL', 9);
+      expect(h.pending, 0); // not asked again on the next save
+      expect(h.settled, 10);
+    });
+
+    test('take the leave off: every day unpaid', () {
+      final s = three();
+      settleLeave(s, days, 'SL', 9, 0);
+      expect(fig(s).sickLeaveHours, 0);
+      expect(unpaidLeaveHours(s, days, 9), 27);
+    });
+
+    test('override: every day paid, not asked again', () {
+      final s = three();
+      settleLeave(s, days, 'SL', 9, double.infinity);
+      expect(fig(s).sickLeaveHours, 27);
+      expect(unpaidLeaveHours(s, days, 9), 0);
+      expect(leaveHoursFor(s, days, 'SL', 9).pending, 0);
+    });
+
+    test('the choice is saved, and retyping the code clears it', () {
+      final s = three();
+      settleLeave(s, days, 'SL', 9, 0);
+      final back = NormalDay.fromMap(s.normal['2026-08-04']!.toMap());
+      expect(back.paid, 0);
+      expect(back.settled, isTrue);
+      expect(parseNormalCell('SL')!.settled, isFalse);
+    });
+
+    test('only days without a choice are settled', () {
+      final s = three();
+      s.normal['2026-08-04'] = const NormalDay(code: 'SL', paid: 9);
+      settleLeave(s, days, 'SL', 9, 0);
+      expect(s.normal['2026-08-04']!.paid, 9);
+      expect(s.normal['2026-08-05']!.paid, 0);
+    });
+  });
+
   test('family responsibility leave is paid as ordinary days', () {
     final s = WorkerSheets(normal: {
       '2026-08-04': const NormalDay(code: 'FL'),

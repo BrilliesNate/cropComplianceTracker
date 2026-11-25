@@ -318,6 +318,32 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
             ),
           ]),
         ),
+        ValueListenableBuilder<int>(
+          valueListenable: _footerTick,
+          builder: (_, __, ___) {
+            final keys = _period.dayKeys;
+            final any = _sheets.values
+                .any((s) => keys.any((k) => s.normal[k]?.settled ?? false));
+            if (!any) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(
+                    text: leaveCodeLabel('SL'),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: Colors.grey.shade500,
+                        decoration: TextDecoration.lineThrough,
+                        decorationThickness: 2),
+                  ),
+                  TextSpan(text: ' ${context.l10n.tsLeaveUnpaidLegend}'),
+                ]),
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+              ),
+            );
+          },
+        ),
       ]),
     );
   }
@@ -360,8 +386,24 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     );
   }
 
+  /// Explains a leave day whose pay was chosen in "Not enough leave left".
+  Widget _settledTip(NormalDay? v, double paidH, {required Widget child}) {
+    if (v == null || !v.settled) return child;
+    final leave = switch (v.code) {
+      'SL' => context.l10n.leaveSick,
+      'HL' => context.l10n.leaveAnnual,
+      _ => context.l10n.leaveFamily,
+    };
+    final msg = paidH <= 0
+        ? context.l10n.tsLeaveUnpaidTip(leave)
+        : paidH < _rates.ordinaryDayHours
+            ? context.l10n.tsLeavePartTip(formatHours(paidH), leave)
+            : context.l10n.tsLeaveOverrideTip(leave);
+    return Tooltip(message: msg, child: child);
+  }
+
   /// Small coloured "SL 1" badges for the Leave column.
-  Widget _leaveBadges(WorkerTotals t) => FittedBox(
+  Widget _leaveBadges(WorkerTotals t, double unpaidH) => FittedBox(
         fit: BoxFit.scaleDown,
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           for (final e in t.leaveByCode.entries)
@@ -377,6 +419,20 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                       fontSize: 11.5,
                       fontWeight: FontWeight.w700,
                       color: _codeStyle(e.key).fg)),
+            ),
+          if (unpaidH > 0)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(context.l10n.tsUnpaidBadge(formatHours(unpaidH)),
+                  style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade700)),
             ),
         ]),
       );
@@ -481,38 +537,73 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     }
 
     // Leave check (same rule as the Payslip Manager): SL / HL / FL beyond the
-    // balance → ask: pay available / take off / override & pay.
+    // balance → ask: pay available / take off / override & pay. Only days
+    // without a choice yet are checked; the choice is then written onto those
+    // days, so the timesheet shows exactly what the payslip pays.
+    const codeOf = {
+      LeaveType.sick: 'SL',
+      LeaveType.holiday: 'HL',
+      LeaveType.family: 'FL',
+    };
+    final dayH = _rates.ordinaryDayHours;
     final shortfalls = <LeaveShortfall>[];
-    for (final entry in figures.entries) {
-      final e = entry.key;
+    for (final e in figures.keys) {
+      final s = _sheets[e.id]!;
       final existing = payslipFor(prov.payslips, e.id, _period);
+      final balance = {
+        LeaveType.sick:
+            prov.sickLeaveBalance(e.id) + (existing?.sickLeaveHours ?? 0),
+        LeaveType.holiday:
+            prov.holidayLeaveBalance(e.id) + (existing?.holidayLeaveHours ?? 0),
+        LeaveType.family:
+            prov.familyLeaveBalance(e.id) + (existing?.familyLeaveHours ?? 0),
+      };
+      final requested = <LeaveType, double>{};
+      final available = <LeaveType, double>{};
+      for (final type in LeaveType.values) {
+        final h = leaveHoursFor(s, days, codeOf[type]!, dayH);
+        requested[type] = h.pending;
+        available[type] = balance[type]! - h.settled;
+      }
       shortfalls.addAll(findLeaveShortfalls(
         employeeId: e.id,
         employeeName: e.name,
-        requested: {
-          LeaveType.sick: entry.value.sickLeaveHours,
-          LeaveType.holiday: entry.value.holidayLeaveHours,
-          LeaveType.family: entry.value.familyLeaveHours,
-        },
-        available: {
-          LeaveType.sick:
-              prov.sickLeaveBalance(e.id) + (existing?.sickLeaveHours ?? 0),
-          LeaveType.holiday: prov.holidayLeaveBalance(e.id) +
-              (existing?.holidayLeaveHours ?? 0),
-          LeaveType.family:
-              prov.familyLeaveBalance(e.id) + (existing?.familyLeaveHours ?? 0),
-        },
+        requested: requested,
+        available: available,
       ));
     }
-    final leaveHours = <String, Map<LeaveType, double>>{};
     if (shortfalls.isNotEmpty && mounted) {
       final choices = await LeaveShortfallDialog.show(context, shortfalls);
       if (choices == null) return null;
+      final changed = <String, WorkerSheets>{};
       for (var i = 0; i < shortfalls.length; i++) {
-        final s = shortfalls[i];
-        leaveHours.putIfAbsent(s.employeeId, () => {})[s.type] =
-            s.hoursFor(choices[i]);
+        final sf = shortfalls[i];
+        final s = _sheets[sf.employeeId]!;
+        settleLeave(
+            s,
+            days,
+            codeOf[sf.type]!,
+            dayH,
+            choices[i] == ShortfallChoice.overridePay
+                ? double.infinity
+                : sf.hoursFor(choices[i]));
+        changed[sf.employeeId] = s;
+        _tick(sf.employeeId).value++;
       }
+      _footerTick.value++;
+      await _service.saveEntries(widget.companyId, _period.id, changed);
+      // Payslip figures from the sheets as they are now.
+      for (final e in [...figures.keys]) {
+        if (!changed.containsKey(e.id)) continue;
+        figures[e] = payslipFiguresFor(
+          sheets: changed[e.id]!,
+          days: days,
+          hourlyRate: e.normalHourlyRate,
+          rates: _rates,
+          pieceRate: _pieceRate,
+        );
+      }
+      if (mounted) _toast(context.l10n.tsLeaveSettledToast);
     }
 
     var saved = 0;
@@ -527,9 +618,6 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         companyName: widget.companyName,
         companyAddress: settings?.companyAddress ?? '',
         uifRegNumber: settings?.uifRegNumber ?? '',
-        sickLeaveHours: leaveHours[e.id]?[LeaveType.sick],
-        holidayLeaveHours: leaveHours[e.id]?[LeaveType.holiday],
-        familyLeaveHours: leaveHours[e.id]?[LeaveType.family],
       );
       if (await prov.savePayslip(ps) != null) saved++;
     }
@@ -1288,46 +1376,86 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
         final target = _codeTarget.value;
         final selected =
             !locked && target != null && target.$1 == e.id && target.$2 == key;
+        // Leave day whose pay was chosen in "Not enough leave left".
+        final dayH = _rates.ordinaryDayHours;
+        final settled = v != null && v.settled;
+        final paidH = settled ? paidLeaveHours(v, dayH) : 0.0;
+        final unpaid = settled && paidH <= 0;
+        final partly = settled && paidH > 0 && paidH < dayH;
+        final forced = settled && paidH >= dayH;
         return _cellBox(
           width: _dayW,
           weekend: weekend,
           bad: _badCells.contains(cellKey),
           selected: selected,
-          tint: style?.bg,
-          child: Center(
-            child: Focus(
-              canRequestFocus: false,
-              skipTraversal: true,
-              onFocusChange: (f) {
-                if (f) _setCodeTarget(e.id, key);
-              },
-              child: TextFormField(
-                key: ValueKey('$cellKey#${_cellRev[cellKey] ?? 0}'),
-                initialValue: _cellText(v),
-                readOnly: locked,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight:
-                        v?.code != null ? FontWeight.w800 : FontWeight.w500,
-                    color: style?.fg),
-                decoration: _cellDeco,
-                onChanged: (raw) {
-                  try {
-                    final parsed = parseNormalCell(raw);
-                    if (parsed == null) {
-                      s.normal.remove(key);
-                    } else {
-                      s.normal[key] = parsed;
-                    }
-                    _setBad(cellKey, false);
-                  } on FormatException {
-                    _setBad(cellKey, true);
-                  }
-                  _changed(e.id);
+          tint: unpaid ? Colors.grey.shade100 : style?.bg,
+          child: _settledTip(
+            v,
+            paidH,
+            child: Stack(alignment: Alignment.center, children: [
+              Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onFocusChange: (f) {
+                  if (f) _setCodeTarget(e.id, key);
                 },
+                child: TextFormField(
+                  key: ValueKey('$cellKey#${_cellRev[cellKey] ?? 0}'),
+                  initialValue: _cellText(v),
+                  readOnly: locked,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight:
+                          v?.code != null ? FontWeight.w800 : FontWeight.w500,
+                      decoration: settled && !forced
+                          ? TextDecoration.lineThrough
+                          : null,
+                      decorationThickness: 2,
+                      color: unpaid ? Colors.grey.shade500 : style?.fg),
+                  decoration: _cellDeco,
+                  onChanged: (raw) {
+                    try {
+                      final parsed = parseNormalCell(raw);
+                      if (parsed == null) {
+                        s.normal.remove(key);
+                      } else {
+                        s.normal[key] = parsed;
+                      }
+                      _setBad(cellKey, false);
+                    } on FormatException {
+                      _setBad(cellKey, true);
+                    }
+                    _changed(e.id);
+                  },
+                ),
               ),
-            ),
+              if (partly)
+                Positioned(
+                  bottom: 1,
+                  child: IgnorePointer(
+                    child: Text('${formatHours(paidH)}h', // l10n-ignore: hours unit
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: style?.fg)),
+                  ),
+                ),
+              if (forced)
+                Positioned(
+                  top: 3,
+                  right: 3,
+                  child: IgnorePointer(
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                          color: Colors.orange.shade700,
+                          shape: BoxShape.circle),
+                    ),
+                  ),
+                ),
+            ]),
           ),
         );
 
@@ -1513,7 +1641,11 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           _cellBox(
               width: cols[1].width,
               tint: const Color(0xFFF3F8F3),
-              child: Center(child: _leaveBadges(t))),
+              child: Center(
+                  child: _leaveBadges(
+                      t,
+                      unpaidLeaveHours(
+                          s, _period.dayKeys, _rates.ordinaryDayHours)))),
           _cellBox(
             width: cols[2].width,
             child: TextFormField(

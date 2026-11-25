@@ -7983,6 +7983,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Making the timesheet PDF…'**
   String get tsPdfDownloading;
+
+  /// No description provided for @tsLeaveUnpaidTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid — not enough {leave} left (chosen when saving). Type the code again to have it checked again.'**
+  String tsLeaveUnpaidTip(String leave);
+
+  /// No description provided for @tsLeavePartTip.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h paid, the rest unpaid — not enough {leave} left (chosen when saving). Type the code again to have it checked again.'**
+  String tsLeavePartTip(String hours, String leave);
+
+  /// No description provided for @tsLeaveOverrideTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid in full although the {leave} balance was short (chosen when saving). Type the code again to have it checked again.'**
+  String tsLeaveOverrideTip(String leave);
+
+  /// No description provided for @tsUnpaidBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h unpaid'**
+  String tsUnpaidBadge(String hours);
+
+  /// No description provided for @tsLeaveUnpaidLegend.
+  ///
+  /// In en, this message translates to:
+  /// **'= unpaid or partly paid — not enough leave left, as chosen when saving. Type the code again to have the day checked again.'**
+  String get tsLeaveUnpaidLegend;
+
+  /// No description provided for @tsPdfUnpaidLegend.
+  ///
+  /// In en, this message translates to:
+  /// **'A number under a leave code = hours paid for that day (not enough leave left).'**
+  String get tsPdfUnpaidLegend;
+
+  /// No description provided for @tsLeaveSettledToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Your choices are on the timesheet: crossed-out days are unpaid.'**
+  String get tsLeaveSettledToast;
 }
 
 class _AppLocalizationsDelegate
