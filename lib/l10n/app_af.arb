@@ -1324,5 +1324,16 @@
   "tsSavedNoPayslipsYet": "Tydstaat gestoor — maar nog geen salarisstrokies gemaak nie. Kies wat met die verlof moet gebeur (blou banier → Maak salarisstrokies).",
   "tsPayslipsSaveFailed": "{count, plural, =1{Tydstaat gestoor, maar 1 salarisstrokie kon nie gestoor word nie: {error}} other{Tydstaat gestoor, maar {count} salarisstrokies kon nie gestoor word nie: {error}}}",
   "tsNoPayslipBanner": "{count, plural, =1{1 werker het ure op hierdie tydstaat maar nog geen salarisstrokie nie ({names}).} other{{count} werkers het ure op hierdie tydstaat maar nog geen salarisstrokie nie ({names}).}}",
-  "tsMakePayslips": "Maak salarisstrokies"
+  "tsMakePayslips": "Maak salarisstrokies",
+  "psDownloadAllTitle": "Laai salarisstrokies af",
+  "psDownloadAllBody": "Kies 'n betaaltydperk — al sy salarisstrokies gaan in een PDF, een bladsy elk, gereed om te druk.",
+  "psCount": "{count, plural, =1{1 salarisstrokie} other{{count} salarisstrokies}}",
+  "tsTimesheetPdf": "Tydstaat-PDF",
+  "tsPayslipsPdf": "Salarisstrokies-PDF",
+  "tsNoPayslipsToPrint": "Nog geen salarisstrokies vir hierdie tydperk nie — druk eers Stoor (of Maak salarisstrokies).",
+  "tsExtraHolidaysTitle": "Ekstra openbare vakansiedae",
+  "tsExtraHolidaysHelp": "Alle jaarlikse openbare vakansiedae en geproklameerde verkiesingsdae (bv. 4 Nov 2026) is ingebou. Voeg enige ander dag by wat die regering verklaar — ure wat daarop gewerk is, word dan as 'n openbare vakansiedag betaal.",
+  "tsExtraHolidaysAdd": "Voeg datum by",
+  "tsExtraHolidaysPick": "Kies die openbare vakansiedag",
+  "tsExtraHolidayKnown": "{date} is reeds 'n openbare vakansiedag."
 }

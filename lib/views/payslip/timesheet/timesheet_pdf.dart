@@ -323,10 +323,10 @@ class TimesheetPdf {
                 align: pw.Alignment.centerLeft),
             for (final d in days)
               cell(
-                  isSaPublicHoliday(d)
+                  isSaPublicHoliday(d, rates.extraHolidays)
                       ? '${leaveCodeLabel('PH')}\n${d.day}'
                       : '${shortDay(d)}\n${d.day}',
-                  bg: isSaPublicHoliday(d)
+                  bg: isSaPublicHoliday(d, rates.extraHolidays)
                       ? _holidayBg
                       : d.weekday >= 6
                           ? _weekendBg

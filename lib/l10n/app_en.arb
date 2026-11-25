@@ -3491,5 +3491,30 @@
       }
     }
   },
-  "tsMakePayslips": "Make payslips"
+  "tsMakePayslips": "Make payslips",
+  "psDownloadAllTitle": "Download payslips",
+  "psDownloadAllBody": "Pick a pay period — all its payslips go into one PDF, one page each, ready to print.",
+  "psCount": "{count, plural, =1{1 payslip} other{{count} payslips}}",
+  "@psCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tsTimesheetPdf": "Timesheet PDF",
+  "tsPayslipsPdf": "Payslips PDF",
+  "tsNoPayslipsToPrint": "No payslips for this period yet — press Save (or Make payslips) first.",
+  "tsExtraHolidaysTitle": "Extra public holidays",
+  "tsExtraHolidaysHelp": "All yearly public holidays and proclaimed election days (e.g. 4 Nov 2026) are built in. Add any other day the government declares — hours worked on it are then paid as a public holiday.",
+  "tsExtraHolidaysAdd": "Add date",
+  "tsExtraHolidaysPick": "Pick the public holiday",
+  "tsExtraHolidayKnown": "{date} is already a public holiday.",
+  "@tsExtraHolidayKnown": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  }
 }

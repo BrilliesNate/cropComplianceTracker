@@ -8049,6 +8049,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Make payslips'**
   String get tsMakePayslips;
+
+  /// No description provided for @psDownloadAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Download payslips'**
+  String get psDownloadAllTitle;
+
+  /// No description provided for @psDownloadAllBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a pay period — all its payslips go into one PDF, one page each, ready to print.'**
+  String get psDownloadAllBody;
+
+  /// No description provided for @psCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 payslip} other{{count} payslips}}'**
+  String psCount(int count);
+
+  /// No description provided for @tsTimesheetPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Timesheet PDF'**
+  String get tsTimesheetPdf;
+
+  /// No description provided for @tsPayslipsPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Payslips PDF'**
+  String get tsPayslipsPdf;
+
+  /// No description provided for @tsNoPayslipsToPrint.
+  ///
+  /// In en, this message translates to:
+  /// **'No payslips for this period yet — press Save (or Make payslips) first.'**
+  String get tsNoPayslipsToPrint;
+
+  /// No description provided for @tsExtraHolidaysTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra public holidays'**
+  String get tsExtraHolidaysTitle;
+
+  /// No description provided for @tsExtraHolidaysHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'All yearly public holidays and proclaimed election days (e.g. 4 Nov 2026) are built in. Add any other day the government declares — hours worked on it are then paid as a public holiday.'**
+  String get tsExtraHolidaysHelp;
+
+  /// No description provided for @tsExtraHolidaysAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add date'**
+  String get tsExtraHolidaysAdd;
+
+  /// No description provided for @tsExtraHolidaysPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the public holiday'**
+  String get tsExtraHolidaysPick;
+
+  /// No description provided for @tsExtraHolidayKnown.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} is already a public holiday.'**
+  String tsExtraHolidayKnown(String date);
 }
 
 class _AppLocalizationsDelegate

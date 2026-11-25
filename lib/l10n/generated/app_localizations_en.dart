@@ -5012,4 +5012,50 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tsMakePayslips => 'Make payslips';
+
+  @override
+  String get psDownloadAllTitle => 'Download payslips';
+
+  @override
+  String get psDownloadAllBody =>
+      'Pick a pay period — all its payslips go into one PDF, one page each, ready to print.';
+
+  @override
+  String psCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count payslips',
+      one: '1 payslip',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tsTimesheetPdf => 'Timesheet PDF';
+
+  @override
+  String get tsPayslipsPdf => 'Payslips PDF';
+
+  @override
+  String get tsNoPayslipsToPrint =>
+      'No payslips for this period yet — press Save (or Make payslips) first.';
+
+  @override
+  String get tsExtraHolidaysTitle => 'Extra public holidays';
+
+  @override
+  String get tsExtraHolidaysHelp =>
+      'All yearly public holidays and proclaimed election days (e.g. 4 Nov 2026) are built in. Add any other day the government declares — hours worked on it are then paid as a public holiday.';
+
+  @override
+  String get tsExtraHolidaysAdd => 'Add date';
+
+  @override
+  String get tsExtraHolidaysPick => 'Pick the public holiday';
+
+  @override
+  String tsExtraHolidayKnown(String date) {
+    return '$date is already a public holiday.';
+  }
 }

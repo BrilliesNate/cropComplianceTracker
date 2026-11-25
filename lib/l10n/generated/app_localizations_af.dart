@@ -5046,4 +5046,50 @@ class AppLocalizationsAf extends AppLocalizations {
 
   @override
   String get tsMakePayslips => 'Maak salarisstrokies';
+
+  @override
+  String get psDownloadAllTitle => 'Laai salarisstrokies af';
+
+  @override
+  String get psDownloadAllBody =>
+      'Kies \'n betaaltydperk — al sy salarisstrokies gaan in een PDF, een bladsy elk, gereed om te druk.';
+
+  @override
+  String psCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count salarisstrokies',
+      one: '1 salarisstrokie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tsTimesheetPdf => 'Tydstaat-PDF';
+
+  @override
+  String get tsPayslipsPdf => 'Salarisstrokies-PDF';
+
+  @override
+  String get tsNoPayslipsToPrint =>
+      'Nog geen salarisstrokies vir hierdie tydperk nie — druk eers Stoor (of Maak salarisstrokies).';
+
+  @override
+  String get tsExtraHolidaysTitle => 'Ekstra openbare vakansiedae';
+
+  @override
+  String get tsExtraHolidaysHelp =>
+      'Alle jaarlikse openbare vakansiedae en geproklameerde verkiesingsdae (bv. 4 Nov 2026) is ingebou. Voeg enige ander dag by wat die regering verklaar — ure wat daarop gewerk is, word dan as \'n openbare vakansiedag betaal.';
+
+  @override
+  String get tsExtraHolidaysAdd => 'Voeg datum by';
+
+  @override
+  String get tsExtraHolidaysPick => 'Kies die openbare vakansiedag';
+
+  @override
+  String tsExtraHolidayKnown(String date) {
+    return '$date is reeds \'n openbare vakansiedag.';
+  }
 }

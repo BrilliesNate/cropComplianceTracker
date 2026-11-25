@@ -6,6 +6,7 @@ import 'package:cropCompliance/providers/auth_provider.dart';
 import 'package:cropCompliance/providers/payslip_provider.dart';
 import 'package:cropCompliance/views/payslip/utils/leave_check.dart';
 import 'package:cropCompliance/views/payslip/widgets/leave_shortfall_dialog.dart';
+import 'package:cropCompliance/views/payslip/utils/payslip_pdf_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -914,6 +915,25 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     }
   }
 
+  /// Every payslip of this period in one PDF (one page each), to print in
+  /// one go. Nothing to print yet → say how to make them.
+  Future<void> _downloadPayslipsPdf() async {
+    final list = [
+      for (final e in _workers) payslipFor(_prov.payslips, e.id, _period),
+    ].whereType<PayslipModel>().toList();
+    if (list.isEmpty) {
+      _toast(context.l10n.tsNoPayslipsToPrint);
+      return;
+    }
+    _toast(context.l10n.tsPdfDownloading);
+    try {
+      await PayslipPdfBuilder.downloadAllAsSinglePdf(
+          list, context.l10n.psAllPdfName(widget.companyName));
+    } catch (e) {
+      _toast(context.l10n.pdfGenerateFailed('$e'));
+    }
+  }
+
   void _toast(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -1070,7 +1090,12 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           OutlinedButton.icon(
             onPressed: _saving ? null : _downloadPdf,
             icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-            label: Text(context.l10n.pdfDownloadBtn),
+            label: Text(context.l10n.tsTimesheetPdf),
+          ),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _downloadPayslipsPdf,
+            icon: const Icon(Icons.print_outlined, size: 18),
+            label: Text(context.l10n.tsPayslipsPdf),
           ),
           if (_saving)
             const SizedBox(
@@ -1265,7 +1290,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       children: [
         Row(children: [
           for (final d in days)
-            isSaPublicHoliday(d)
+            isSaPublicHoliday(d, _rates.extraHolidays)
                 ? Tooltip(
                     message: context.l10n.tsPhTooltip,
                     child: _headerCell(
@@ -1909,6 +1934,31 @@ class _RatesDialogState extends State<_RatesDialog> {
       TextEditingController(text: widget.initial.dailyHoursLimit.toString());
   late String? _topUp = widget.initial.topUpPeriod;
   late final Set<int> _workDays = {...?widget.initial.ordinaryWorkDays};
+  late final List<String> _extra = [...widget.initial.extraHolidays];
+
+  Future<void> _addHoliday() async {
+    final now = DateTime.now();
+    final d = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: DateTime(now.year - 2),
+      lastDate: DateTime(now.year + 2, 12, 31),
+      helpText: context.l10n.tsExtraHolidaysPick,
+    );
+    if (d == null) return;
+    final key = dayKey(d);
+    if (_extra.contains(key) || isSaPublicHoliday(d)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(context.l10n
+                .tsExtraHolidayKnown(DateFormat('d MMM yyyy').format(d)))));
+      }
+      return;
+    }
+    setState(() => _extra
+      ..add(key)
+      ..sort());
+  }
 
   @override
   void dispose() {
@@ -2021,6 +2071,25 @@ class _RatesDialogState extends State<_RatesDialog> {
                         () => on ? _workDays.add(wd) : _workDays.remove(wd)),
                   ),
               ]),
+              const SizedBox(height: 16),
+              Text(context.l10n.tsExtraHolidaysTitle,
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              Text(context.l10n.tsExtraHolidaysHelp,
+                  style: TextStyle(fontSize: 12, color: Colors.black54)),
+              const SizedBox(height: 6),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                for (final k in _extra)
+                  InputChip(
+                    label: Text(
+                        DateFormat('d MMM yyyy').format(DateTime.parse(k))),
+                    onDeleted: () => setState(() => _extra.remove(k)),
+                  ),
+                ActionChip(
+                  avatar: const Icon(Icons.add, size: 16),
+                  label: Text(context.l10n.tsExtraHolidaysAdd),
+                  onPressed: _addHoliday,
+                ),
+              ]),
             ],
           ),
         ),
@@ -2042,6 +2111,7 @@ class _RatesDialogState extends State<_RatesDialog> {
               topUpPeriod: _topUp,
               ordinaryWorkDays:
                   _workDays.isEmpty ? null : (_workDays.toList()..sort()),
+              extraHolidays: _extra,
             ),
           ),
           child: Text(context.l10n.tsSaveRates),

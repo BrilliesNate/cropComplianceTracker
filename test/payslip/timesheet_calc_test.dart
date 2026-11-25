@@ -339,7 +339,36 @@ void main() {
       expect(h, contains('2026-08-10')); // Women's Day moved off Sunday
       expect(h, isNot(contains('2026-08-09')));
       expect(h, contains('2026-12-16'));
-      expect(h.length, 12);
+      expect(h, contains('2026-11-04')); // proclaimed election day
+      expect(h.length, 13);
+      expect(saPublicHolidays(2027), isNot(contains('2026-11-04')));
+    });
+
+    test('election day 4 Nov 2026 worked = public holiday pay, not 1x', () {
+      final s = WorkerSheets();
+      s.normal['2026-11-04'] = NormalDay(hours: 8);
+      final f = payslipFiguresFor(
+        sheets: s,
+        days: ['2026-11-04'],
+        hourlyRate: 30,
+        rates: const TimesheetRates(ordinaryWorkDays: [1, 2, 3, 4, 5]),
+      );
+      expect(f.normalHours, 0);
+      expect(f.earnings.single.amount, 480); // 2 x daily wage (8 h x R30)
+    });
+
+    test('a farm can add its own extra public holiday', () {
+      final s = WorkerSheets();
+      s.normal['2026-11-18'] = NormalDay(hours: 8);
+      const extra = TimesheetRates(
+          ordinaryWorkDays: [1, 2, 3, 4, 5], extraHolidays: ['2026-11-18']);
+      expect(isSaPublicHoliday(DateTime(2026, 11, 18), extra.extraHolidays),
+          isTrue);
+      final f = payslipFiguresFor(
+          sheets: s, days: ['2026-11-18'], hourlyRate: 30, rates: extra);
+      expect(f.earnings.single.amount, 480);
+      final back = TimesheetRates.fromMap(extra.toMap());
+      expect(back.extraHolidays, ['2026-11-18']);
     });
 
     test('rates round-trip, including the new settings', () {

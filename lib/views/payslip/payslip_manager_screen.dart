@@ -831,20 +831,109 @@ class _PayslipManagerScreenState extends State<PayslipManagerScreen> {
 
   // ── Download ───────────────────────────────────────────────────────────────
 
+  /// One PDF with every payslip of a pay period, ready to print in one go.
+  /// The user picks the period (latest first, pre-selected) — rows open on
+  /// "New payslip", so "whatever each row is viewing" was usually nothing
+  /// (e.g. payslips made from the Timesheet).
   Future<void> _downloadAll(PayslipProvider prov) async {
-    // Download whatever payslip each row is currently viewing
-    final list = <PayslipModel>[];
+    final byPeriod = <String, List<PayslipModel>>{};
+    final starts = <String, DateTime>{};
+    final ends = <String, DateTime>{};
+    for (final p in prov.payslips) {
+      final s = DateUtils.dateOnly(p.payPeriodStart);
+      final e = DateUtils.dateOnly(p.payPeriodEnd);
+      final key = '${s.toIso8601String()}|${e.toIso8601String()}';
+      byPeriod.putIfAbsent(key, () => []).add(p);
+      starts[key] = s;
+      ends[key] = e;
+    }
+    if (byPeriod.isEmpty) return;
+    final keys = byPeriod.keys.toList()
+      ..sort((a, b) {
+        final c = ends[b]!.compareTo(ends[a]!);
+        return c != 0 ? c : starts[b]!.compareTo(starts[a]!);
+      });
+
+    // The period the rows are looking at, if any, else the latest one.
+    var chosen = keys.first;
     for (final row in _rows) {
-      final payslips = _getEmployeePayslips(row, prov);
-      if (row.navIndex < payslips.length) {
-        list.add(payslips[row.navIndex]);
+      final list = _getEmployeePayslips(row, prov);
+      if (row.navIndex < list.length) {
+        final p = list[row.navIndex];
+        final key = '${DateUtils.dateOnly(p.payPeriodStart).toIso8601String()}'
+            '|${DateUtils.dateOnly(p.payPeriodEnd).toIso8601String()}';
+        if (byPeriod.containsKey(key)) chosen = key;
+        break;
       }
     }
-    if (list.isEmpty) return;
-    await PayslipPdfBuilder.downloadAllAsSinglePdf(
-      list,
-      context.l10n.psAllPdfName(_selectedCompany?.name ?? context.l10n.companyFallback),
+
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, set) => AlertDialog(
+          title: Text(context.l10n.psDownloadAllTitle),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.l10n.psDownloadAllBody,
+                    style:
+                        TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                const SizedBox(height: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 320),
+                  child: SingleChildScrollView(
+                    child: RadioGroup<String>(
+                      groupValue: chosen,
+                      onChanged: (v) => set(() => chosen = v!),
+                      child: Column(children: [
+                        for (final k in keys)
+                          RadioListTile<String>(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            value: k,
+                            title: Text(
+                                '${_shortDate.format(starts[k]!)} – ${_shortDate.format(ends[k]!)}'), // l10n-ignore: date range
+                            subtitle:
+                                Text(context.l10n.psCount(byPeriod[k]!.length)),
+                          ),
+                      ]),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(context.l10n.commonCancel)),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, chosen),
+              icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+              label: Text(context.l10n.pdfDownloadBtn),
+            ),
+          ],
+        ),
+      ),
     );
+    if (picked == null || !mounted) return;
+    final list = [...byPeriod[picked]!]..sort((a, b) =>
+        a.employeeName.toLowerCase().compareTo(b.employeeName.toLowerCase()));
+    try {
+      await PayslipPdfBuilder.downloadAllAsSinglePdf(
+        list,
+        context.l10n.psAllPdfName(
+            _selectedCompany?.name ?? context.l10n.companyFallback),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(context.l10n.pdfError('$e'))));
+      }
+    }
   }
 
   // ── Deductions dialog ──────────────────────────────────────────────────────

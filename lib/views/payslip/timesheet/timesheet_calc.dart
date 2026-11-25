@@ -407,6 +407,10 @@ class TimesheetRates {
   /// Decides how a worked public holiday is paid (SD13). Null = not set.
   final List<int>? ordinaryWorkDays;
 
+  /// Extra public holidays for this farm (yyyy-MM-dd) — e.g. a newly
+  /// proclaimed election day the built-in list doesn't know yet.
+  final List<String> extraHolidays;
+
   const TimesheetRates({
     this.overtimeMultiplier,
     this.nightAllowancePercent,
@@ -416,6 +420,7 @@ class TimesheetRates {
     this.dailyHoursLimit = 12,
     this.topUpPeriod,
     this.ordinaryWorkDays,
+    this.extraHolidays = const [],
   });
 
   Map<String, dynamic> toMap() => {
@@ -427,6 +432,7 @@ class TimesheetRates {
         'dailyHoursLimit': dailyHoursLimit,
         'topUpPeriod': topUpPeriod,
         'ordinaryWorkDays': ordinaryWorkDays,
+        'extraHolidays': extraHolidays,
       };
 
   static TimesheetRates fromMap(Map? m) {
@@ -446,6 +452,10 @@ class TimesheetRates {
           ?.map((e) => (e as num).toInt())
           .where((d) => d >= 1 && d <= 7)
           .toList(),
+      extraHolidays: [
+        for (final e in (m['extraHolidays'] as List? ?? const []))
+          if (e is String && DateTime.tryParse(e) != null) e,
+      ]..sort(),
     );
   }
 }
@@ -595,7 +605,7 @@ PayslipFigures payslipFiguresFor({
         sundayTopUp += dailyWage - pay;
         sundayTopUpDays++;
       }
-    } else if (isSaPublicHoliday(date)) {
+    } else if (isSaPublicHoliday(date, rates.extraHolidays)) {
       normalHours -= normalPart;
       overtimeHours -= otPart;
       final workDays = rates.ordinaryWorkDays;
@@ -745,9 +755,18 @@ DateTime easterSunday(int year) {
   return DateTime(year, month, day);
 }
 
+/// Once-off public holidays proclaimed under s 2A of the Public Holidays Act
+/// (election days). Farms can add any new ones themselves under Timesheet →
+/// Rates → Extra public holidays ([TimesheetRates.extraHolidays]).
+const onceOffPublicHolidays = {
+  '2021-11-01', // Local Government Elections
+  '2024-05-29', // National and Provincial Elections
+  '2026-11-04', // Local Government Elections (Proclamation 346 of 2026)
+};
+
 /// The statutory public holidays (Public Holidays Act 36 of 1994), with a
-/// holiday that falls on a Sunday moved to the Monday. Once-off holidays
-/// (e.g. election days) aren't included — mark those days "PH" by hand.
+/// holiday that falls on a Sunday moved to the Monday, plus the proclaimed
+/// once-off days in [onceOffPublicHolidays].
 Set<String> saPublicHolidays(int year) {
   final fixed = [
     DateTime(year, 1, 1), // New Year's Day
@@ -765,6 +784,7 @@ Set<String> saPublicHolidays(int year) {
   final out = <String>{
     dayKey(easter.subtract(const Duration(days: 2))), // Good Friday
     dayKey(easter.add(const Duration(days: 1))), // Family Day
+    ...onceOffPublicHolidays.where((d) => d.startsWith('$year-')),
   };
   for (final d in fixed) {
     out.add(dayKey(
@@ -774,9 +794,14 @@ Set<String> saPublicHolidays(int year) {
 }
 
 final _holidayCache = <int, Set<String>>{};
-bool isSaPublicHoliday(DateTime d) => _holidayCache
-    .putIfAbsent(d.year, () => saPublicHolidays(d.year))
-    .contains(dayKey(d));
+
+/// Whether [d] is a public holiday: the statutory/proclaimed ones, plus a
+/// farm's own [extra] dates (yyyy-MM-dd) from the Rates dialog.
+bool isSaPublicHoliday(DateTime d, [Iterable<String> extra = const []]) =>
+    _holidayCache
+        .putIfAbsent(d.year, () => saPublicHolidays(d.year))
+        .contains(dayKey(d)) ||
+    extra.contains(dayKey(d));
 
 // ── Warnings (SD13 cl 13 — warn, don't block) ──────────────────────────────
 
